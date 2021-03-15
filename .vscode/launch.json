@@ -1,0 +1,68 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        // C >> WINDOWS DEBUG >> ACTIVE FILE
+        {
+            "name": "C >> windows debug >> active file",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${fileDirname}/${fileBasenameNoExtension}.exe",   // plain launch
+            "args": ["3", "1", "0.01", "500", "g"],
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "console": "integratedTerminal",
+            "preLaunchTask": "C >> windows|linux debug >> makefile",   // makefile
+         // "preLaunchTask": "C >> windows debug >> active file",      // active file
+            "stopAtEntry": false,
+        },
+        
+        // C >> LINUX DEBUG >> ACTIVE FILE
+        {
+            "name": "C >> linux debug >> active file",
+            "type": "cppdbg",
+            "request": "launch",
+         // "program": "${fileDirname}/${fileBasenameNoExtension}.exe",   // plain launch
+            "program": "/usr/bin/mpirun",                                 // openmpi launch
+         // "args": ["10", "10"],                                                               // plain args
+            "args": ["-n", "1", "${fileDirname}/${fileBasenameNoExtension}.exe", "10", "10"],   // openmpi args
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "preLaunchTask": "C >> windows|linux debug >> makefile",   // makefile
+         // "preLaunchTask": "C >> linux debug >> active file",        // active file
+            "stopAtEntry": false,
+            "MIMode": "gdb",
+         // "miDebuggerPath": "/usr/bin/gdb",                   // ubuntu wsl
+            "miDebuggerPath": "/home/sm170081d/.bin/gdb/gdb",   // ubuntu rtidev5
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+            ],
+        },
+
+        // C >> LINUX ATTACH >> ACTIVE FILE
+        {
+            "name": "C >> linux attach >> active file",
+            "type": "cppdbg",
+            "request": "attach",
+            "processId": "${command:pickProcess}",
+            "program": "${fileDirname}/${fileBasenameNoExtension}.exe",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",                   // ubuntu wsl
+         // "miDebuggerPath": "/home/sm170081d/.bin/gdb/gdb",   // ubuntu rtidev5
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+            ],
+        },
+    ]
+}

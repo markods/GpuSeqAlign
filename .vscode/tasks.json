@@ -1,0 +1,69 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        // C >> WINDOWS DEBUG >> ACTIVE FILE
+        {
+            "label": "C >> windows debug >> active file",
+            "type": "shell",
+         // "command": "clang-cl",   // plain c
+            "command": "nvcc",       // cuda
+            "args": [
+                // wrap the command arguments for powershell
+                "\"",
+                // cuda compiler options
+                "-Xcompiler", "\"/Od /Zi /EHsc /Fe: /openmp\"",
+             // // compiler options
+             // "/Od", "/Zi", "/EHsc", "/Fe:", "/openmp",
+                // compile the active file
+                "${file}",
+                // link the object file into an .exe
+                "/o", "${fileDirname}/${fileBasenameNoExtension}.exe",
+                // wrap the command arguments for powershell
+                "\"",
+            ],
+            "problemMatcher": [ "$gcc" ],
+            "group": "build",
+            "presentation": { "reveal": "never", "panel": "shared" },
+        },
+
+        // C >> LINUX DEBUG >> ACTIVE FILE
+        {
+            "label": "C >> linux debug >> active file",
+            "type": "shell",
+         // "command": "gcc",                        // plain c
+         // "command": "/usr/bin/mpicc",             // openmpi
+            "command": "/usr/local/cuda/bin/nvcc",   // cuda
+            "args": [
+                // include debug symbols, show all warnings
+                "-g", "-Wall", "-Wextra", "-Wpedantic",
+                // compile the active file
+                "${file}",
+                // link the object file into an .exe
+                "-o", "${fileDirname}/${fileBasenameNoExtension}.exe",
+                // link with c standard library
+                "-lm",
+            ],
+            "problemMatcher": [ "$gcc" ],
+            "group": "build",
+            "presentation": { "reveal": "never", "panel": "shared" },
+        },
+
+        // C >> WINDOWS|LINUX DEBUG >> MAKEFILE
+        {
+            "label": "C >> windows|linux debug >> makefile",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                // make target
+                "all",
+                // set debug symbol to true
+                "DEBUG=1"
+            ],
+            "problemMatcher": [ "$gcc" ],
+            "group": "build",
+            "presentation": { "reveal": "never", "panel": "shared" },
+        },
+    ]
+}
