@@ -1,206 +1,7 @@
-/*
-./needle.exe 2048 10
-./needle.exe 6144 10
-./needle.exe 16384 10
-./needle.exe 22528 10
-*/
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-#include <time.h>
+#include <cstdio>
 #include <cooperative_groups.h>
 #include "omp.h"
-// #define INT_MAX +2147483647
-// #define INT_MIN -2147483648
-// stream used through the rest of the program
-#define STREAM_ID 0
-// number of streaming multiprocessors (sm-s) and cores per sm
-#define MPROCS 28
-#define CORES 128
-// number of threads in warp
-#define WARPSZ 32
-// tile sizes for kernels A and B
-// +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
-// +   tile B must have one dimension fixed to the number of threads in a warp
-const int tileAx = 1*WARPSZ;
-const int tileAy = 32;
-const int tileBx = 60;
-const int tileBy = WARPSZ;
-
-// get the specified element from the given linearized matrix
-#define el( mat, cols, i, j ) ( mat[(i)*(cols) + (j)] )
-
-
-// block substitution matrix
-#define BLOSUMSZ 24
-int blosum62[BLOSUMSZ][BLOSUMSZ] =
-{
-   {  4, -1, -2, -2,  0, -1, -1,  0, -2, -1, -1, -1, -1, -2, -1,  1,  0, -3, -2,  0, -2, -1,  0, -4 },
-   { -1,  5,  0, -2, -3,  1,  0, -2,  0, -3, -2,  2, -1, -3, -2, -1, -1, -3, -2, -3, -1,  0, -1, -4 },
-   { -2,  0,  6,  1, -3,  0,  0,  0,  1, -3, -3,  0, -2, -3, -2,  1,  0, -4, -2, -3,  3,  0, -1, -4 },
-   { -2, -2,  1,  6, -3,  0,  2, -1, -1, -3, -4, -1, -3, -3, -1,  0, -1, -4, -3, -3,  4,  1, -1, -4 },
-   {  0, -3, -3, -3,  9, -3, -4, -3, -3, -1, -1, -3, -1, -2, -3, -1, -1, -2, -2, -1, -3, -3, -2, -4 },
-   { -1,  1,  0,  0, -3,  5,  2, -2,  0, -3, -2,  1,  0, -3, -1,  0, -1, -2, -1, -2,  0,  3, -1, -4 },
-   { -1,  0,  0,  2, -4,  2,  5, -2,  0, -3, -3,  1, -2, -3, -1,  0, -1, -3, -2, -2,  1,  4, -1, -4 },
-   {  0, -2,  0, -1, -3, -2, -2,  6, -2, -4, -4, -2, -3, -3, -2,  0, -2, -2, -3, -3, -1, -2, -1, -4 },
-   { -2,  0,  1, -1, -3,  0,  0, -2,  8, -3, -3, -1, -2, -1, -2, -1, -2, -2,  2, -3,  0,  0, -1, -4 },
-   { -1, -3, -3, -3, -1, -3, -3, -4, -3,  4,  2, -3,  1,  0, -3, -2, -1, -3, -1,  3, -3, -3, -1, -4 },
-   { -1, -2, -3, -4, -1, -2, -3, -4, -3,  2,  4, -2,  2,  0, -3, -2, -1, -2, -1,  1, -4, -3, -1, -4 },
-   { -1,  2,  0, -1, -3,  1,  1, -2, -1, -3, -2,  5, -1, -3, -1,  0, -1, -3, -2, -2,  0,  1, -1, -4 },
-   { -1, -1, -2, -3, -1,  0, -2, -3, -2,  1,  2, -1,  5,  0, -2, -1, -1, -1, -1,  1, -3, -1, -1, -4 },
-   { -2, -3, -3, -3, -2, -3, -3, -3, -1,  0,  0, -3,  0,  6, -4, -2, -2,  1,  3, -1, -3, -3, -1, -4 },
-   { -1, -2, -2, -1, -3, -1, -1, -2, -2, -3, -3, -1, -2, -4,  7, -1, -1, -4, -3, -2, -2, -1, -2, -4 },
-   {  1, -1,  1,  0, -1,  0,  0,  0, -1, -2, -2,  0, -1, -2, -1,  4,  1, -3, -2, -2,  0,  0,  0, -4 },
-   {  0, -1,  0, -1, -1, -1, -1, -2, -2, -1, -1, -1, -1, -2, -1,  1,  5, -2, -2,  0, -1, -1,  0, -4 },
-   { -3, -3, -4, -4, -2, -2, -3, -2, -2, -3, -2, -3, -1,  1, -4, -3, -2, 11,  2, -3, -4, -3, -2, -4 },
-   { -2, -2, -2, -3, -2, -1, -2, -3,  2, -1, -1, -2, -1,  3, -3, -2, -2,  2,  7, -1, -3, -2, -1, -4 },
-   {  0, -3, -3, -3, -1, -2, -2, -3, -3,  3,  1, -2,  1, -1, -2, -2,  0, -3, -1,  4, -3, -2, -1, -4 },
-   { -2, -1,  3,  4, -3,  0,  1, -1,  0, -3, -4,  0, -3, -3, -2,  0, -1, -4, -3, -3,  4,  1, -1, -4 },
-   { -1,  0,  0,  1, -3,  3,  4, -2,  0, -3, -3,  1, -1, -3, -1,  0, -1, -3, -2, -2,  1,  4, -1, -4 },
-   {  0, -1, -1, -1, -2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -2,  0,  0, -2, -1, -1, -1, -1, -1, -4 },
-   { -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4,  1 }
-};
-
-// call in case of invalid command line arguments
-void Usage( char* argv[] )
-{
-   fprintf(stderr, "Usage: %s <rows=cols> <insdelcost>\n", argv[0]);
-   fprintf(stderr, "\t<dimension>      - x and y dimensions\n");
-   fprintf(stderr, "\t<insdelcost>     - insert and delete cost (positive integer)\n");
-   fflush(stderr);
-   exit(0);
-}
-
-
-// print one of the optimal matching paths to a file
-void Traceback( const char* fname, int* score, int rows, int cols, int adjrows, int adjcols, unsigned* _hash )
-{
-   printf("   - printing traceback\n");
-   
-   // if the given file and matrix are null, or the matrix is the wrong size, return
-   if( !fname || !score ) return;
-   if( rows <= 0 || cols <= 0 ) return;
-   // try to open the file with the given name, return if unsuccessful
-   FILE *fout = fopen( fname, "w" );
-   if( !fout ) return;
-   
-   // variable used to calculate the hash function
-   // http://www.cse.yorku.ca/~oz/hash.html
-   // the starting value is a magic constant
-   unsigned hash = 5381;
-
-   // for all elements on one of the optimal paths
-   bool loop = true;
-   for( int i = rows-1, j = cols-1;  loop;  )
-   {
-      // print the current element
-      fprintf( fout, "%d\n", el(score,adjcols, i,j) );
-      // add the current element to the hash
-      hash = ( ( hash<<5 ) + hash ) ^ el(score,adjcols, i,j);
-
-      int max = INT_MIN;   // maximum value of the up, left and diagonal neighbouring elements
-      int dir = '-';       // the current movement direction is unknown
-
-      if( i > 0 && j > 0 && max < el(score,adjcols, i-1,j-1) ) { max = el(score,adjcols, i-1,j-1); dir = 'i'; }   // diagonal movement if possible
-      if( i > 0          && max < el(score,adjcols, i-1,j  ) ) { max = el(score,adjcols, i-1,j  ); dir = 'u'; }   // up       movement if possible
-      if(          j > 0 && max < el(score,adjcols, i  ,j-1) ) { max = el(score,adjcols, i  ,j-1); dir = 'l'; }   // left     movement if possible
-
-      // move to the neighbour with the maximum value
-      switch( dir )
-      {
-      case 'i': i--; j--; break;
-      case 'u': i--;      break;
-      case 'l':      j--; break;
-      default:  loop = false; break;
-      }
-   }
-
-   // close the file handle
-   fclose( fout );
-   // save the hash value
-   *_hash = hash;
-}
-
-
-
-// update the score given the current score matrix and position
-void UpdateScore( const int* seqX, const int* seqY, int* score, int rows, int cols, int insdelcost, int i, int j )
-{
-   int p1 = el(score,cols, i-1,j-1) + blosum62[ seqY[i] ][ seqX[j] ];
-   int p2 = el(score,cols, i-1,j  ) - insdelcost;
-   int p3 = el(score,cols, i  ,j-1) - insdelcost;
-   el(score,cols, i,j) = max( max( p1, p2 ), p3 );
-}
-
-// sequential implementation of the Needleman Wunsch algorithm
-int Seq( const int* seqX, const int* seqY, int* score, int rows, int cols, int adjrows, int adjcols, int insdelcost, float* time )
-{
-   // check if the given input is valid, if not return
-   if( !seqX || !seqY || !score || !time ) return false;
-   if( rows <= 1 || cols <= 1 ) return false;
-
-   // start the timer
-   *time = omp_get_wtime();
-
-
-   // skip the first row and first column in the next calculation
-   rows--; cols--;
-
-   // initialize the first row and column of the score matrix
-   for( int i = 0; i < 1+rows; i++ ) el(score,adjcols, i,0) = -i*insdelcost;
-   for( int j = 0; j < 1+cols; j++ ) el(score,adjcols, 0,j) = -j*insdelcost;
-
-   //  / / / . .
-   //  / / . . .
-   //  / . . . .
-   printf("   - processing top-left triangle + first diagonal of the score matrix\n");
-   for( int s = 0; s < rows; s++ )
-   for( int t = 0; t <= s; t++ )
-   {
-      int i = 1 +     t;
-      int j = 1 + s - t;
-      UpdateScore( seqX, seqY, score, adjrows, adjcols, insdelcost, i, j );
-   }
-
-   //  . . . / /
-   //  . . / / .
-   //  . / / . .
-   // if the matrix is not square shaped
-   if( rows != cols )
-   {
-      printf("   - processing all other diagonals of the score matrix\n");
-      for( int s = rows; s < cols; s++ )
-      for( int t = 0; t <= rows-1; t++ )
-      {
-         int i = 1 +     t;
-         int j = 1 + s - t;
-         UpdateScore( seqX, seqY, score, adjrows, adjcols, insdelcost, i, j );
-      }
-   }
-
-   //  . . . . .|/ /
-   //  . . . . /|/
-   //  . . . / /|
-   printf("   - processing bottom-right triangle of the score matrix\n");
-   for( int s = cols; s < cols-1 + rows; s++ )
-   for( int t = s-cols+1; t <= rows-1; t++ )
-   {
-      int i = 1 +     t;
-      int j = 1 + s - t;
-      UpdateScore( seqX, seqY, score, adjrows, adjcols, insdelcost, i, j );
-   }
-
-   // restore the original row and column count
-   rows++; cols++;
-
-   // stop the timer
-   *time = ( omp_get_wtime() - *time );
-   // return that the operation is successful
-   return true;
-}
-
+#include "Common.h"
 
 
 // cuda kernel A for the parallel implementation
@@ -273,6 +74,7 @@ __global__ void kernelA( int* seqX_gpu, int* seqY_gpu, int* score_gpu, int rows,
       el(score_gpu,cols, i,j) = elem;
    }
 }
+
 
 // cuda kernel B for the parallel implementation
 // +   calculates the score matrix in the gpu using the initialized score matrix from kernel A
@@ -414,8 +216,9 @@ __global__ void kernelB( int* score_gpu, int trows, int tcols, int insdelcost )
    }
 }
 
-// parallel implementation of the Needleman Wunsch algorithm
-bool Par( const int* seqX, const int* seqY, int* score, int rows, int cols, int adjrows, int adjcols, int insdelcost, float* time, float* ktime )
+
+// parallel gpu implementation of the Needleman Wunsch algorithm
+int GpuParallel1( const int* seqX, const int* seqY, int* score, int rows, int cols, int adjrows, int adjcols, int insdelcost, float* time, float* ktime )
 {
    // check if the given input is valid, if not return
    if( !seqX || !seqY || !score || !time || !ktime ) return false;
@@ -549,85 +352,5 @@ bool Par( const int* seqX, const int* seqY, int* score, int rows, int cols, int 
 
 
 
-
-
-// main program
-int main( int argc, char** argv )
-{
-   fflush(stdout);
-   if( argc != 3 ) Usage( argv );
-
-   // number of rows, number of columns and insdelcost
-   int rows = atoi( argv[1] );
-   int cols = rows;
-   int insdelcost = atoi( argv[2] );
-   // add the padding (zeroth row and column) to the matrix
-   rows++; cols++;
-   // if the number of columns is less than the number of rows, swap them
-   if( cols < rows ) { int temp = cols; cols = rows; rows = temp; }
-
-   // adjusted matrix dimensions
-   // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile B size (in order to be evenly divisible)
-   int adjrows = 1 + tileBy*ceil( float( rows-1 )/tileBy );
-   int adjcols = 1 + tileBx*ceil( float( cols-1 )/tileBx );
-
-   // allocate memory for the sequences which will be compared and the score matrix
-   int* const seqX  = ( int* ) malloc( adjcols * sizeof( int ) );
-   int* const seqY  = ( int* ) malloc( adjrows * sizeof( int ) );
-   int* const score = ( int* ) malloc( adjrows*adjcols * sizeof( int ) );
-
-   // if memory hasn't been allocated
-   if( !seqX || !seqY || !score )
-   {
-      fprintf(stderr, "Error: memory allocation failed\n");
-      fflush(stderr);
-
-      // free allocated memory
-      free( seqX ); free( seqY ); free( score );
-      exit(1);
-   }
-
-   // seed the random generator
-// unsigned int seed = time( NULL );
-   unsigned int seed = 1605868371;
-   srand( seed );
-
-   // initialize the sequences A and B to random values in the range [1-10]
-   // +   also initialize the padding with zeroes
-   seqX[0] = 0;
-   seqY[0] = 0;
-   for( int j = 1; j < adjcols; j++ ) seqX[j] = ( j < cols ) ? 1 + rand() % 10 : 0;
-   for( int i = 1; i < adjrows; i++ ) seqY[i] = ( i < rows ) ? 1 + rand() % 10 : 0;
-
-   // variables for measuring the algorithms' cpu execution time and kernel execution time
-   float htime = 0, ktime = 0;
-   // variables for storing the calculation hashes
-   unsigned hash1 = 10, hash2 = 20;
-
-   // use the Needleman-Wunsch algorithm to find the optimal matching between the input vectors
-   // +   sequential implementation
-   printf("Sequential implementation:\n" );
-   Seq( seqX, seqY, score, rows, cols, adjrows, adjcols, insdelcost, &htime );
-   Traceback( "needle.out1.txt", score, rows, cols, adjrows, adjcols, &hash1 );
-   printf("   hash=%10u\n", hash1 );
-   printf("   time=%9.6fs\n", htime );
-   fflush(stdout);
-   
-   // +   parallel implementation
-   printf("Parallel implementation:\n" );
-   Par( seqX, seqY, score, rows, cols, adjrows, adjcols, insdelcost, &htime, &ktime );
-   Traceback( "needle.out2.txt", score, rows, cols, adjrows, adjcols, &hash2 );
-   printf("   hash=%10u\n", hash2 );
-   printf("   time=%9.6fs ktime=%9.6fs\n", htime, ktime );
-   fflush(stdout);
-
-   // +   compare the implementations
-   if( hash1 == hash2 ) printf( "TEST PASSED\n" );
-   else                 printf( "TEST FAILED\n" );
-   fflush(stdout);
-
-   // free allocated memory
-   free( seqX ); free( seqY );
-}
 
 
