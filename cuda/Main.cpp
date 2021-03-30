@@ -6,6 +6,7 @@
 */
 
 #include <string>
+#include <time.h>
 #include "Common.h"
 // #define INT_MAX +2147483647
 // #define INT_MIN -2147483648
@@ -112,8 +113,8 @@ int main( int argc, char** argv )
    }
 
    // seed the random generator
-// unsigned int seed = time( NULL );
-   unsigned int seed = 1605868371;
+   unsigned int seed = time( NULL );
+// unsigned int seed = 1605868371;
    srand( seed );
 
    // initialize the sequences A and B to random values in the range [1-10]
