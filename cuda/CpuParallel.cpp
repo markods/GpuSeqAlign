@@ -7,6 +7,14 @@
 // parallel cpu implementation of the Needleman Wunsch algorithm
 int CpuParallel( const int* seqX, const int* seqY, int* score, int rows, int cols, int adjrows, int adjcols, int insdelcost, float* time )
 {
+   // check if the given input is valid, if not return
+   if( !seqX || !seqY || !score || !time ) return false;
+   if( rows <= 1 || cols <= 1 ) return false;
+
+   // start the timer
+   *time = omp_get_wtime();
+
+
    // skip the first row and first column in the next calculations
    rows--; cols--;
 
@@ -14,9 +22,9 @@ int CpuParallel( const int* seqX, const int* seqY, int* score, int rows, int col
    #pragma omp parallel
    {
       #pragma omp for schedule( static ) nowait
-      for( int i = 0; i < 1+rows; i++ ) el(score,cols, i,0) = -i*insdelcost;
+      for( int i = 0; i < 1+rows; i++ ) el(score,adjcols, i,0) = -i*insdelcost;
       #pragma omp for schedule( static )
-      for( int j = 0; j < 1+cols; j++ ) el(score,cols, 0,j) = -j*insdelcost;
+      for( int j = 0; j < 1+cols; j++ ) el(score,adjcols, 0,j) = -j*insdelcost;
 
       #pragma omp single
       {
@@ -54,7 +62,7 @@ int CpuParallel( const int* seqX, const int* seqY, int* score, int rows, int col
             for( int i = ibeg; i < iend; i++ )
             for( int j = jbeg; j < jend; j++ )
             {
-               UpdateScore( seqX, seqY, score, rows, cols, insdelcost, i, j );
+               UpdateScore( seqX, seqY, score, adjrows, adjcols, insdelcost, i, j );
             }
          }
       }
@@ -62,4 +70,14 @@ int CpuParallel( const int* seqX, const int* seqY, int* score, int rows, int col
 
    // restore the original row and column count
    rows++; cols++;
+
+   // stop the timer
+   *time = ( omp_get_wtime() - *time );
+   // return that the operation is successful
+   return true;
 }
+
+
+
+
+
