@@ -3,6 +3,7 @@
 **/.bin
 **/.vs
 
+*.pdf
 *.zip
 # *.jpg
 # *.png
