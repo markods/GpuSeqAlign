@@ -1,8 +1,8 @@
 /*
-./needle.exe 2048 10
-./needle.exe 6144 10
-./needle.exe 16384 10
-./needle.exe 22528 10
+./build -run 2048 10
+./build -run 6144 10
+./build -run 16384 10
+./build -run 22528 10
 */
 
 #include <string>

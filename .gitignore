@@ -1,6 +1,6 @@
 ### My rules ###
----/
-**/.bin
+**/!docs
+**/build
 **/.vs
 
 *.pdf
