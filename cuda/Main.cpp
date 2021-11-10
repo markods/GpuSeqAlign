@@ -15,9 +15,9 @@
 // call in case of invalid command line arguments
 void Usage( char* argv[] )
 {
-   fprintf(stderr, "Usage: %s <rows=cols> <insdelcost>\n", argv[0]);
-   fprintf(stderr, "\t<dimension>      - x and y dimensions\n");
-   fprintf(stderr, "\t<insdelcost>     - insert and delete cost (positive integer)\n");
+   fprintf(stderr, "nw dim [cost]\n", argv[0]);
+   fprintf(stderr, "   dim   - square matrix dimensions\n");
+   fprintf(stderr, "   cost  - insert and delete cost (positive integer)\n");
    fflush(stderr);
    exit(0);
 }
@@ -127,13 +127,13 @@ int main( int argc, char** argv )
    // variables for measuring the algorithms' cpu execution time and kernel execution time
    float htime = 0, ktime = 0;
    // variables for storing the calculation hashes
-   unsigned hash1 = 10, hash2 = 20, hash3 = 30;
+   unsigned hash1 = 10, hash2 = 20, hash3 = 30, hash4 = 40;
 
    // use the Needleman-Wunsch algorithm to find the optimal matching between the input vectors
    // +   sequential cpu implementation
    printf("Sequential cpu implementation:\n" );
    CpuSequential( seqX, seqY, score, rows, cols, adjrows, adjcols, insdelcost, &htime );
-   Traceback( "needle.out1.txt", score, rows, cols, adjrows, adjcols, &hash1 );
+   Traceback( "nw.out1.txt", score, rows, cols, adjrows, adjcols, &hash1 );
    printf("   hash=%10u\n", hash1 );
    printf("   time=%9.6fs\n", htime );
    fflush(stdout);
@@ -141,22 +141,30 @@ int main( int argc, char** argv )
    // +   parallel cpu implementation
    printf("Parallel cpu implementation:\n" );
    CpuParallel( seqX, seqY, score, rows, cols, adjrows, adjcols, insdelcost, &htime );
-   Traceback( "needle.out2.txt", score, rows, cols, adjrows, adjcols, &hash2 );
+   Traceback( "nw.out2.txt", score, rows, cols, adjrows, adjcols, &hash2 );
    printf("   hash=%10u\n", hash2 );
    printf("   time=%9.6fs\n", htime );
    fflush(stdout);
 
    // +   parallel gpu implementation
-   printf("Parallel gpu implementation:\n" );
+   printf("Parallel gpu implementation 1:\n" );
    GpuParallel1( seqX, seqY, score, rows, cols, adjrows, adjcols, insdelcost, &htime, &ktime );
-   Traceback( "needle.out3.txt", score, rows, cols, adjrows, adjcols, &hash3 );
+   Traceback( "nw.out3.txt", score, rows, cols, adjrows, adjcols, &hash3 );
    printf("   hash=%10u\n", hash3 );
    printf("   time=%9.6fs ktime=%9.6fs\n", htime, ktime );
    fflush(stdout);
 
+   // +   parallel gpu implementation
+   printf("Parallel gpu implementation 2:\n" );
+   GpuParallel2( seqX, seqY, score, rows, cols, adjrows, adjcols, insdelcost, &htime, &ktime );
+   Traceback( "nw.out4.txt", score, rows, cols, adjrows, adjcols, &hash4 );
+   printf("   hash=%10u\n", hash4 );
+   printf("   time=%9.6fs ktime=%9.6fs\n", htime, ktime );
+   fflush(stdout);
+
    // +   compare the implementations
-   if( hash1 == hash2 && hash2 == hash3 ) printf( "TEST PASSED\n" );
-   else                                   printf( "TEST FAILED\n" );
+   if( hash1 == hash2 && hash2 == hash3 && hash3 == hash4 ) printf( "TEST PASSED\n" );
+   else                                                     printf( "TEST FAILED\n" );
    fflush(stdout);
 
    // free allocated memory

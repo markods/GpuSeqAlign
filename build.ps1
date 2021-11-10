@@ -63,6 +63,7 @@ if( "-help" -in $args -or "--help" -in $args )
     Write-Output "";
     Write-Output "    -clean      cleans the project";
     Write-Output "    -build      builds the project";
+    Write-Output "      -debug    +   don't optimise and define the DEBUG symbol";
     Write-Output "";
     Write-Output "    -run        runs the compiled program";
     Write-Output "      ...       +   run arguments";
@@ -79,12 +80,24 @@ if( $args.count -eq 0 )
 }
 
 # calculate the "run" command's position in the argument list
+$BuildArgs = $null;
 $RunArgs = $null;
 
 if( $true )
 {
-    $RunArgs_Beg, $RunArgs_End = [array]::indexof( $args, "-run" ), $args.count;
-    $RunArgs = $args[ ($RunArgs_Beg + 1) .. ($RunArgs_End - 1) ];
+    $BuildArgs_Beg, $BuildArgs_End = [array]::indexof( $args, "-build" ), $args.count;
+    $RunArgs_Beg,   $RunArgs_End   = [array]::indexof( $args, "-run" ),   $args.count;
+
+    if( $BuildArgs_Beg -ge 0 )
+    {
+        if( $RunArgs_Beg    -ge 0 ) { $BuildArgs_End = $RunArgs_Beg; }
+
+        if( $BuildArgs_Beg + 1   -le   $BuildArgs_End - 1 ) { $CompileArgs = $args[ ($BuildArgs_Beg + 1) .. ($BuildArgs_End - 1) ]; }
+    }
+    if( $RunArgs_Beg -ge 0 )
+    {
+        if( $RunArgs_Beg + 1   -le   $RunArgs_End - 1 ) { $RunArgs = $args[ ($RunArgs_Beg + 1) .. ($RunArgs_End - 1) ]; }
+    }
 }
 
 # compilation target
@@ -101,7 +114,7 @@ if( "-clean" -in $args )
     if( Test-Path "./build" -PathType "Container" ) { Remove-Item "./build" -Recurse; }
 
     # print the build command
-    Write-Output "success"
+    Write-Output "Clean success"
     Write-Output ""
 }
 
@@ -121,23 +134,25 @@ if( "-build" -in $args )
     # if there aren't any source files, exit
     if( $SourceFiles.Count -eq 0 ) { "No source files given"; exit -1; }
 
+
+    # set the openmp flag for the compiler (visual studio c++ on windows or gcc on linux)
+    $Openmp = ( $isWindows ) ? '/openmp' : '-openmp';
+    # if debugging is requested, don't optimize the code
+    $Debug = ( '-debug' -in $args ) ? '-DDEBUG' : '-O2';
+
     # create the build command
     $BuildCmd = $null;
-    $BuildCmd = 'nvcc',          # call the nvidia c++ compiler wrapper
-        '-Xcompiler', '"',       # pass the string arguments to the underlying c++ compiler (msvc)
-            '/openmp',           # +   use openmp
-        '"',                     # 
-        '-Xptxas -v',            # show verbose cuda kernel compilation info
-        '-arch=sm_61',           # architecture - cuda 6.1
-        '-prec-sqrt true',       # use precise sqrt
-        '-maxrregcount 32',      # maximum registers available per thread
-        '--output-directory', './build';
-    
-    # if debugging is requested, don't optimize the code
-    $BuildCmd += ( '-Debug' -in $args ) ? '-DDEBUG' : '-O2';
+    $BuildCmd = 'nvcc',            # call the nvidia c++ compiler wrapper
+        '-Xcompiler', '"',         # pass the string arguments to the underlying c++ compiler (msvc)
+            "$Openmp",             # +   use openmp
+        '"',                       # 
+        '-Xptxas -v',              # show verbose cuda kernel compilation info
+        '-arch=sm_61',             # architecture - cuda 6.1
+        '-prec-sqrt true',         # use precise sqrt
+        '-maxrregcount 32',        # maximum registers available per thread
+        "$Debug",                  # define the debug symbol, or optimise code, depending on what is requested
+        '   -o "{0}" ' -f $Target; # add the output file name to the build command
 
-    # add the output file name to the build command
-    $BuildCmd += '   -o "{0}" ' -f $Target;
     # join the array of strings into a single string using the space character
     $BuildCmd = $BuildCmd -Join ' ';
     # append the source files to the command

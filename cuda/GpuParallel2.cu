@@ -218,7 +218,7 @@ __global__ static void kernelB( int* score_gpu, int trows, int tcols, int insdel
 
 
 // parallel gpu implementation of the Needleman Wunsch algorithm
-int GpuParallel1( const int* seqX, const int* seqY, int* score, int rows, int cols, int adjrows, int adjcols, int insdelcost, float* time, float* ktime )
+int GpuParallel2( const int* seqX, const int* seqY, int* score, int rows, int cols, int adjrows, int adjcols, int insdelcost, float* time, float* ktime )
 {
    // check if the given input is valid, if not return
    if( !seqX || !seqY || !score || !time || !ktime ) return false;
