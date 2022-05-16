@@ -168,7 +168,7 @@ int main( int argc, char** argv )
    fflush(stdout);
 
    // free allocated memory
-   free( seqX ); free( seqY );
+   free( seqX ); free( seqY ); free( score );
 }
 
 
