@@ -24,7 +24,7 @@ int CpuSequential( const int* seqX, const int* seqY, int* score, int rows, int c
    //  / / / . .
    //  / / . . .
    //  / . . . .
-   printf("   - processing top-left triangle + first diagonal of the score matrix\n");
+   // printf("   - processing top-left triangle + first diagonal of the score matrix\n");
    for( int s = 0; s < rows; s++ )
    for( int t = 0; t <= s; t++ )
    {
@@ -39,7 +39,7 @@ int CpuSequential( const int* seqX, const int* seqY, int* score, int rows, int c
    // if the matrix is not square shaped
    if( rows != cols )
    {
-      printf("   - processing all other diagonals of the score matrix\n");
+      // printf("   - processing all other diagonals of the score matrix\n");
       for( int s = rows; s < cols; s++ )
       for( int t = 0; t <= rows-1; t++ )
       {
@@ -52,7 +52,7 @@ int CpuSequential( const int* seqX, const int* seqY, int* score, int rows, int c
    //  . . . . .|/ /
    //  . . . . /|/
    //  . . . / /|
-   printf("   - processing bottom-right triangle of the score matrix\n");
+   // printf("   - processing bottom-right triangle of the score matrix\n");
    for( int s = cols; s < cols-1 + rows; s++ )
    for( int t = s-cols+1; t <= rows-1; t++ )
    {

@@ -79,9 +79,7 @@ int CpuSequential( const int* seqX, const int* seqY, int* score, int rows, int c
 // parallel cpu implementation of the Needleman Wunsch algorithm
 int CpuParallel( const int* seqX, const int* seqY, int* score, int rows, int cols, int adjrows, int adjcols, int insdelcost, float* time );
 // parallel implementation of the Needleman Wunsch algorithm (fast)
-int GpuParallel1( const int* seqX, const int* seqY, int* score, int rows, int cols, int adjrows, int adjcols, int insdelcost, float* time, float* ktime );
-// parallel implementation of the Needleman Wunsch algorithm (medium)
-int GpuParallel2( const int* seqX, const int* seqY, int* score, int rows, int cols, int adjrows, int adjcols, int insdelcost, float* time, float* ktime );
+int GpuParallel( const int* seqX, const int* seqY, int* score, int rows, int cols, int adjrows, int adjcols, int insdelcost, float* time, float* ktime );
 
 
 

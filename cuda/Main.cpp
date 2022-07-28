@@ -26,7 +26,7 @@ void Usage( char* argv[] )
 // print one of the optimal matching paths to a file
 void Traceback( const char* fname, int* score, int rows, int cols, int adjrows, int adjcols, unsigned* _hash )
 {
-   printf("   - printing traceback\n");
+   // printf("   - printing traceback\n");
    
    // if the given file and matrix are null, or the matrix is the wrong size, return
    if( !fname || !score ) return;
@@ -77,7 +77,7 @@ void Traceback( const char* fname, int* score, int rows, int cols, int adjrows, 
 
 
 // main program
-int main( int argc, char** argv )
+int main( int argc, char *argv[] )
 {
    fflush(stdout);
    if( argc != 3 ) Usage( argv );
@@ -127,7 +127,7 @@ int main( int argc, char** argv )
    // variables for measuring the algorithms' cpu execution time and kernel execution time
    float htime = 0, ktime = 0;
    // variables for storing the calculation hashes
-   unsigned hash1 = 10, hash2 = 20, hash3 = 30, hash4 = 40;
+   unsigned hash1 = 10, hash2 = 20, hash3 = 30;
 
    // use the Needleman-Wunsch algorithm to find the optimal matching between the input vectors
    // +   sequential cpu implementation
@@ -147,24 +147,16 @@ int main( int argc, char** argv )
    fflush(stdout);
 
    // +   parallel gpu implementation
-   printf("Parallel gpu implementation 1:\n" );
-   GpuParallel1( seqX, seqY, score, rows, cols, adjrows, adjcols, insdelcost, &htime, &ktime );
+   printf("Parallel gpu implementation:\n" );
+   GpuParallel( seqX, seqY, score, rows, cols, adjrows, adjcols, insdelcost, &htime, &ktime );
    Traceback( "nw.out3.txt", score, rows, cols, adjrows, adjcols, &hash3 );
    printf("   hash=%10u\n", hash3 );
    printf("   time=%9.6fs ktime=%9.6fs\n", htime, ktime );
    fflush(stdout);
 
-   // +   parallel gpu implementation
-   printf("Parallel gpu implementation 2:\n" );
-   GpuParallel2( seqX, seqY, score, rows, cols, adjrows, adjcols, insdelcost, &htime, &ktime );
-   Traceback( "nw.out4.txt", score, rows, cols, adjrows, adjcols, &hash4 );
-   printf("   hash=%10u\n", hash4 );
-   printf("   time=%9.6fs ktime=%9.6fs\n", htime, ktime );
-   fflush(stdout);
-
    // +   compare the implementations
-   if( hash1 == hash2 && hash2 == hash3 && hash3 == hash4 ) printf( "TEST PASSED\n" );
-   else                                                     printf( "TEST FAILED\n" );
+   if( hash1 == hash2 && hash2 == hash3 && hash3 ) printf( "TEST PASSED\n" );
+   else                                            printf( "TEST FAILED\n" );
    fflush(stdout);
 
    // free allocated memory

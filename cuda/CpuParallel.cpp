@@ -28,7 +28,7 @@ int CpuParallel( const int* seqX, const int* seqY, int* score, int rows, int col
 
       #pragma omp single
       {
-         printf("   - processing score matrix in a blocky diagonal fashion\n");
+         // printf("   - processing score matrix in a blocky diagonal fashion\n");
       }
       
       // size of block that will be a unit of work
