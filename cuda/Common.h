@@ -93,30 +93,26 @@ struct NWArgs
 // results that the Needleman-Wunsch algorithm variants return
 struct NWResult
 {
-   const char* algname = "alg";
-   const char* fpath = "./out.txt";
-   unsigned hash = 0;
-   
    float Tcpu = 0;
    float Tgpu = 0;
+   unsigned hash = 0;
 };
 
-// Needleman-Wunsch template algorithm
-template<typename T>
-class NWVariant
+
+struct NWVariant
 {
-public:
+   using NWVariantFnPtr = void (*)( NWArgs& args, NWResult& res );
+
+   NWVariantFnPtr foo = nullptr;
+   const char* algname = "alg";
+   const char* fpath = "./out.txt";
+
    void run( NWArgs& args, NWResult& res )
    {
-      static_cast<T*>( this )->impl( args );
+      foo( args, res );
    }
-
-   // define the actual implementation in subclasses
-// void impl() = 0;
 };
 
-
-using Variant = void (*)( NWArgs& args, NWResult& res );
 
 
 

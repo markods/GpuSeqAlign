@@ -1,6 +1,5 @@
-#include <cstdio>
+#include <chrono>
 #include <cooperative_groups.h>
-#include "omp.h"
 #include "Common.h"
 
 // stream used through the rest of the program
@@ -236,7 +235,7 @@ __global__ static void kernelB( int* score_gpu, int trows, int tcols, int insdel
 void GpuParallel( NWArgs& nw, NWResult& res )
 {
    // start the host timer and initialize the gpu timer
-   res.Tcpu = omp_get_wtime();
+   auto Tcpu1 = std::chrono::system_clock::now();
    res.Tgpu = 0;
 
    // blosum matrix, sequences which will be compared and the score matrix stored in gpu global memory
@@ -344,8 +343,9 @@ void GpuParallel( NWArgs& nw, NWResult& res )
    // +   waits for the device to finish, then copies data from device to host
    cudaMemcpy( nw.score, score_gpu, nw.adjrows*nw.adjcols * sizeof( int ), cudaMemcpyDeviceToHost );
 
-   // stop the timer
-   res.Tcpu = ( omp_get_wtime() - res.Tcpu );
+   // stop the cpu timer
+   auto Tcpu2 = std::chrono::system_clock::now();
+   res.Tcpu = std::chrono::duration_cast<std::chrono::milliseconds>( Tcpu2 - Tcpu1 ).count() / 1000.;
 
    
    // free allocated space in the gpu global memory

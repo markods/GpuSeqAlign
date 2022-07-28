@@ -5,8 +5,9 @@
 ./build -run 22528 22528 10
 */
 
+#include <cstdio>
 #include <string>
-#include <time.h>
+#include <ctime>
 #include "Common.h"
 // #define INT_MAX +2147483647
 // #define INT_MIN -2147483648
@@ -49,12 +50,12 @@ void Usage( char* argv[] )
 
 
 // print one of the optimal matching paths to a file
-void Traceback( NWArgs& nw, NWResult& res )
+void Traceback( NWVariant& variant, NWArgs& nw, NWResult& res )
 {
    // printf("   - printing traceback\n");
    
    // try to open the file with the given name, return if unsuccessful
-   FILE *fout = fopen( res.fpath, "w" );
+   FILE *fout = fopen( variant.fpath, "w" );
    if( !fout ) return;
    
    // variable used to calculate the hash function
@@ -94,13 +95,13 @@ void Traceback( NWArgs& nw, NWResult& res )
    res.hash = hash;
 }
 
-void RunVariant( Variant fpVariant, NWArgs& args, NWResult& res )
+void RunVariant( NWVariant& variant, NWArgs& args, NWResult& res )
 {
-   printf("%-20s:   ", res.algname );
+   printf("%-20s:   ", variant.algname );
    fflush( stdout );
 
-   fpVariant( args, res );
-   Traceback( args, res );
+   variant.foo( args, res );
+   Traceback( variant, args, res );
    
    printf("hash=%10u   Tcpu=%6.3fs   Tgpu=%6.3fs\n", res.hash, res.Tcpu, res.Tgpu );
    fflush( stdout );
@@ -163,6 +164,11 @@ int main( int argc, char *argv[] )
    // if the test was successful
    bool success = true;
 
+   NWVariant
+      alg1 { CpuSequential, "Cpu sequential", "./alg1-cpu-seq.out.txt" },
+      alg2 { CpuParallel,   "Cpu parallel",   "./alg2-cpu-par.out.txt" },
+      alg3 { GpuParallel,   "Gpu parallel",   "./alg3-gpu-par.out.txt" };
+
    NWArgs nw {
       seqX,
       seqY,
@@ -177,21 +183,21 @@ int main( int argc, char *argv[] )
    };
 
    NWResult
-      res1 { "Cpu sequential", "./alg1-cpu-seq.out.txt" },
-      res2 { "Cpu parallel",   "./alg2-cpu-par.out.txt" },
-      res3 { "Gpu parallel",   "./alg3-gpu-par.out.txt" };
+      res1 {},
+      res2 {},
+      res3 {};
 
    // use the Needleman-Wunsch algorithm to find the optimal matching between the input vectors
    // +   sequential cpu implementation
-   RunVariant( CpuSequential, nw, res1 );
+   RunVariant( alg1, nw, res1 );
    prevhash = res1.hash;
 
    // +   parallel cpu implementation
-   RunVariant( CpuParallel, nw, res2 );
+   RunVariant( alg2, nw, res2 );
    if( res2.hash != prevhash ) success = false;
 
    // +   parallel gpu implementation
-   RunVariant( GpuParallel, nw, res3 );
+   RunVariant( alg3, nw, res3 );
    if( res3.hash != prevhash ) success = false;
 
    // +   compare the implementations

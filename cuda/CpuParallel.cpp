@@ -1,6 +1,4 @@
-#include <cstdio>
-#include <cmath>
-#include "omp.h"
+#include <chrono>
 #include "Common.h"
 
 
@@ -8,7 +6,7 @@
 void CpuParallel( NWArgs& nw, NWResult& res )
 {
    // start the timer
-   res.Tcpu = omp_get_wtime();
+   auto Tcpu1 = std::chrono::system_clock::now();
 
 
    // skip the first row and first column in the next calculations
@@ -68,7 +66,8 @@ void CpuParallel( NWArgs& nw, NWResult& res )
    nw.rows++; nw.cols++;
 
    // stop the timer
-   res.Tcpu = ( omp_get_wtime() - res.Tcpu );
+   auto Tcpu2 = std::chrono::system_clock::now();
+   res.Tcpu = std::chrono::duration_cast<std::chrono::milliseconds>( Tcpu2 - Tcpu1 ).count() / 1000.;
 }
 
 
