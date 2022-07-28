@@ -1,25 +1,8 @@
-// missing cpp file on purpose, since whole program optimization is disabled
+// missing Common.cpp file on purpose, since whole program optimization is disabled
 #pragma once
-
-
-// stream used through the rest of the program
-#define STREAM_ID 0
-// number of streaming multiprocessors (sm-s) and cores per sm
-#define MPROCS 28
-#define CORES 128
-// number of threads in warp
-#define WARPSZ 32
-// tile sizes for kernels A and B
-// +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
-// +   tile B must have one dimension fixed to the number of threads in a warp
-const int tileAx = 1*WARPSZ;
-const int tileAy = 32;
-const int tileBx = 60;
-const int tileBy = WARPSZ;
 
 // get the specified element from the given linearized matrix
 #define el( mat, cols, i, j ) ( mat[(i)*(cols) + (j)] )
-
 
 // block substitution matrix
 #define BLOSUMSZ 24
@@ -51,35 +34,92 @@ static int blosum62[BLOSUMSZ][BLOSUMSZ] =
    { -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4,  1 }
 };
 
+// TODO: test performance of min2, max2 and max3 without branching
+// +   https://docs.nvidia.com/cuda/parallel-thread-execution/index.html
 
-// calculate the maximum of two numbers
-[[nodiscard]] constexpr const int& max2( const int& a, const int& b ) noexcept { return ( a >= b ) ? a : b; }
 // calculate the minimum of two numbers
-[[nodiscard]] constexpr const int& min2( const int& a, const int& b ) noexcept { return ( a < b ) ? a : b; }
+inline const int& min2( const int& a, const int& b ) noexcept
+{
+   return ( a < b ) ? a : b;
+}
+// calculate the maximum of two numbers
+inline const int& max2( const int& a, const int& b ) noexcept
+{
+   return ( a >= b ) ? a : b;
+}
 // calculate the maximum of three numbers
-[[nodiscard]] constexpr const int& max3( const int& a, const int& b, const int& c ) noexcept
+inline const int& max3( const int& a, const int& b, const int& c ) noexcept
 {
    if( a >= b ) { return ( a >= c ) ? a : c; }
    else         { return ( b >= c ) ? b : c; }
 }
 
-
 // update the score given the current score matrix and position
-inline void UpdateScore( const int* seqX, const int* seqY, int* score, int rows, int cols, int insdelcost, int i, int j )
+inline void UpdateScore(
+   const int* const seqX,
+   const int* const seqY,
+   int* const score,
+   const int rows,
+   const int cols,
+   const int insdelcost,
+   const int i,
+   const int j )
+   noexcept
 {
-   int p1 = el(score,cols, i-1,j-1) + blosum62[ seqY[i] ][ seqX[j] ];
-   int p2 = el(score,cols, i-1,j  ) - insdelcost;
-   int p3 = el(score,cols, i  ,j-1) - insdelcost;
+   const int p1 = el(score,cols, i-1,j-1) + blosum62[ seqY[i] ][ seqX[j] ];
+   const int p2 = el(score,cols, i-1,j  ) - insdelcost;
+   const int p3 = el(score,cols, i  ,j-1) - insdelcost;
    el(score,cols, i,j) = max3( p1, p2, p3 );
 }
 
 
-// sequential implementation of the Needleman Wunsch algorithm
-int CpuSequential( const int* seqX, const int* seqY, int* score, int rows, int cols, int adjrows, int adjcols, int insdelcost, float* time );
-// parallel cpu implementation of the Needleman Wunsch algorithm
-int CpuParallel( const int* seqX, const int* seqY, int* score, int rows, int cols, int adjrows, int adjcols, int insdelcost, float* time );
-// parallel implementation of the Needleman Wunsch algorithm (fast)
-int GpuParallel( const int* seqX, const int* seqY, int* score, int rows, int cols, int adjrows, int adjcols, int insdelcost, float* time, float* ktime );
+
+// arguments for the Needleman-Wunsch algorithm variants
+struct NWArgs
+{
+   const int* seqX = nullptr;
+   const int* seqY = nullptr;
+   
+   int* score = nullptr;
+   int rows = 0;
+   int cols = 0;
+
+   int adjrows = 0;
+   int adjcols = 0;
+
+   int insdelcost = 0;
+};
+
+// results that the Needleman-Wunsch algorithm variants return
+struct NWResult
+{
+   const char* algname = "alg";
+   const char* fpath = "./out.txt";
+   unsigned hash = 0;
+   
+   float Tcpu = 0;
+   float Tgpu = 0;
+};
+
+// Needleman-Wunsch template algorithm
+template<typename T>
+class NWVariant
+{
+public:
+   void run( NWArgs& args, NWResult& res )
+   {
+      static_cast<T*>( this )->impl( args );
+   }
+
+   // define the actual implementation in subclasses
+// void impl() = 0;
+};
+
+
+using Variant = void (*)( NWArgs& args, NWResult& res );
+
+
+
 
 
 

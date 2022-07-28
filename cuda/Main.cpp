@@ -1,8 +1,8 @@
 /*
-./build -run 2048 10
-./build -run 6144 10
-./build -run 16384 10
-./build -run 22528 10
+./build -run  2048  2048 10
+./build -run  6144  6144 10
+./build -run 16384 16384 10
+./build -run 22528 22528 10
 */
 
 #include <string>
@@ -11,28 +11,50 @@
 // #define INT_MAX +2147483647
 // #define INT_MIN -2147483648
 
+// stream used through the rest of the program
+#define STREAM_ID 0
+// number of streaming multiprocessors (sm-s) and cores per sm
+#define MPROCS 28
+#define CORES 128
+// number of threads in warp
+#define WARPSZ 32
+// tile sizes for kernels A and B
+// +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
+// +   tile B must have one dimension fixed to the number of threads in a warp
+const int tileAx = 1*WARPSZ;
+const int tileAy = 32;
+const int tileBx = 60;
+const int tileBy = WARPSZ;
+
+
+// sequential implementation of the Needleman Wunsch algorithm
+void CpuSequential( NWArgs& nw, NWResult& res );
+// parallel cpu implementation of the Needleman Wunsch algorithm
+void CpuParallel( NWArgs& nw, NWResult& res );
+// parallel implementation of the Needleman Wunsch algorithm (fast)
+void GpuParallel( NWArgs& nw, NWResult& res );
+
 
 // call in case of invalid command line arguments
 void Usage( char* argv[] )
 {
-   fprintf(stderr, "nw dim [cost]\n", argv[0]);
-   fprintf(stderr, "   dim   - square matrix dimensions\n");
-   fprintf(stderr, "   cost  - insert and delete cost (positive integer)\n");
-   fflush(stderr);
-   exit(0);
+   fprintf( stderr,
+      "nw m n [cost]\n"
+      "   m    - length of the first sequence\n"
+      "   n    - length of the second sequence\n"
+      "   cost - insert and delete cost (positive integer)\n" );
+   fflush( stderr );
+   exit( 0 );
 }
 
 
 // print one of the optimal matching paths to a file
-void Traceback( const char* fname, int* score, int rows, int cols, int adjrows, int adjcols, unsigned* _hash )
+void Traceback( NWArgs& nw, NWResult& res )
 {
    // printf("   - printing traceback\n");
    
-   // if the given file and matrix are null, or the matrix is the wrong size, return
-   if( !fname || !score ) return;
-   if( rows <= 0 || cols <= 0 ) return;
    // try to open the file with the given name, return if unsuccessful
-   FILE *fout = fopen( fname, "w" );
+   FILE *fout = fopen( res.fpath, "w" );
    if( !fout ) return;
    
    // variable used to calculate the hash function
@@ -42,19 +64,19 @@ void Traceback( const char* fname, int* score, int rows, int cols, int adjrows, 
 
    // for all elements on one of the optimal paths
    bool loop = true;
-   for( int i = rows-1, j = cols-1;  loop;  )
+   for( int i = nw.rows-1, j = nw.cols-1;  loop;  )
    {
       // print the current element
-      fprintf( fout, "%d\n", el(score,adjcols, i,j) );
+      fprintf( fout, "%d\n", el(nw.score,nw.adjcols, i,j) );
       // add the current element to the hash
-      hash = ( ( hash<<5 ) + hash ) ^ el(score,adjcols, i,j);
+      hash = ( ( hash<<5 ) + hash ) ^ el(nw.score,nw.adjcols, i,j);
 
       int max = INT_MIN;   // maximum value of the up, left and diagonal neighbouring elements
       int dir = '-';       // the current movement direction is unknown
 
-      if( i > 0 && j > 0 && max < el(score,adjcols, i-1,j-1) ) { max = el(score,adjcols, i-1,j-1); dir = 'i'; }   // diagonal movement if possible
-      if( i > 0          && max < el(score,adjcols, i-1,j  ) ) { max = el(score,adjcols, i-1,j  ); dir = 'u'; }   // up       movement if possible
-      if(          j > 0 && max < el(score,adjcols, i  ,j-1) ) { max = el(score,adjcols, i  ,j-1); dir = 'l'; }   // left     movement if possible
+      if( i > 0 && j > 0 && max < el(nw.score,nw.adjcols, i-1,j-1) ) { max = el(nw.score,nw.adjcols, i-1,j-1); dir = 'i'; }   // diagonal movement if possible
+      if( i > 0          && max < el(nw.score,nw.adjcols, i-1,j  ) ) { max = el(nw.score,nw.adjcols, i-1,j  ); dir = 'u'; }   // up       movement if possible
+      if(          j > 0 && max < el(nw.score,nw.adjcols, i  ,j-1) ) { max = el(nw.score,nw.adjcols, i  ,j-1); dir = 'l'; }   // left     movement if possible
 
       // move to the neighbour with the maximum value
       switch( dir )
@@ -69,7 +91,19 @@ void Traceback( const char* fname, int* score, int rows, int cols, int adjrows, 
    // close the file handle
    fclose( fout );
    // save the hash value
-   *_hash = hash;
+   res.hash = hash;
+}
+
+void RunVariant( Variant fpVariant, NWArgs& args, NWResult& res )
+{
+   printf("%-20s:   ", res.algname );
+   fflush( stdout );
+
+   fpVariant( args, res );
+   Traceback( args, res );
+   
+   printf("hash=%10u   Tcpu=%6.3fs   Tgpu=%6.3fs\n", res.hash, res.Tcpu, res.Tgpu );
+   fflush( stdout );
 }
 
 
@@ -79,13 +113,13 @@ void Traceback( const char* fname, int* score, int rows, int cols, int adjrows, 
 // main program
 int main( int argc, char *argv[] )
 {
-   fflush(stdout);
-   if( argc != 3 ) Usage( argv );
+   fflush( stdout );
+   if( argc != 4 ) Usage( argv );
 
    // number of rows, number of columns and insdelcost
    int rows = atoi( argv[1] );
-   int cols = rows;
-   int insdelcost = atoi( argv[2] );
+   int cols = atoi( argv[2] );
+   int insdelcost = atoi( argv[3] );
    // add the padding (zeroth row and column) to the matrix
    rows++; cols++;
    // if the number of columns is less than the number of rows, swap them
@@ -124,39 +158,45 @@ int main( int argc, char *argv[] )
    for( int j = 1; j < adjcols; j++ ) seqX[j] = ( j < cols ) ? 1 + rand() % 10 : 0;
    for( int i = 1; i < adjrows; i++ ) seqY[i] = ( i < rows ) ? 1 + rand() % 10 : 0;
 
-   // variables for measuring the algorithms' cpu execution time and kernel execution time
-   float htime = 0, ktime = 0;
    // variables for storing the calculation hashes
-   unsigned hash1 = 10, hash2 = 20, hash3 = 30;
+   unsigned prevhash = 10;
+   // if the test was successful
+   bool success = true;
+
+   NWArgs nw {
+      seqX,
+      seqY,
+      score,
+      rows,
+      cols,
+
+      adjrows,
+      adjcols,
+
+      insdelcost,
+   };
+
+   NWResult
+      res1 { "Cpu sequential", "./alg1-cpu-seq.out.txt" },
+      res2 { "Cpu parallel",   "./alg2-cpu-par.out.txt" },
+      res3 { "Gpu parallel",   "./alg3-gpu-par.out.txt" };
 
    // use the Needleman-Wunsch algorithm to find the optimal matching between the input vectors
    // +   sequential cpu implementation
-   printf("Sequential cpu implementation:\n" );
-   CpuSequential( seqX, seqY, score, rows, cols, adjrows, adjcols, insdelcost, &htime );
-   Traceback( "nw.out1.txt", score, rows, cols, adjrows, adjcols, &hash1 );
-   printf("   hash=%10u\n", hash1 );
-   printf("   time=%9.6fs\n", htime );
-   fflush(stdout);
+   RunVariant( CpuSequential, nw, res1 );
+   prevhash = res1.hash;
 
    // +   parallel cpu implementation
-   printf("Parallel cpu implementation:\n" );
-   CpuParallel( seqX, seqY, score, rows, cols, adjrows, adjcols, insdelcost, &htime );
-   Traceback( "nw.out2.txt", score, rows, cols, adjrows, adjcols, &hash2 );
-   printf("   hash=%10u\n", hash2 );
-   printf("   time=%9.6fs\n", htime );
-   fflush(stdout);
+   RunVariant( CpuParallel, nw, res2 );
+   if( res2.hash != prevhash ) success = false;
 
    // +   parallel gpu implementation
-   printf("Parallel gpu implementation:\n" );
-   GpuParallel( seqX, seqY, score, rows, cols, adjrows, adjcols, insdelcost, &htime, &ktime );
-   Traceback( "nw.out3.txt", score, rows, cols, adjrows, adjcols, &hash3 );
-   printf("   hash=%10u\n", hash3 );
-   printf("   time=%9.6fs ktime=%9.6fs\n", htime, ktime );
-   fflush(stdout);
+   RunVariant( GpuParallel, nw, res3 );
+   if( res3.hash != prevhash ) success = false;
 
    // +   compare the implementations
-   if( hash1 == hash2 && hash2 == hash3 && hash3 ) printf( "TEST PASSED\n" );
-   else                                            printf( "TEST FAILED\n" );
+   if( success ) printf( "TEST PASSED\n" );
+   else          printf( "TEST FAILED\n" );
    fflush(stdout);
 
    // free allocated memory

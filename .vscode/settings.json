@@ -2,7 +2,6 @@
     "files.associations": {
         "*.json": "jsonc",
         "*.tcc": "c",
-    // "*.cu": "cpp",
         "complex": "cpp",
         "system_error": "cpp",
         "xlocale": "cpp",
@@ -46,6 +45,10 @@
         "xstring": "cpp",
         "xtr1common": "cpp",
         "xutility": "cpp",
+        "locale": "cpp",
+        "optional": "cpp",
+        "thread": "cpp",
+        "__threading_support": "cpp"
     },
     "peacock.color": "#832561",
     "workbench.colorCustomizations": {

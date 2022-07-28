@@ -3,6 +3,21 @@
 #include "omp.h"
 #include "Common.h"
 
+// stream used through the rest of the program
+#define STREAM_ID 0
+// number of streaming multiprocessors (sm-s) and cores per sm
+#define MPROCS 28
+#define CORES 128
+// number of threads in warp
+#define WARPSZ 32
+// tile sizes for kernels A and B
+// +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
+// +   tile B must have one dimension fixed to the number of threads in a warp
+const int tileAx = 1*WARPSZ;
+const int tileAy = 32;
+const int tileBx = 60;
+const int tileBy = WARPSZ;
+
 
 // cuda kernel A for the parallel implementation
 // +   initializes the score matrix in the gpu
@@ -218,26 +233,22 @@ __global__ static void kernelB( int* score_gpu, int trows, int tcols, int insdel
 
 
 // parallel gpu implementation of the Needleman Wunsch algorithm
-int GpuParallel( const int* seqX, const int* seqY, int* score, int rows, int cols, int adjrows, int adjcols, int insdelcost, float* time, float* ktime )
+void GpuParallel( NWArgs& nw, NWResult& res )
 {
-   // check if the given input is valid, if not return
-   if( !seqX || !seqY || !score || !time || !ktime ) return false;
-   if( rows <= 1 || cols <= 1 ) return false;
-
    // start the host timer and initialize the gpu timer
-   *time = omp_get_wtime();
-   *ktime = 0;
+   res.Tcpu = omp_get_wtime();
+   res.Tgpu = 0;
 
    // blosum matrix, sequences which will be compared and the score matrix stored in gpu global memory
    int *blosum62_gpu, *seqX_gpu, *seqY_gpu, *score_gpu;
    // allocate space in the gpu global memory
-   cudaMalloc( &seqX_gpu,     adjcols           * sizeof( int ) );
-   cudaMalloc( &seqY_gpu,     adjrows           * sizeof( int ) );
-   cudaMalloc( &score_gpu,    adjrows*adjcols   * sizeof( int ) );
-   cudaMalloc( &blosum62_gpu, BLOSUMSZ*BLOSUMSZ * sizeof( int ) );
+   cudaMalloc( &seqX_gpu,     nw.adjcols            * sizeof( int ) );
+   cudaMalloc( &seqY_gpu,     nw.adjrows            * sizeof( int ) );
+   cudaMalloc( &score_gpu,    nw.adjrows*nw.adjcols * sizeof( int ) );
+   cudaMalloc( &blosum62_gpu, BLOSUMSZ*BLOSUMSZ     * sizeof( int ) );
    // copy data from host to device
-	cudaMemcpy( seqX_gpu,     seqX,     adjcols           * sizeof( int ), cudaMemcpyHostToDevice );
-	cudaMemcpy( seqY_gpu,     seqY,     adjrows           * sizeof( int ), cudaMemcpyHostToDevice );
+	cudaMemcpy( seqX_gpu,     nw.seqX,     nw.adjcols     * sizeof( int ), cudaMemcpyHostToDevice );
+	cudaMemcpy( seqY_gpu,     nw.seqY,     nw.adjrows     * sizeof( int ), cudaMemcpyHostToDevice );
 	cudaMemcpy( blosum62_gpu, blosum62, BLOSUMSZ*BLOSUMSZ * sizeof( int ), cudaMemcpyHostToDevice );
    // create events for measuring kernel execution time
    cudaEvent_t start, stop;
@@ -252,8 +263,8 @@ int GpuParallel( const int* seqX, const int* seqY, int* score, int rows, int col
    {
       // calculate grid dimensions for kernel A
       dim3 gridA;
-      gridA.y = ceil( float( adjrows )/tileAy );
-      gridA.x = ceil( float( adjcols )/tileAx );
+      gridA.y = ceil( float( nw.adjrows )/tileAy );
+      gridA.x = ceil( float( nw.adjcols )/tileAx );
       // block dimensions for kernel A
       dim3 blockA { tileAx, tileAy };
       
@@ -261,7 +272,7 @@ int GpuParallel( const int* seqX, const int* seqY, int* score, int rows, int col
       // +   capture events around kernel launch as well
       // +   update the stop event when the kernel finishes
       cudaEventRecord( start, STREAM_ID );
-      kernelA<<< gridA, blockA, 0, STREAM_ID >>>( seqX_gpu, seqY_gpu, score_gpu, adjrows, adjcols, ( int (*)[BLOSUMSZ] )blosum62_gpu, insdelcost );
+      kernelA<<< gridA, blockA, 0, STREAM_ID >>>( seqX_gpu, seqY_gpu, score_gpu, nw.adjrows, nw.adjcols, ( int (*)[BLOSUMSZ] )blosum62_gpu, nw.insdelcost );
       cudaEventRecord( stop, STREAM_ID );
       cudaEventSynchronize( stop );
       
@@ -270,7 +281,7 @@ int GpuParallel( const int* seqX, const int* seqY, int* score, int rows, int col
       // calculate the time between the given events
       cudaEventElapsedTime( &ktimeA, start, stop );
       // update the total kernel execution time
-      *ktime += ktimeA;
+      res.Tgpu += ktimeA;
    }
    
    // wait for the gpu to finish before going to the next step
@@ -283,8 +294,8 @@ int GpuParallel( const int* seqX, const int* seqY, int* score, int rows, int col
       dim3 gridB;
       dim3 blockB;
       // the number of tiles per row and column of the score matrix
-      int trows = ceil( float( adjrows-1 )/tileBy );
-      int tcols = ceil( float( adjcols-1 )/tileBx );
+      int trows = ceil( float( nw.adjrows-1 )/tileBy );
+      int tcols = ceil( float( nw.adjcols-1 )/tileBx );
       
       // calculate grid and block dimensions for kernel B
       {
@@ -309,7 +320,7 @@ int GpuParallel( const int* seqX, const int* seqY, int* score, int rows, int col
       }
 
       // group arguments to be passed to kernel B
-      void* kargs[] { &score_gpu, &trows, &tcols, &insdelcost };
+      void* kargs[] { &score_gpu, &trows, &tcols, &nw.insdelcost };
       
       // launch the kernel in the given stream (don't statically allocate shared memory)
       // +   capture events around kernel launch as well
@@ -324,17 +335,17 @@ int GpuParallel( const int* seqX, const int* seqY, int* score, int rows, int col
       // calculate the time between the given events
       cudaEventElapsedTime( &ktimeB, start, stop );
       // update the total kernel execution time
-      *ktime += ktimeB;
+      res.Tgpu += ktimeB;
    }
 
    // wait for the gpu to finish before going to the next step
    cudaDeviceSynchronize();
    // save the calculated score matrix
    // +   waits for the device to finish, then copies data from device to host
-   cudaMemcpy( score, score_gpu, adjrows*adjcols * sizeof( int ), cudaMemcpyDeviceToHost );
+   cudaMemcpy( nw.score, score_gpu, nw.adjrows*nw.adjcols * sizeof( int ), cudaMemcpyDeviceToHost );
 
    // stop the timer
-   *time = ( omp_get_wtime() - *time );
+   res.Tcpu = ( omp_get_wtime() - res.Tcpu );
 
    
    // free allocated space in the gpu global memory
@@ -345,9 +356,6 @@ int GpuParallel( const int* seqX, const int* seqY, int* score, int rows, int col
    // free events' memory
    cudaEventDestroy( start );
    cudaEventDestroy( stop );
-
-   // return that the operation is successful
-   return true;
 }
 
 

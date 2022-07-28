@@ -5,26 +5,22 @@
 
 
 // parallel cpu implementation of the Needleman Wunsch algorithm
-int CpuParallel( const int* seqX, const int* seqY, int* score, int rows, int cols, int adjrows, int adjcols, int insdelcost, float* time )
+void CpuParallel( NWArgs& nw, NWResult& res )
 {
-   // check if the given input is valid, if not return
-   if( !seqX || !seqY || !score || !time ) return false;
-   if( rows <= 1 || cols <= 1 ) return false;
-
    // start the timer
-   *time = omp_get_wtime();
+   res.Tcpu = omp_get_wtime();
 
 
    // skip the first row and first column in the next calculations
-   rows--; cols--;
+   nw.rows--; nw.cols--;
 
    // initialize the first row and column of the score matrix
    #pragma omp parallel
    {
       #pragma omp for schedule( static ) nowait
-      for( int i = 0; i < 1+rows; i++ ) el(score,adjcols, i,0) = -i*insdelcost;
+      for( int i = 0; i < 1+nw.rows; i++ ) el(nw.score,nw.adjcols, i,0) = -i*nw.insdelcost;
       #pragma omp for schedule( static )
-      for( int j = 0; j < 1+cols; j++ ) el(score,adjcols, 0,j) = -j*insdelcost;
+      for( int j = 0; j < 1+nw.cols; j++ ) el(nw.score,nw.adjcols, 0,j) = -j*nw.insdelcost;
 
       #pragma omp single
       {
@@ -36,8 +32,8 @@ int CpuParallel( const int* seqX, const int* seqY, int* score, int rows, int col
       const int bsize = 8 * 64/*B*//sizeof( int );
       
       // number of blocks in a row and column (rounded up)
-      const int brows = ceil( 1.*rows / bsize );
-      const int bcols = ceil( 1.*cols / bsize );
+      const int brows = ceil( 1.*nw.rows / bsize );
+      const int bcols = ceil( 1.*nw.cols / bsize );
 
 
       //  / / / . .   +   . . . / /   +   . . . . .|/ /
@@ -55,26 +51,24 @@ int CpuParallel( const int* seqX, const int* seqY, int* score, int rows, int col
             int ibeg = 1 + (   t )*bsize;
             int jbeg = 1 + ( s-t )*bsize;
 
-            int iend = min2( ibeg + bsize, 1+rows );
-            int jend = min2( jbeg + bsize, 1+cols );
+            int iend = min2( ibeg + bsize, 1+nw.rows );
+            int jend = min2( jbeg + bsize, 1+nw.cols );
 
             // process the block
             for( int i = ibeg; i < iend; i++ )
             for( int j = jbeg; j < jend; j++ )
             {
-               UpdateScore( seqX, seqY, score, adjrows, adjcols, insdelcost, i, j );
+               UpdateScore( nw.seqX, nw.seqY, nw.score, nw.adjrows, nw.adjcols, nw.insdelcost, i, j );
             }
          }
       }
    }
 
    // restore the original row and column count
-   rows++; cols++;
+   nw.rows++; nw.cols++;
 
    // stop the timer
-   *time = ( omp_get_wtime() - *time );
-   // return that the operation is successful
-   return true;
+   res.Tcpu = ( omp_get_wtime() - res.Tcpu );
 }
 
 
