@@ -70,7 +70,8 @@
         "xlocmes": "cpp",
         "xlocmon": "cpp",
         "xloctime": "cpp",
-        "xtree": "cpp"
+        "xtree": "cpp",
+        "__config": "cpp"
     },
     "peacock.color": "#832561",
     "workbench.colorCustomizations": {

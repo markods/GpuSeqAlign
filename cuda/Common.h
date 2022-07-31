@@ -1,5 +1,8 @@
 // missing Common.cpp file on purpose, since whole program optimization is disabled
 #pragma once
+#include <chrono>
+#include <unordered_map>
+
 
 // get the specified element from the given linearized matrix
 #define el( mat, cols, i, j ) ( mat[(i)*(cols) + (j)] )
@@ -74,6 +77,65 @@ inline void UpdateScore(
 
 
 
+template< class Clock = std::chrono::system_clock, class Duration = std::chrono::milliseconds >
+class Stopwatch_t
+{
+public:
+   void startTimer() noexcept
+   {
+      if( isCounting ) {
+         stopTimer();
+      }
+      
+      start_tp = Clock::now();
+      laps.clear();
+      isCounting = true;
+   }
+
+   void addLap( std::string lapName )
+   {
+      if( !isCounting ) {
+         return;
+      }
+
+      laps.insert_or_assign( lapName, Clock::now() );
+   }
+
+   void stopTimer() noexcept
+   {
+      isCounting = false;
+   }
+
+
+   bool hasLap( std::string lapName )
+   {
+      return laps.end() != laps.find( lapName );
+   }
+
+   auto getLap( std::string lapName )
+   {
+      auto res = laps.find( lapName );
+      if( res == laps.end() ) {
+         return std::chrono::duration_values<Duration>::zero().count();
+      }
+
+      auto lap_tp = res->second;
+      auto lapTime = std::chrono::duration_cast<Duration>( lap_tp - start_tp ).count();
+      return lapTime;
+   }
+
+private:
+   using TimePoint = std::chrono::time_point<Clock>;
+   
+   TimePoint start_tp {};
+   std::unordered_map<std::string, TimePoint> laps {};
+   bool isCounting {};
+};
+
+using Stopwatch = Stopwatch_t<>;
+
+
+
 // arguments for the Needleman-Wunsch algorithm variants
 struct NWArgs
 {
@@ -101,15 +163,15 @@ struct NWResult
 
 struct NWVariant
 {
-   using NWVariantFnPtr = void (*)( NWArgs& args, NWResult& res );
+   using NWVariantFnPtr = void (*)( NWArgs& args, NWResult& res, Stopwatch& sw );
 
    NWVariantFnPtr foo = nullptr;
    const char* algname = "alg";
    const char* fpath = "./out.txt";
 
-   void run( NWArgs& args, NWResult& res )
+   void run( NWArgs& args, NWResult& res, Stopwatch& sw )
    {
-      foo( args, res );
+      foo( args, res, sw );
    }
 };
 

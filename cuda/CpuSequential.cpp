@@ -3,10 +3,10 @@
 
 
 // sequential cpu implementation of the Needleman Wunsch algorithm
-void CpuSequential( NWArgs& nw, NWResult& res )
+void CpuSequential( NWArgs& nw, NWResult& res, Stopwatch& sw )
 {
    // start the timer
-   auto Tcpu1 = std::chrono::system_clock::now();
+   sw.startTimer();
 
 
    // skip the first row and first column in the next calculation
@@ -60,8 +60,9 @@ void CpuSequential( NWArgs& nw, NWResult& res )
    nw.rows++; nw.cols++;
 
    // stop the timer
-   auto Tcpu2 = std::chrono::system_clock::now();
-   res.Tcpu = std::chrono::duration_cast<std::chrono::milliseconds>( Tcpu2 - Tcpu1 ).count() / 1000.;
+   sw.addLap( "Tcpu" );
+   sw.stopTimer();
+   res.Tcpu = sw.getLap( "Tcpu" ) / 1000.;
 }
 
 

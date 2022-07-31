@@ -232,10 +232,10 @@ __global__ static void kernelB( int* score_gpu, int trows, int tcols, int insdel
 
 
 // parallel gpu implementation of the Needleman Wunsch algorithm
-void GpuParallel( NWArgs& nw, NWResult& res )
+void GpuParallel( NWArgs& nw, NWResult& res, Stopwatch& sw )
 {
    // start the host timer and initialize the gpu timer
-   auto Tcpu1 = std::chrono::system_clock::now();
+   sw.startTimer();
    res.Tgpu = 0;
 
    // blosum matrix, sequences which will be compared and the score matrix stored in gpu global memory
@@ -344,8 +344,9 @@ void GpuParallel( NWArgs& nw, NWResult& res )
    cudaMemcpy( nw.score, score_gpu, nw.adjrows*nw.adjcols * sizeof( int ), cudaMemcpyDeviceToHost );
 
    // stop the cpu timer
-   auto Tcpu2 = std::chrono::system_clock::now();
-   res.Tcpu = std::chrono::duration_cast<std::chrono::milliseconds>( Tcpu2 - Tcpu1 ).count() / 1000.;
+   sw.addLap( "Tcpu" );
+   sw.stopTimer();
+   res.Tcpu = sw.getLap( "Tcpu" ) / 1000.;
 
    
    // free allocated space in the gpu global memory

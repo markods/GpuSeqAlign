@@ -29,11 +29,11 @@ const int tileBy = WARPSZ;
 
 
 // sequential implementation of the Needleman Wunsch algorithm
-void CpuSequential( NWArgs& nw, NWResult& res );
+void CpuSequential( NWArgs& nw, NWResult& res, Stopwatch& sw );
 // parallel cpu implementation of the Needleman Wunsch algorithm
-void CpuParallel( NWArgs& nw, NWResult& res );
+void CpuParallel( NWArgs& nw, NWResult& res, Stopwatch& sw );
 // parallel implementation of the Needleman Wunsch algorithm (fast)
-void GpuParallel( NWArgs& nw, NWResult& res );
+void GpuParallel( NWArgs& nw, NWResult& res, Stopwatch& sw );
 
 
 // call in case of invalid command line arguments
@@ -95,12 +95,12 @@ void Traceback( NWVariant& variant, NWArgs& nw, NWResult& res )
    res.hash = hash;
 }
 
-void RunVariant( NWVariant& variant, NWArgs& args, NWResult& res )
+void RunVariant( NWVariant& variant, NWArgs& args, NWResult& res, Stopwatch& sw )
 {
    printf("%-20s:   ", variant.algname );
    fflush( stdout );
 
-   variant.foo( args, res );
+   variant.foo( args, res, sw );
    Traceback( variant, args, res );
    
    printf("hash=%10u   Tcpu=%6.3fs   Tgpu=%6.3fs\n", res.hash, res.Tcpu, res.Tgpu );
@@ -159,6 +159,8 @@ int main( int argc, char *argv[] )
    for( int j = 1; j < adjcols; j++ ) seqX[j] = ( j < cols ) ? 1 + rand() % 10 : 0;
    for( int i = 1; i < adjrows; i++ ) seqY[i] = ( i < rows ) ? 1 + rand() % 10 : 0;
 
+   Stopwatch sw {};
+
    // variables for storing the calculation hashes
    unsigned prevhash = 10;
    // if the test was successful
@@ -189,15 +191,15 @@ int main( int argc, char *argv[] )
 
    // use the Needleman-Wunsch algorithm to find the optimal matching between the input vectors
    // +   sequential cpu implementation
-   RunVariant( alg1, nw, res1 );
+   RunVariant( alg1, nw, res1, sw );
    prevhash = res1.hash;
 
    // +   parallel cpu implementation
-   RunVariant( alg2, nw, res2 );
+   RunVariant( alg2, nw, res2, sw );
    if( res2.hash != prevhash ) success = false;
 
    // +   parallel gpu implementation
-   RunVariant( alg3, nw, res3 );
+   RunVariant( alg3, nw, res3, sw );
    if( res3.hash != prevhash ) success = false;
 
    // +   compare the implementations
