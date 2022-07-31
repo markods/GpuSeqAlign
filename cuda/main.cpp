@@ -29,11 +29,11 @@ const int tileBy = WARPSZ;
 
 
 // sequential implementation of the Needleman Wunsch algorithm
-void CpuSequential( NWArgs& nw, NWResult& res );
+void Cpu2_Diag( NWArgs& nw, NWResult& res );
 // parallel cpu implementation of the Needleman Wunsch algorithm
-void CpuParallel( NWArgs& nw, NWResult& res );
+void Cpu3_DiagRow( NWArgs& nw, NWResult& res );
 // parallel implementation of the Needleman Wunsch algorithm (fast)
-void GpuParallel( NWArgs& nw, NWResult& res );
+void Gpu2_DiagDiag( NWArgs& nw, NWResult& res );
 
 
 // call in case of invalid command line arguments
@@ -164,9 +164,9 @@ int main( int argc, char *argv[] )
    bool success = true;
 
    NWVariant
-      alg1 { CpuSequential, "Cpu sequential", "./alg1-cpu-seq.out.txt" },
-      alg2 { CpuParallel,   "Cpu parallel",   "./alg2-cpu-par.out.txt" },
-      alg3 { GpuParallel,   "Gpu parallel",   "./alg3-gpu-par.out.txt" };
+      alg1 { Cpu2_Diag, "Cpu sequential", "./alg1-cpu-seq.out.txt" },
+      alg2 { Cpu3_DiagRow,   "Cpu parallel",   "./alg2-cpu-par.out.txt" },
+      alg3 { Gpu2_DiagDiag,   "Gpu parallel",   "./alg3-gpu-par.out.txt" };
 
    NWArgs nw {
       seqX,

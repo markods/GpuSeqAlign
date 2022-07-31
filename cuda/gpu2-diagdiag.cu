@@ -231,7 +231,7 @@ __global__ static void kernelB( int* score_gpu, int trows, int tcols, int insdel
 
 
 // parallel gpu implementation of the Needleman Wunsch algorithm
-void GpuParallel( NWArgs& nw, NWResult& res )
+void Gpu2_DiagDiag( NWArgs& nw, NWResult& res )
 {
    // blosum matrix, sequences which will be compared and the score matrix stored in gpu global memory
    int *blosum62_gpu, *seqX_gpu, *seqY_gpu, *score_gpu;

@@ -2,7 +2,7 @@
 
 
 // sequential cpu implementation of the Needleman Wunsch algorithm
-void CpuSimple( NWArgs& nw, NWResult& res )
+void Cpu1_Row( NWArgs& nw, NWResult& res )
 {
    // start the timer
    res.sw.lap( "cpu-start" );
