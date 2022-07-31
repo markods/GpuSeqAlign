@@ -1,6 +1,7 @@
 // missing Common.cpp file on purpose, since whole program optimization is disabled
 #pragma once
 #include <chrono>
+#include <memory>
 #include <unordered_map>
 
 
@@ -53,8 +54,8 @@ inline const int& max2( const int& a, const int& b ) noexcept
 // calculate the maximum of three numbers
 inline const int& max3( const int& a, const int& b, const int& c ) noexcept
 {
-   if( a >= b ) { return ( a >= c ) ? a : c; }
-   else         { return ( b >= c ) ? b : c; }
+   return ( a >= b ) ? ( ( a >= c ) ? a : c ):
+                       ( ( b >= c ) ? b : c );
 }
 
 // update the score given the current score matrix and position
@@ -77,101 +78,77 @@ inline void UpdateScore(
 
 
 
-template< class Clock = std::chrono::system_clock, class Duration = std::chrono::milliseconds >
-class Stopwatch_t
+class Stopwatch
 {
 public:
-   void startTimer() noexcept
+   void lap( std::string lap_name )
    {
-      if( isCounting ) {
-         stopTimer();
-      }
-      
-      start_tp = Clock::now();
+      laps.insert_or_assign( lap_name, Clock::now() );
+   }
+
+   void reset() noexcept
+   {
       laps.clear();
-      isCounting = true;
-   }
-
-   void addLap( std::string lapName )
-   {
-      if( !isCounting ) {
-         return;
-      }
-
-      laps.insert_or_assign( lapName, Clock::now() );
-   }
-
-   void stopTimer() noexcept
-   {
-      isCounting = false;
    }
 
 
-   bool hasLap( std::string lapName )
+   float dt( std::string lap1_name, std::string lap2_name )
    {
-      return laps.end() != laps.find( lapName );
-   }
+      auto p1_iter = laps.find( lap1_name );
+      auto p2_iter = laps.find( lap2_name );
 
-   auto getLap( std::string lapName )
-   {
-      auto res = laps.find( lapName );
-      if( res == laps.end() ) {
-         return std::chrono::duration_values<Duration>::zero().count();
-      }
-
-      auto lap_tp = res->second;
-      auto lapTime = std::chrono::duration_cast<Duration>( lap_tp - start_tp ).count();
-      return lapTime;
+      auto p1 = p1_iter->second;
+      auto p2 = p2_iter->second;
+      return std::chrono::duration_cast<Resolution>( p1 - p2 ).count() / 1000.;
    }
 
 private:
-   using TimePoint = std::chrono::time_point<Clock>;
-   
-   TimePoint start_tp {};
-   std::unordered_map<std::string, TimePoint> laps {};
-   bool isCounting {};
-};
+   using Clock = std::chrono::steady_clock;
+   using Resolution = std::chrono::milliseconds;
 
-using Stopwatch = Stopwatch_t<>;
+   std::unordered_map< std::string, std::chrono::time_point<Clock> > laps;
+};
 
 
 
 // arguments for the Needleman-Wunsch algorithm variants
 struct NWArgs
 {
-   const int* seqX = nullptr;
-   const int* seqY = nullptr;
-   
-   int* score = nullptr;
-   int rows = 0;
-   int cols = 0;
+   int* seqX;
+   int* seqY;
+   // int* blosum62;
+   int* score;
 
-   int adjrows = 0;
-   int adjcols = 0;
+   int rows;
+   int cols;
 
-   int insdelcost = 0;
+   int adjrows;   // TODO: remove
+   int adjcols;
+
+   int insdelcost;
 };
 
 // results that the Needleman-Wunsch algorithm variants return
 struct NWResult
 {
-   float Tcpu = 0;
-   float Tgpu = 0;
-   unsigned hash = 0;
+   Stopwatch sw;
+   float Tcpu;
+   float Tgpu;
+   unsigned hash;
 };
 
 
 struct NWVariant
 {
-   using NWVariantFnPtr = void (*)( NWArgs& args, NWResult& res, Stopwatch& sw );
+   using NWVariantFnPtr = void (*)( NWArgs& args, NWResult& res );
 
-   NWVariantFnPtr foo = nullptr;
-   const char* algname = "alg";
-   const char* fpath = "./out.txt";
+   NWVariantFnPtr fn;
+   const char* algname;
+   const char* fpath;
 
-   void run( NWArgs& args, NWResult& res, Stopwatch& sw )
+   void run( NWArgs& args, NWResult& res )
    {
-      foo( args, res, sw );
+      fn( args, res );
    }
 };
 

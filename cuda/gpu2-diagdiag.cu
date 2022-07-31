@@ -1,6 +1,5 @@
-#include <chrono>
 #include <cooperative_groups.h>
-#include "Common.h"
+#include "common.h"
 
 // stream used through the rest of the program
 #define STREAM_ID 0
@@ -232,12 +231,8 @@ __global__ static void kernelB( int* score_gpu, int trows, int tcols, int insdel
 
 
 // parallel gpu implementation of the Needleman Wunsch algorithm
-void GpuParallel( NWArgs& nw, NWResult& res, Stopwatch& sw )
+void GpuParallel( NWArgs& nw, NWResult& res )
 {
-   // start the host timer and initialize the gpu timer
-   sw.startTimer();
-   res.Tgpu = 0;
-
    // blosum matrix, sequences which will be compared and the score matrix stored in gpu global memory
    int *blosum62_gpu, *seqX_gpu, *seqY_gpu, *score_gpu;
    // allocate space in the gpu global memory
@@ -245,14 +240,19 @@ void GpuParallel( NWArgs& nw, NWResult& res, Stopwatch& sw )
    cudaMalloc( &seqY_gpu,     nw.adjrows            * sizeof( int ) );
    cudaMalloc( &score_gpu,    nw.adjrows*nw.adjcols * sizeof( int ) );
    cudaMalloc( &blosum62_gpu, BLOSUMSZ*BLOSUMSZ     * sizeof( int ) );
-   // copy data from host to device
-	cudaMemcpy( seqX_gpu,     nw.seqX,     nw.adjcols     * sizeof( int ), cudaMemcpyHostToDevice );
-	cudaMemcpy( seqY_gpu,     nw.seqY,     nw.adjrows     * sizeof( int ), cudaMemcpyHostToDevice );
-	cudaMemcpy( blosum62_gpu, blosum62, BLOSUMSZ*BLOSUMSZ * sizeof( int ), cudaMemcpyHostToDevice );
    // create events for measuring kernel execution time
    cudaEvent_t start, stop;
    cudaEventCreate( &start );
    cudaEventCreate( &stop );
+
+   // start the host timer and initialize the gpu timer
+   res.sw.lap( "cpu-start" );
+   res.Tgpu = 0;
+
+   // copy data from host to device
+	cudaMemcpy( seqX_gpu,     nw.seqX,     nw.adjcols     * sizeof( int ), cudaMemcpyHostToDevice );
+	cudaMemcpy( seqY_gpu,     nw.seqY,     nw.adjrows     * sizeof( int ), cudaMemcpyHostToDevice );
+	cudaMemcpy( blosum62_gpu, blosum62, BLOSUMSZ*BLOSUMSZ * sizeof( int ), cudaMemcpyHostToDevice );
 
 
    // printf("   - processing score matrix in a blocky diagonal fashion\n");
@@ -344,9 +344,9 @@ void GpuParallel( NWArgs& nw, NWResult& res, Stopwatch& sw )
    cudaMemcpy( nw.score, score_gpu, nw.adjrows*nw.adjcols * sizeof( int ), cudaMemcpyDeviceToHost );
 
    // stop the cpu timer
-   sw.addLap( "Tcpu" );
-   sw.stopTimer();
-   res.Tcpu = sw.getLap( "Tcpu" ) / 1000.;
+   res.sw.lap( "cpu-end" );
+   res.Tcpu = res.sw.dt( "cpu-end", "cpu-start" );
+   res.Tgpu /= 1000 * 2;
 
    
    // free allocated space in the gpu global memory

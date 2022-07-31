@@ -8,7 +8,7 @@
 #include <cstdio>
 #include <string>
 #include <ctime>
-#include "Common.h"
+#include "common.h"
 // #define INT_MAX +2147483647
 // #define INT_MIN -2147483648
 
@@ -29,11 +29,11 @@ const int tileBy = WARPSZ;
 
 
 // sequential implementation of the Needleman Wunsch algorithm
-void CpuSequential( NWArgs& nw, NWResult& res, Stopwatch& sw );
+void CpuSequential( NWArgs& nw, NWResult& res );
 // parallel cpu implementation of the Needleman Wunsch algorithm
-void CpuParallel( NWArgs& nw, NWResult& res, Stopwatch& sw );
+void CpuParallel( NWArgs& nw, NWResult& res );
 // parallel implementation of the Needleman Wunsch algorithm (fast)
-void GpuParallel( NWArgs& nw, NWResult& res, Stopwatch& sw );
+void GpuParallel( NWArgs& nw, NWResult& res );
 
 
 // call in case of invalid command line arguments
@@ -95,20 +95,17 @@ void Traceback( NWVariant& variant, NWArgs& nw, NWResult& res )
    res.hash = hash;
 }
 
-void RunVariant( NWVariant& variant, NWArgs& args, NWResult& res, Stopwatch& sw )
+void RunVariant( NWVariant& variant, NWArgs& args, NWResult& res )
 {
    printf("%-20s:   ", variant.algname );
    fflush( stdout );
 
-   variant.foo( args, res, sw );
+   variant.run( args, res );
    Traceback( variant, args, res );
    
    printf("hash=%10u   Tcpu=%6.3fs   Tgpu=%6.3fs\n", res.hash, res.Tcpu, res.Tgpu );
    fflush( stdout );
 }
-
-
-
 
 
 // main program
@@ -124,7 +121,7 @@ int main( int argc, char *argv[] )
    // add the padding (zeroth row and column) to the matrix
    rows++; cols++;
    // if the number of columns is less than the number of rows, swap them
-   if( cols < rows ) { int temp = cols; cols = rows; rows = temp; }
+   if( cols < rows ) { std::swap( rows, cols ); }
 
    // adjusted matrix dimensions
    // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile B size (in order to be evenly divisible)
@@ -191,15 +188,15 @@ int main( int argc, char *argv[] )
 
    // use the Needleman-Wunsch algorithm to find the optimal matching between the input vectors
    // +   sequential cpu implementation
-   RunVariant( alg1, nw, res1, sw );
+   RunVariant( alg1, nw, res1 );
    prevhash = res1.hash;
 
    // +   parallel cpu implementation
-   RunVariant( alg2, nw, res2, sw );
+   RunVariant( alg2, nw, res2 );
    if( res2.hash != prevhash ) success = false;
 
    // +   parallel gpu implementation
-   RunVariant( alg3, nw, res3, sw );
+   RunVariant( alg3, nw, res3 );
    if( res3.hash != prevhash ) success = false;
 
    // +   compare the implementations

@@ -1,12 +1,11 @@
-#include <chrono>
-#include "Common.h"
+#include "common.h"
 
 
 // sequential cpu implementation of the Needleman Wunsch algorithm
-void CpuSequential( NWArgs& nw, NWResult& res, Stopwatch& sw )
+void CpuSimple( NWArgs& nw, NWResult& res )
 {
    // start the timer
-   sw.startTimer();
+   res.sw.lap( "cpu-start" );
 
 
    // skip the first row and first column in the next calculation
@@ -16,9 +15,9 @@ void CpuSequential( NWArgs& nw, NWResult& res, Stopwatch& sw )
    for( int i = 0; i < 1+nw.rows; i++ ) el(nw.score,nw.adjcols, i,0) = -i*nw.insdelcost;
    for( int j = 0; j < 1+nw.cols; j++ ) el(nw.score,nw.adjcols, 0,j) = -j*nw.insdelcost;
 
-   //  / / / . .
-   //  / / . . .
-   //  / . . . .
+   //  . . . . .
+   //  . . . . .
+   //  . . . . .
    // printf("   - processing top-left triangle + first diagonal of the score matrix\n");
    for( int s = 0; s < nw.rows; s++ )
    for( int t = 0; t <= s; t++ )
@@ -60,9 +59,8 @@ void CpuSequential( NWArgs& nw, NWResult& res, Stopwatch& sw )
    nw.rows++; nw.cols++;
 
    // stop the timer
-   sw.addLap( "Tcpu" );
-   sw.stopTimer();
-   res.Tcpu = sw.getLap( "Tcpu" ) / 1000.;
+   res.sw.lap( "cpu-end" );
+   res.Tcpu = res.sw.dt( "cpu-end", "cpu-start" );
 }
 
 

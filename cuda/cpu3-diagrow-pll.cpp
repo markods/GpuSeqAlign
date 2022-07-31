@@ -1,12 +1,11 @@
-#include <chrono>
-#include "Common.h"
+#include "common.h"
 
 
 // parallel cpu implementation of the Needleman Wunsch algorithm
-void CpuParallel( NWArgs& nw, NWResult& res, Stopwatch& sw )
+void CpuParallel( NWArgs& nw, NWResult& res )
 {
    // start the timer
-   sw.startTimer();
+   res.sw.lap( "cpu-start" );
 
 
    // skip the first row and first column in the next calculations
@@ -66,9 +65,8 @@ void CpuParallel( NWArgs& nw, NWResult& res, Stopwatch& sw )
    nw.rows++; nw.cols++;
 
    // stop the timer
-   sw.addLap( "Tcpu" );
-   sw.stopTimer();
-   res.Tcpu = sw.getLap( "Tcpu" ) / 1000.;
+   res.sw.lap( "cpu-end" );
+   res.Tcpu = res.sw.dt( "cpu-end", "cpu-start" );
 }
 
 
