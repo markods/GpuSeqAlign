@@ -280,7 +280,7 @@ void GpuParallel( NWArgs& nw, NWResult& res )
       // calculate the time between the given events
       cudaEventElapsedTime( &ktimeA, start, stop );
       // update the total kernel execution time
-      res.Tgpu += ktimeA;
+      res.Tgpu += ktimeA / 1000./*ms*/;
    }
    
    // wait for the gpu to finish before going to the next step
@@ -334,7 +334,7 @@ void GpuParallel( NWArgs& nw, NWResult& res )
       // calculate the time between the given events
       cudaEventElapsedTime( &ktimeB, start, stop );
       // update the total kernel execution time
-      res.Tgpu += ktimeB;
+      res.Tgpu += ktimeB / 1000./*ms*/;
    }
 
    // wait for the gpu to finish before going to the next step
@@ -346,7 +346,6 @@ void GpuParallel( NWArgs& nw, NWResult& res )
    // stop the cpu timer
    res.sw.lap( "cpu-end" );
    res.Tcpu = res.sw.dt( "cpu-end", "cpu-start" );
-   res.Tgpu /= 1000 * 2;
 
    
    // free allocated space in the gpu global memory
