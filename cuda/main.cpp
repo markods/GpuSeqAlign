@@ -8,32 +8,16 @@
 #include <cstdio>
 #include <string>
 #include <ctime>
+#include <map>
 #include "common.h"
-// #define INT_MAX +2147483647
-// #define INT_MIN -2147483648
 
-// stream used through the rest of the program
-#define STREAM_ID 0
-// number of streaming multiprocessors (sm-s) and cores per sm
-#define MPROCS 28
-#define CORES 128
 // number of threads in warp
 #define WARPSZ 32
 // tile sizes for kernels A and B
 // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
 // +   tile B must have one dimension fixed to the number of threads in a warp
-const int tileAx = 1*WARPSZ;
-const int tileAy = 32;
 const int tileBx = 60;
 const int tileBy = WARPSZ;
-
-
-// sequential implementation of the Needleman Wunsch algorithm
-void Cpu2_Diag( NWArgs& nw, NWResult& res );
-// parallel cpu implementation of the Needleman Wunsch algorithm
-void Cpu3_DiagRow( NWArgs& nw, NWResult& res );
-// parallel implementation of the Needleman Wunsch algorithm (fast)
-void Gpu2_DiagDiag( NWArgs& nw, NWResult& res );
 
 
 // call in case of invalid command line arguments
@@ -49,15 +33,10 @@ void Usage( char* argv[] )
 }
 
 
+
 // print one of the optimal matching paths to a file
-void Traceback( NWVariant& variant, NWArgs& nw, NWResult& res )
+void Trace( const NWArgs& nw, NWResult& res )
 {
-   // printf("   - printing traceback\n");
-   
-   // try to open the file with the given name, return if unsuccessful
-   FILE *fout = fopen( variant.fpath, "w" );
-   if( !fout ) return;
-   
    // variable used to calculate the hash function
    // http://www.cse.yorku.ca/~oz/hash.html
    // the starting value is a magic constant
@@ -67,13 +46,13 @@ void Traceback( NWVariant& variant, NWArgs& nw, NWResult& res )
    bool loop = true;
    for( int i = nw.rows-1, j = nw.cols-1;  loop;  )
    {
-      // print the current element
-      fprintf( fout, "%d\n", el(nw.score,nw.adjcols, i,j) );
-      // add the current element to the hash
-      hash = ( ( hash<<5 ) + hash ) ^ el(nw.score,nw.adjcols, i,j);
+      // add the current element to the trace and hash
+      int curr = el(nw.score,nw.adjcols, i,j);
+      res.trace.push_back( curr );
+      hash = ( ( hash<<5 ) + hash ) ^ curr;
 
-      int max = INT_MIN;   // maximum value of the up, left and diagonal neighbouring elements
-      int dir = '-';       // the current movement direction is unknown
+      int max = std::numeric_limits<int>::min();   // maximum value of the up, left and diagonal neighbouring elements
+      int dir = '-';                               // the current movement direction is unknown
 
       if( i > 0 && j > 0 && max < el(nw.score,nw.adjcols, i-1,j-1) ) { max = el(nw.score,nw.adjcols, i-1,j-1); dir = 'i'; }   // diagonal movement if possible
       if( i > 0          && max < el(nw.score,nw.adjcols, i-1,j  ) ) { max = el(nw.score,nw.adjcols, i-1,j  ); dir = 'u'; }   // up       movement if possible
@@ -89,23 +68,12 @@ void Traceback( NWVariant& variant, NWArgs& nw, NWResult& res )
       }
    }
 
-   // close the file handle
-   fclose( fout );
+   // reverse the trace, so it starts from the top-left corner of the matrix
+   std::reverse( res.trace.begin(), res.trace.end() );
    // save the hash value
    res.hash = hash;
 }
 
-void RunVariant( NWVariant& variant, NWArgs& args, NWResult& res )
-{
-   printf("%-20s:   ", variant.algname );
-   fflush( stdout );
-
-   variant.run( args, res );
-   Traceback( variant, args, res );
-   
-   printf("hash=%10u   Tcpu=%6.3fs   Tgpu=%6.3fs\n", res.hash, res.Tcpu, res.Tgpu );
-   fflush( stdout );
-}
 
 
 // main program
@@ -158,15 +126,12 @@ int main( int argc, char *argv[] )
 
    Stopwatch sw {};
 
-   // variables for storing the calculation hashes
-   unsigned prevhash = 10;
-   // if the test was successful
-   bool success = true;
-
-   NWVariant
-      alg1 { Cpu2_Diag, "Cpu sequential", "./alg1-cpu-seq.out.txt" },
-      alg2 { Cpu3_DiagRow,   "Cpu parallel",   "./alg2-cpu-par.out.txt" },
-      alg3 { Gpu2_DiagDiag,   "Gpu parallel",   "./alg3-gpu-par.out.txt" };
+   std::map<std::string, NWVariant> variants {
+      { "Cpu1_Row", Cpu1_Row },
+      { "Cpu2_Diag", Cpu2_Diag },
+      { "Cpu3_DiagRow", Cpu3_DiagRow },
+      { "Gpu3_DiagDiag", Gpu3_DiagDiag },
+   };
 
    NWArgs nw {
       seqX,
@@ -181,23 +146,37 @@ int main( int argc, char *argv[] )
       insdelcost,
    };
 
-   NWResult
-      res1 {},
-      res2 {},
-      res3 {};
+   // variables for storing the calculation hashes
+   unsigned prevhash = 10;
+   // if the test was successful
+   bool firstIter = true;
+   bool success = true;
 
-   // use the Needleman-Wunsch algorithm to find the optimal matching between the input vectors
-   // +   sequential cpu implementation
-   RunVariant( alg1, nw, res1 );
-   prevhash = res1.hash;
+   for( auto& variant_iter: variants )
+   {
+      const std::string& name = variant_iter.first;
+      NWVariant& variant = variant_iter.second;
 
-   // +   parallel cpu implementation
-   RunVariant( alg2, nw, res2 );
-   if( res2.hash != prevhash ) success = false;
+      NWResult res {};
 
-   // +   parallel gpu implementation
-   RunVariant( alg3, nw, res3 );
-   if( res3.hash != prevhash ) success = false;
+      printf( "%-20s:   ", name.c_str() );
+      fflush( stdout );
+
+      variant( nw, res );
+
+      Trace( nw, res );
+      if( firstIter )
+      {
+         prevhash = res.hash;
+      }
+      else if( prevhash != res.hash )
+      {
+         success = false;
+      }
+
+      printf( "hash=%10u   Tcpu=%6.3fs   Tgpu=%6.3fs\n", res.hash, res.Tcpu, res.Tgpu );
+      fflush( stdout );
+   }
 
    // +   compare the implementations
    if( success ) printf( "TEST PASSED\n" );

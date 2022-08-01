@@ -1,6 +1,5 @@
 #include "common.h"
 
-
 // parallel cpu implementation of the Needleman Wunsch algorithm
 void Cpu3_DiagRow( NWArgs& nw, NWResult& res )
 {
@@ -18,11 +17,6 @@ void Cpu3_DiagRow( NWArgs& nw, NWResult& res )
       for( int i = 0; i < 1+nw.rows; i++ ) el(nw.score,nw.adjcols, i,0) = -i*nw.insdelcost;
       #pragma omp for schedule( static )
       for( int j = 0; j < 1+nw.cols; j++ ) el(nw.score,nw.adjcols, 0,j) = -j*nw.insdelcost;
-
-      #pragma omp single
-      {
-         // printf("   - processing score matrix in a blocky diagonal fashion\n");
-      }
       
       // size of block that will be a unit of work
       // +   8*16 ints on standard architectures, or 8 cache lines

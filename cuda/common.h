@@ -1,7 +1,9 @@
 // missing Common.cpp file on purpose, since whole program optimization is disabled
 #pragma once
+#include <cstdio>
 #include <chrono>
 #include <memory>
+#include <limits>
 #include <unordered_map>
 
 
@@ -128,30 +130,22 @@ struct NWArgs
    int insdelcost;
 };
 
-// results that the Needleman-Wunsch algorithm variants return
+// results which the Needleman-Wunsch algorithm variants return
 struct NWResult
 {
    Stopwatch sw;
    float Tcpu;
    float Tgpu;
+   std::vector<int> trace;
    unsigned hash;
 };
 
 
-struct NWVariant
-{
-   using NWVariantFnPtr = void (*)( NWArgs& args, NWResult& res );
-
-   NWVariantFnPtr fn;
-   const char* algname;
-   const char* fpath;
-
-   void run( NWArgs& args, NWResult& res )
-   {
-      fn( args, res );
-   }
-};
-
+using NWVariant = void (*)( NWArgs& nw, NWResult& res );
+void Cpu1_Row( NWArgs& nw, NWResult& res );
+void Cpu2_Diag( NWArgs& nw, NWResult& res );
+void Cpu3_DiagRow( NWArgs& nw, NWResult& res );
+void Gpu3_DiagDiag( NWArgs& nw, NWResult& res );
 
 
 

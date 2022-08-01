@@ -231,7 +231,7 @@ __global__ static void kernelB( int* score_gpu, int trows, int tcols, int insdel
 
 
 // parallel gpu implementation of the Needleman Wunsch algorithm
-void Gpu2_DiagDiag( NWArgs& nw, NWResult& res )
+void Gpu3_DiagDiag( NWArgs& nw, NWResult& res )
 {
    // blosum matrix, sequences which will be compared and the score matrix stored in gpu global memory
    int *blosum62_gpu, *seqX_gpu, *seqY_gpu, *score_gpu;
@@ -253,9 +253,6 @@ void Gpu2_DiagDiag( NWArgs& nw, NWResult& res )
 	cudaMemcpy( seqX_gpu,     nw.seqX,     nw.adjcols     * sizeof( int ), cudaMemcpyHostToDevice );
 	cudaMemcpy( seqY_gpu,     nw.seqY,     nw.adjrows     * sizeof( int ), cudaMemcpyHostToDevice );
 	cudaMemcpy( blosum62_gpu, blosum62, BLOSUMSZ*BLOSUMSZ * sizeof( int ), cudaMemcpyHostToDevice );
-
-
-   // printf("   - processing score matrix in a blocky diagonal fashion\n");
 
 
    // launch kernel A

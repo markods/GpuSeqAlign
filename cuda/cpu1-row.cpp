@@ -1,6 +1,5 @@
 #include "common.h"
 
-
 // sequential cpu implementation of the Needleman Wunsch algorithm
 void Cpu1_Row( NWArgs& nw, NWResult& res )
 {
@@ -15,44 +14,13 @@ void Cpu1_Row( NWArgs& nw, NWResult& res )
    for( int i = 0; i < 1+nw.rows; i++ ) el(nw.score,nw.adjcols, i,0) = -i*nw.insdelcost;
    for( int j = 0; j < 1+nw.cols; j++ ) el(nw.score,nw.adjcols, 0,j) = -j*nw.insdelcost;
 
-   //  . . . . .
-   //  . . . . .
-   //  . . . . .
-   // printf("   - processing top-left triangle + first diagonal of the score matrix\n");
-   for( int s = 0; s < nw.rows; s++ )
-   for( int t = 0; t <= s; t++ )
+   //  / / / / /
+   //  / / / / /
+   //  / / / / /
+   for( int i = 0; i < nw.rows; i++ )
+   for( int j = 0; j < nw.cols; j++ )
    {
-      int i = 1 +     t;
-      int j = 1 + s - t;
-      UpdateScore( nw.seqX, nw.seqY, nw.score, nw.adjrows, nw.adjcols, nw.insdelcost, i, j );
-   }
-
-   //  . . . / /
-   //  . . / / .
-   //  . / / . .
-   // if the matrix is not square shaped
-   if( nw.rows != nw.cols )
-   {
-      // printf("   - processing all other diagonals of the score matrix\n");
-      for( int s = nw.rows; s < nw.cols; s++ )
-      for( int t = 0; t <= nw.rows-1; t++ )
-      {
-         int i = 1 +     t;
-         int j = 1 + s - t;
-         UpdateScore( nw.seqX, nw.seqY, nw.score, nw.adjrows, nw.adjcols, nw.insdelcost, i, j );
-      }
-   }
-
-   //  . . . . .|/ /
-   //  . . . . /|/
-   //  . . . / /|
-   // printf("   - processing bottom-right triangle of the score matrix\n");
-   for( int s = nw.cols; s < nw.cols-1 + nw.rows; s++ )
-   for( int t = s-nw.cols+1; t <= nw.rows-1; t++ )
-   {
-      int i = 1 +     t;
-      int j = 1 + s - t;
-      UpdateScore( nw.seqX, nw.seqY, nw.score, nw.adjrows, nw.adjcols, nw.insdelcost, i, j );
+      UpdateScore( nw.seqX, nw.seqY, nw.score, nw.adjrows, nw.adjcols, nw.insdelcost, 1+i, 1+j );
    }
 
    // restore the original row and column count
@@ -62,6 +30,8 @@ void Cpu1_Row( NWArgs& nw, NWResult& res )
    res.sw.lap( "cpu-end" );
    res.Tcpu = res.sw.dt( "cpu-end", "cpu-start" );
 }
+
+
 
 
 

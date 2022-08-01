@@ -1,6 +1,5 @@
 #include "common.h"
 
-
 // sequential cpu implementation of the Needleman Wunsch algorithm
 void Cpu2_Diag( NWArgs& nw, NWResult& res )
 {
@@ -18,7 +17,6 @@ void Cpu2_Diag( NWArgs& nw, NWResult& res )
    //  / / / . .
    //  / / . . .
    //  / . . . .
-   // printf("   - processing top-left triangle + first diagonal of the score matrix\n");
    for( int s = 0; s < nw.rows; s++ )
    for( int t = 0; t <= s; t++ )
    {
@@ -33,7 +31,6 @@ void Cpu2_Diag( NWArgs& nw, NWResult& res )
    // if the matrix is not square shaped
    if( nw.rows != nw.cols )
    {
-      // printf("   - processing all other diagonals of the score matrix\n");
       for( int s = nw.rows; s < nw.cols; s++ )
       for( int t = 0; t <= nw.rows-1; t++ )
       {
@@ -46,7 +43,6 @@ void Cpu2_Diag( NWArgs& nw, NWResult& res )
    //  . . . . .|/ /
    //  . . . . /|/
    //  . . . / /|
-   // printf("   - processing bottom-right triangle of the score matrix\n");
    for( int s = nw.cols; s < nw.cols-1 + nw.rows; s++ )
    for( int t = s-nw.cols+1; t <= nw.rows-1; t++ )
    {
