@@ -18,7 +18,7 @@
 // === NW GPU ===
 // #include "nw-gpu1.hpp"
 // #include "nw-gpu2.hpp"
-#include "nw-gpu3-diagdiag-coop.hpp"
+#include "nw-gpu3-diagdiag-coop.cuh"
 // #include "nw-gpu4.hpp"
 // === UTILS ===
 #include "trace1-diag.hpp"
@@ -62,10 +62,10 @@ static int subst_tmp[SUBSTSZ*SUBSTSZ] =
 void PrintHelpInfo( char* argv[] )
 {
    fprintf( stderr,
-      "nw m n [cost]\n"
-      "   m    - length of the first sequence\n"
-      "   n    - length of the second sequence\n"
-      "   cost - insert and delete cost (positive integer)\n" );
+      "nw m n\n"
+      "   m    - length of the first generated sequence\n"
+      "   n    - length of the second generated sequence\n"
+   );
    fflush( stderr );
    exit( 0 );
 }

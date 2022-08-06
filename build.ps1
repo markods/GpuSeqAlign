@@ -112,6 +112,7 @@ if( "-clean" -in $args )
 
     # remove the compiled code directory
     if( Test-Path "./build-pwsh" -PathType "Container" ) { Remove-Item "./build-pwsh" -Recurse; }
+    if( Test-Path "./build-vs"   -PathType "Container" ) { Remove-Item "./build-vs"   -Recurse; }
 
     # print the build command
     Write-Output "Clean success"
