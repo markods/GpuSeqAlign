@@ -1,7 +1,7 @@
 ### My rules ###
 **/!docs
 **/build*
-**/.vs
+**/nsight
 
 *.pdf
 *.zip
