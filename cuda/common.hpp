@@ -16,35 +16,43 @@ constexpr int WARPSZ = 32;
 // get the specified element from the given linearized matrix
 #define el( mat, cols, i, j ) ( mat[(i)*(cols) + (j)] )
 
+// for diagnostic purposes
+inline void PrintMatrix(
+   const int* const matrix,
+   const int rows,
+   const int cols
+)
+{
+   printf( "\n" );
+   for( int i = 0; i < rows; i++ )
+   {
+      for( int j = 0; j < cols; j++ )
+      {
+         printf( "%3d ", el(matrix,cols, i,j) );
+      }
+      printf( "\n" );
+   }
+   fflush(stdout);
+}
+
+// for diagnostic purposes
+inline void ZeroOutMatrix(
+   int* const matrix,
+   const int rows,
+   const int cols
+) noexcept
+{
+   for( int i = 0; i < rows; i++ )
+   for( int j = 0; j < cols; j++ )
+   {
+      el(matrix,cols, i,j) = 0;
+   }
+}
+
+
+// TODO: remove
 // block substitution matrix
 #define SUBSTSZ 24
-static int subst[SUBSTSZ][SUBSTSZ] =
-{
-   {  4, -1, -2, -2,  0, -1, -1,  0, -2, -1, -1, -1, -1, -2, -1,  1,  0, -3, -2,  0, -2, -1,  0, -4 },
-   { -1,  5,  0, -2, -3,  1,  0, -2,  0, -3, -2,  2, -1, -3, -2, -1, -1, -3, -2, -3, -1,  0, -1, -4 },
-   { -2,  0,  6,  1, -3,  0,  0,  0,  1, -3, -3,  0, -2, -3, -2,  1,  0, -4, -2, -3,  3,  0, -1, -4 },
-   { -2, -2,  1,  6, -3,  0,  2, -1, -1, -3, -4, -1, -3, -3, -1,  0, -1, -4, -3, -3,  4,  1, -1, -4 },
-   {  0, -3, -3, -3,  9, -3, -4, -3, -3, -1, -1, -3, -1, -2, -3, -1, -1, -2, -2, -1, -3, -3, -2, -4 },
-   { -1,  1,  0,  0, -3,  5,  2, -2,  0, -3, -2,  1,  0, -3, -1,  0, -1, -2, -1, -2,  0,  3, -1, -4 },
-   { -1,  0,  0,  2, -4,  2,  5, -2,  0, -3, -3,  1, -2, -3, -1,  0, -1, -3, -2, -2,  1,  4, -1, -4 },
-   {  0, -2,  0, -1, -3, -2, -2,  6, -2, -4, -4, -2, -3, -3, -2,  0, -2, -2, -3, -3, -1, -2, -1, -4 },
-   { -2,  0,  1, -1, -3,  0,  0, -2,  8, -3, -3, -1, -2, -1, -2, -1, -2, -2,  2, -3,  0,  0, -1, -4 },
-   { -1, -3, -3, -3, -1, -3, -3, -4, -3,  4,  2, -3,  1,  0, -3, -2, -1, -3, -1,  3, -3, -3, -1, -4 },
-   { -1, -2, -3, -4, -1, -2, -3, -4, -3,  2,  4, -2,  2,  0, -3, -2, -1, -2, -1,  1, -4, -3, -1, -4 },
-   { -1,  2,  0, -1, -3,  1,  1, -2, -1, -3, -2,  5, -1, -3, -1,  0, -1, -3, -2, -2,  0,  1, -1, -4 },
-   { -1, -1, -2, -3, -1,  0, -2, -3, -2,  1,  2, -1,  5,  0, -2, -1, -1, -1, -1,  1, -3, -1, -1, -4 },
-   { -2, -3, -3, -3, -2, -3, -3, -3, -1,  0,  0, -3,  0,  6, -4, -2, -2,  1,  3, -1, -3, -3, -1, -4 },
-   { -1, -2, -2, -1, -3, -1, -1, -2, -2, -3, -3, -1, -2, -4,  7, -1, -1, -4, -3, -2, -2, -1, -2, -4 },
-   {  1, -1,  1,  0, -1,  0,  0,  0, -1, -2, -2,  0, -1, -2, -1,  4,  1, -3, -2, -2,  0,  0,  0, -4 },
-   {  0, -1,  0, -1, -1, -1, -1, -2, -2, -1, -1, -1, -1, -2, -1,  1,  5, -2, -2,  0, -1, -1,  0, -4 },
-   { -3, -3, -4, -4, -2, -2, -3, -2, -2, -3, -2, -3, -1,  1, -4, -3, -2, 11,  2, -3, -4, -3, -2, -4 },
-   { -2, -2, -2, -3, -2, -1, -2, -3,  2, -1, -1, -2, -1,  3, -3, -2, -2,  2,  7, -1, -3, -2, -1, -4 },
-   {  0, -3, -3, -3, -1, -2, -2, -3, -3,  3,  1, -2,  1, -1, -2, -2,  0, -3, -1,  4, -3, -2, -1, -4 },
-   { -2, -1,  3,  4, -3,  0,  1, -1,  0, -3, -4,  0, -3, -3, -2,  0, -1, -4, -3, -3,  4,  1, -1, -4 },
-   { -1,  0,  0,  1, -3,  3,  4, -2,  0, -3, -3,  1, -1, -3, -1,  0, -1, -3, -2, -2,  1,  4, -1, -4 },
-   {  0, -1, -1, -1, -2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -2,  0,  0, -2, -1, -1, -1, -1, -1, -4 },
-   { -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4,  1 }
-};
 
 // TODO: test performance of min2, max2 and max3 without branching
 // +   https://docs.nvidia.com/cuda/parallel-thread-execution/index.html
@@ -102,24 +110,25 @@ private:
 
 
 // arguments for the Needleman-Wunsch algorithm variants
-struct NWArgs
+struct NwInput
 {
    int* seqX;
    int* seqY;
-   // int* subst;
    int* score;
+   int* subst;
 
    int rows;
    int cols;
+   // int substsz;
 
-   int adjrows;   // TODO: remove
-   int adjcols;
-
+   // TODO: remove
    int insdelcost;
+   // int inscost;
+   // int delcost;
 };
 
 // results which the Needleman-Wunsch algorithm variants return
-struct NWResult
+struct NwMetrics
 {
    Stopwatch sw;
    float Tcpu;
@@ -129,19 +138,20 @@ struct NWResult
 };
 
 
-using NWVariant = void (*)( NWArgs& nw, NWResult& res );
-void Nw_Cpu1_Row_St( NWArgs& nw, NWResult& res );
-void Nw_Cpu2_Diag_St( NWArgs& nw, NWResult& res );
-void Nw_Cpu3_DiagRow_St( NWArgs& nw, NWResult& res );
-void Nw_Cpu4_DiagRow_Mt( NWArgs& nw, NWResult& res );
-void Nw_Gpu3_DiagDiag_Coop( NWArgs& nw, NWResult& res );
+using NwVariant = void (*)( NwInput& nw, NwMetrics& res );
+void Nw_Cpu1_Row_St( NwInput& nw, NwMetrics& res );
+void Nw_Cpu2_Diag_St( NwInput& nw, NwMetrics& res );
+void Nw_Cpu3_DiagRow_St( NwInput& nw, NwMetrics& res );
+void Nw_Cpu4_DiagRow_Mt( NwInput& nw, NwMetrics& res );
+void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res );
 
 
-void Trace1_Diag( const NWArgs& nw, NWResult& res );
+void Trace1_Diag( const NwInput& nw, NwMetrics& res );
 inline void UpdateScore1_Simple(
    const int* const seqX,
    const int* const seqY,
    int* const score,
+   const int* const subst,
    const int rows,
    const int cols,
    const int insdelcost,
@@ -152,6 +162,7 @@ inline void UpdateScore2_Incremental(
    const int* const seqX,
    const int* const seqY,
    int* const score,
+   const int* const subst,
    const int rows,
    const int cols,
    const int insdelcost,

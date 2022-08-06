@@ -2,7 +2,7 @@
 #include "common.hpp"
 
 // parallel cpu implementation of the Needleman Wunsch algorithm
-void Nw_Cpu3_DiagRow_St( NWArgs& nw, NWResult& res )
+void Nw_Cpu3_DiagRow_St( NwInput& nw, NwMetrics& res )
 {
    // start the timer
    res.sw.lap( "cpu-start" );
@@ -12,8 +12,8 @@ void Nw_Cpu3_DiagRow_St( NWArgs& nw, NWResult& res )
    nw.rows--; nw.cols--;
 
    // initialize the first row and column of the score matrix
-   for( int i = 0; i < 1+nw.rows; i++ ) el(nw.score,nw.adjcols, i,0) = -i*nw.insdelcost;
-   for( int j = 0; j < 1+nw.cols; j++ ) el(nw.score,nw.adjcols, 0,j) = -j*nw.insdelcost;
+   for( int i = 0; i < 1+nw.rows; i++ ) el(nw.score,nw.cols, i,0) = -i*nw.insdelcost;
+   for( int j = 0; j < 1+nw.cols; j++ ) el(nw.score,nw.cols, 0,j) = -j*nw.insdelcost;
    
    // size of block that will be a unit of work
    // +   8*16 ints on standard architectures, or 8 cache lines
@@ -45,7 +45,7 @@ void Nw_Cpu3_DiagRow_St( NWArgs& nw, NWResult& res )
          for( int i = ibeg; i < iend; i++ )
          for( int j = jbeg; j < jend; j++ )
          {
-            UpdateScore1_Simple( nw.seqX, nw.seqY, nw.score, nw.adjrows, nw.adjcols, nw.insdelcost, i, j );
+            UpdateScore1_Simple( nw.seqX, nw.seqY, nw.score, nw.subst, nw.rows, nw.cols, nw.insdelcost, i, j );
          }
       }
    }

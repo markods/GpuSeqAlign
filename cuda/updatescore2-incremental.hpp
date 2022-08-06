@@ -6,6 +6,7 @@ inline void UpdateScore2_Incremental(
    const int* const seqX,
    const int* const seqY,
    int* const score,
+   const int* const subst,
    const int rows,
    const int cols,
    const int insdelcost,
@@ -18,7 +19,7 @@ inline void UpdateScore2_Incremental(
    // const int p3 = el(score,cols, i  ,j-1) - insdelcost;
    // el(score,cols, i,j) = max3( p1, p2, p3 );
 
-   int res = subst[ seqY[i] ][ seqX[j] ] + insdelcost;
+   int res = el(subst,SUBSTSZ, seqY[i], seqX[j]) + insdelcost;
 
    res =       res + el(score,cols, i-1,j-1)  ;   // UP LEFT
    res = max2( res,  el(score,cols, i-1,j  ) );   // LEFT

@@ -38,7 +38,7 @@ function Find-Recursive
     $Result = @();
     if( $Files )
     {
-        Push-Location "./build";
+        Push-Location "./build-pwsh";
         $Result = @( $Files.FullName | Resolve-Path -Relative | ForEach-Object -Process { $_.ToString() } );
         Pop-Location;
     }
@@ -111,7 +111,7 @@ if( "-clean" -in $args )
     Write-Output "---------------------------------------------------------------------------------------------------------------- <<< CLEAN";
 
     # remove the compiled code directory
-    if( Test-Path "./build" -PathType "Container" ) { Remove-Item "./build" -Recurse; }
+    if( Test-Path "./build-pwsh" -PathType "Container" ) { Remove-Item "./build-pwsh" -Recurse; }
 
     # print the build command
     Write-Output "Clean success"
@@ -126,7 +126,7 @@ if( "-build" -in $args )
     Write-Output "---------------------------------------------------------------------------------------------------------------- <<< BUILD";
 
     # create the build folder if it doesn't exist
-    if( !( Test-Path "./build" -PathType "Container" ) ) { New-Item -Path "./build" -ItemType "Directory" | Out-Null; }
+    if( !( Test-Path "./build-pwsh" -PathType "Container" ) ) { New-Item -Path "./build-pwsh" -ItemType "Directory" | Out-Null; }
 
     # all .cpp and .cu source files
     $SourceFiles = $null;
@@ -162,7 +162,7 @@ if( "-build" -in $args )
     Write-Output $BuildCmd;
     
     # set current working directory to the project 'build' folder
-    Push-Location "./build";
+    Push-Location "./build-pwsh";
 
     # invoke the build command
     Invoke-Expression -Command $BuildCmd;
@@ -195,7 +195,7 @@ if( "-run" -in $args )
     Write-Output $RunCmd;
 
     # set current working directory to the project 'build' folder to simplify paths
-    Push-Location "./build";
+    Push-Location "./build-pwsh";
 
     # invoke the run command
     Invoke-Expression -Command $RunCmd;

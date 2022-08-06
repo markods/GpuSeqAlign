@@ -25,14 +25,37 @@
 #include "updatescore1-simple.hpp"
 #include "updatescore2-incremental.hpp"
 
-// TODO: remove
-// number of threads in warp
-#define WARPSZ 32
-// tile sizes for kernels A and B
-// +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
-// +   tile B must have one dimension fixed to the number of threads in a warp
-const int tileBx = 60;
-const int tileBy = WARPSZ;
+
+// TODO: read from file
+// block substitution matrix
+#define SUBSTSZ 24
+static int subst_tmp[SUBSTSZ*SUBSTSZ] =
+{
+    4, -1, -2, -2,  0, -1, -1,  0, -2, -1, -1, -1, -1, -2, -1,  1,  0, -3, -2,  0, -2, -1,  0, -4,
+   -1,  5,  0, -2, -3,  1,  0, -2,  0, -3, -2,  2, -1, -3, -2, -1, -1, -3, -2, -3, -1,  0, -1, -4,
+   -2,  0,  6,  1, -3,  0,  0,  0,  1, -3, -3,  0, -2, -3, -2,  1,  0, -4, -2, -3,  3,  0, -1, -4,
+   -2, -2,  1,  6, -3,  0,  2, -1, -1, -3, -4, -1, -3, -3, -1,  0, -1, -4, -3, -3,  4,  1, -1, -4,
+    0, -3, -3, -3,  9, -3, -4, -3, -3, -1, -1, -3, -1, -2, -3, -1, -1, -2, -2, -1, -3, -3, -2, -4,
+   -1,  1,  0,  0, -3,  5,  2, -2,  0, -3, -2,  1,  0, -3, -1,  0, -1, -2, -1, -2,  0,  3, -1, -4,
+   -1,  0,  0,  2, -4,  2,  5, -2,  0, -3, -3,  1, -2, -3, -1,  0, -1, -3, -2, -2,  1,  4, -1, -4,
+    0, -2,  0, -1, -3, -2, -2,  6, -2, -4, -4, -2, -3, -3, -2,  0, -2, -2, -3, -3, -1, -2, -1, -4,
+   -2,  0,  1, -1, -3,  0,  0, -2,  8, -3, -3, -1, -2, -1, -2, -1, -2, -2,  2, -3,  0,  0, -1, -4,
+   -1, -3, -3, -3, -1, -3, -3, -4, -3,  4,  2, -3,  1,  0, -3, -2, -1, -3, -1,  3, -3, -3, -1, -4,
+   -1, -2, -3, -4, -1, -2, -3, -4, -3,  2,  4, -2,  2,  0, -3, -2, -1, -2, -1,  1, -4, -3, -1, -4,
+   -1,  2,  0, -1, -3,  1,  1, -2, -1, -3, -2,  5, -1, -3, -1,  0, -1, -3, -2, -2,  0,  1, -1, -4,
+   -1, -1, -2, -3, -1,  0, -2, -3, -2,  1,  2, -1,  5,  0, -2, -1, -1, -1, -1,  1, -3, -1, -1, -4,
+   -2, -3, -3, -3, -2, -3, -3, -3, -1,  0,  0, -3,  0,  6, -4, -2, -2,  1,  3, -1, -3, -3, -1, -4,
+   -1, -2, -2, -1, -3, -1, -1, -2, -2, -3, -3, -1, -2, -4,  7, -1, -1, -4, -3, -2, -2, -1, -2, -4,
+    1, -1,  1,  0, -1,  0,  0,  0, -1, -2, -2,  0, -1, -2, -1,  4,  1, -3, -2, -2,  0,  0,  0, -4,
+    0, -1,  0, -1, -1, -1, -1, -2, -2, -1, -1, -1, -1, -2, -1,  1,  5, -2, -2,  0, -1, -1,  0, -4,
+   -3, -3, -4, -4, -2, -2, -3, -2, -2, -3, -2, -3, -1,  1, -4, -3, -2, 11,  2, -3, -4, -3, -2, -4,
+   -2, -2, -2, -3, -2, -1, -2, -3,  2, -1, -1, -2, -1,  3, -3, -2, -2,  2,  7, -1, -3, -2, -1, -4,
+    0, -3, -3, -3, -1, -2, -2, -3, -3,  3,  1, -2,  1, -1, -2, -2,  0, -3, -1,  4, -3, -2, -1, -4,
+   -2, -1,  3,  4, -3,  0,  1, -1,  0, -3, -4,  0, -3, -3, -2,  0, -1, -4, -3, -3,  4,  1, -1, -4,
+   -1,  0,  0,  1, -3,  3,  4, -2,  0, -3, -3,  1, -1, -3, -1,  0, -1, -3, -2, -2,  1,  4, -1, -4,
+    0, -1, -1, -1, -2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -2,  0,  0, -2, -1, -1, -1, -1, -1, -4,
+   -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4,  1,
+};
 
 
 // call in case of invalid command line arguments
@@ -48,13 +71,11 @@ void PrintHelpInfo( char* argv[] )
 }
 
 
-
-
 // main program
 int main( int argc, char *argv[] )
 {
    fflush( stdout );
-   if( argc != 4 ) PrintHelpInfo( argv );
+   if( argc != 3 ) PrintHelpInfo( argv );
 
    // number of rows, number of columns and insdelcost
    int rows = atoi( argv[1] );
@@ -65,15 +86,10 @@ int main( int argc, char *argv[] )
    // if the number of columns is less than the number of rows, swap them
    if( cols < rows ) { std::swap( rows, cols ); }
 
-   // adjusted matrix dimensions
-   // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile B size (in order to be evenly divisible)
-   int adjrows = 1 + tileBy*ceil( float( rows-1 )/tileBy );
-   int adjcols = 1 + tileBx*ceil( float( cols-1 )/tileBx );
-
    // allocate memory for the sequences which will be compared and the score matrix
-   int* const seqX  = ( int* ) malloc( adjcols * sizeof( int ) );
-   int* const seqY  = ( int* ) malloc( adjrows * sizeof( int ) );
-   int* const score = ( int* ) malloc( adjrows*adjcols * sizeof( int ) );
+   int* const seqX  = ( int* ) malloc( cols * sizeof( int ) );
+   int* const seqY  = ( int* ) malloc( rows * sizeof( int ) );
+   int* const score = ( int* ) malloc( rows*cols * sizeof( int ) );
 
    // if memory hasn't been allocated
    if( !seqX || !seqY || !score )
@@ -95,12 +111,12 @@ int main( int argc, char *argv[] )
    // +   also initialize the padding with zeroes
    seqX[0] = 0;
    seqY[0] = 0;
-   for( int j = 1; j < adjcols; j++ ) seqX[j] = ( j < cols ) ? ( rand() % SUBSTSZ ) : 0;
-   for( int i = 1; i < adjrows; i++ ) seqY[i] = ( i < rows ) ? ( rand() % SUBSTSZ ) : 0;
+   for( int j = 1; j < cols; j++ ) seqX[j] = ( j < cols ) ? ( rand() % SUBSTSZ ) : 0;
+   for( int i = 1; i < rows; i++ ) seqY[i] = ( i < rows ) ? ( rand() % SUBSTSZ ) : 0;
 
    Stopwatch sw {};
 
-   std::map<std::string, NWVariant> variants {
+   std::map<std::string, NwVariant> variants {
       { "Nw_Cpu1_Row_St", Nw_Cpu1_Row_St },
       { "Nw_Cpu2_Diag_St", Nw_Cpu2_Diag_St },
       { "Nw_Cpu3_DiagRow_St", Nw_Cpu3_DiagRow_St },
@@ -108,15 +124,14 @@ int main( int argc, char *argv[] )
       { "Nw_Gpu3_DiagDiag_Coop", Nw_Gpu3_DiagDiag_Coop },
    };
 
-   NWArgs nw {
+   NwInput nw {
       seqX,
       seqY,
       score,
+      subst_tmp,
+
       rows,
       cols,
-
-      adjrows,
-      adjcols,
 
       insdelcost,
    };
@@ -130,9 +145,9 @@ int main( int argc, char *argv[] )
    for( auto& variant_iter: variants )
    {
       const std::string& name = variant_iter.first;
-      NWVariant& variant = variant_iter.second;
+      NwVariant& variant = variant_iter.second;
 
-      NWResult res {};
+      NwMetrics res {};
 
       printf( "%-22s:   ", name.c_str() );
       fflush( stdout );
