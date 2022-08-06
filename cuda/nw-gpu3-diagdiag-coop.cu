@@ -11,31 +11,31 @@
 // tile sizes for kernels A and B
 // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
 // +   tile B must have one dimension fixed to the number of threads in a warp
-const int tileAx = 1*WARPSZ;
-const int tileAy = 32;
-const int tileBx = 60;
-const int tileBy = WARPSZ;
+constexpr int tileAx = 1*WARPSZ;
+constexpr int tileAy = 32;
+constexpr int tileBx = 60;
+constexpr int tileBy = WARPSZ;
 
 
 // cuda kernel A for the parallel implementation
 // +   initializes the score matrix in the gpu
-__global__ static void kernelA( int* seqX_gpu, int* seqY_gpu, int* score_gpu, int rows, int cols, int (*blosum62_gpu)[BLOSUMSZ], int insdelcost )
+__global__ static void kernelA( int* seqX_gpu, int* seqY_gpu, int* score_gpu, int rows, int cols, int (*subst_gpu)[SUBSTSZ], int insdelcost )
 {
    // the blosum matrix and relevant parts of the two sequences
    // +   stored in shared memory for faster random access
-   __shared__ int blosum62[BLOSUMSZ][BLOSUMSZ];
+   __shared__ int subst[SUBSTSZ][SUBSTSZ];
    __shared__ int seqX[tileAx];
    __shared__ int seqY[tileAy];
 
    // initialize the blosum shared memory copy
    {
       // map the threads from the thread block onto the blosum matrix elements
-      int i = threadIdx.y*BLOSUMSZ + threadIdx.x;
+      int i = threadIdx.y*SUBSTSZ + threadIdx.x;
       // while the current thread maps onto an element in the matrix
-      while( i < BLOSUMSZ*BLOSUMSZ )
+      while( i < SUBSTSZ*SUBSTSZ )
       {
          // copy the current element from the global blosum matrix
-         blosum62[ 0 ][ i ] = blosum62_gpu[ 0 ][ i ];
+         subst[ 0 ][ i ] = subst_gpu[ 0 ][ i ];
          // map this thread to the next element with stride equal to the number of threads in this block
          i += tileAy*tileAx;
       }
@@ -77,7 +77,7 @@ __global__ static void kernelA( int* seqX_gpu, int* seqY_gpu, int* score_gpu, in
       // if the current thread is not in the first row or column of the score matrix
       // +   use the blosum matrix to calculate the score matrix element value
       // +   increase the value by insert delete cost, since then the formula for calculating the actual element value in kernel B becomes simpler
-      if( i > 0 && j > 0 ) { elem = blosum62[ seqY[iY] ][ seqX[iX] ] + insdelcost; }
+      if( i > 0 && j > 0 ) { elem = subst[ seqY[iY] ][ seqX[iX] ] + insdelcost; }
       // otherwise, if the current thread is in the first row or column
       // +   update the score matrix element using the insert delete cost
       else                 { elem = -( i|j )*insdelcost; }
@@ -231,15 +231,15 @@ __global__ static void kernelB( int* score_gpu, int trows, int tcols, int insdel
 
 
 // parallel gpu implementation of the Needleman Wunsch algorithm
-void Gpu3_DiagDiag( NWArgs& nw, NWResult& res )
+void Nw_Gpu3_DiagDiag_Coop( NWArgs& nw, NWResult& res )
 {
    // blosum matrix, sequences which will be compared and the score matrix stored in gpu global memory
-   int *blosum62_gpu, *seqX_gpu, *seqY_gpu, *score_gpu;
+   int *subst_gpu, *seqX_gpu, *seqY_gpu, *score_gpu;
    // allocate space in the gpu global memory
    cudaMalloc( &seqX_gpu,     nw.adjcols            * sizeof( int ) );
    cudaMalloc( &seqY_gpu,     nw.adjrows            * sizeof( int ) );
    cudaMalloc( &score_gpu,    nw.adjrows*nw.adjcols * sizeof( int ) );
-   cudaMalloc( &blosum62_gpu, BLOSUMSZ*BLOSUMSZ     * sizeof( int ) );
+   cudaMalloc( &subst_gpu, SUBSTSZ*SUBSTSZ     * sizeof( int ) );
    // create events for measuring kernel execution time
    cudaEvent_t start, stop;
    cudaEventCreate( &start );
@@ -252,7 +252,7 @@ void Gpu3_DiagDiag( NWArgs& nw, NWResult& res )
    // copy data from host to device
 	cudaMemcpy( seqX_gpu,     nw.seqX,     nw.adjcols     * sizeof( int ), cudaMemcpyHostToDevice );
 	cudaMemcpy( seqY_gpu,     nw.seqY,     nw.adjrows     * sizeof( int ), cudaMemcpyHostToDevice );
-	cudaMemcpy( blosum62_gpu, blosum62, BLOSUMSZ*BLOSUMSZ * sizeof( int ), cudaMemcpyHostToDevice );
+	cudaMemcpy( subst_gpu, subst, SUBSTSZ*SUBSTSZ * sizeof( int ), cudaMemcpyHostToDevice );
 
 
    // launch kernel A
@@ -268,7 +268,7 @@ void Gpu3_DiagDiag( NWArgs& nw, NWResult& res )
       // +   capture events around kernel launch as well
       // +   update the stop event when the kernel finishes
       cudaEventRecord( start, STREAM_ID );
-      kernelA<<< gridA, blockA, 0, STREAM_ID >>>( seqX_gpu, seqY_gpu, score_gpu, nw.adjrows, nw.adjcols, ( int (*)[BLOSUMSZ] )blosum62_gpu, nw.insdelcost );
+      kernelA<<< gridA, blockA, 0, STREAM_ID >>>( seqX_gpu, seqY_gpu, score_gpu, nw.adjrows, nw.adjcols, ( int (*)[SUBSTSZ] )subst_gpu, nw.insdelcost );
       cudaEventRecord( stop, STREAM_ID );
       cudaEventSynchronize( stop );
       
@@ -349,7 +349,7 @@ void Gpu3_DiagDiag( NWArgs& nw, NWResult& res )
    cudaFree( seqX_gpu );
    cudaFree( seqY_gpu );
    cudaFree( score_gpu );
-   cudaFree( blosum62_gpu );
+   cudaFree( subst_gpu );
    // free events' memory
    cudaEventDestroy( start );
    cudaEventDestroy( stop );

@@ -11,8 +11,8 @@
 #define el( mat, cols, i, j ) ( mat[(i)*(cols) + (j)] )
 
 // block substitution matrix
-#define BLOSUMSZ 24
-static int blosum62[BLOSUMSZ][BLOSUMSZ] =
+#define SUBSTSZ 24
+static int subst[SUBSTSZ][SUBSTSZ] =
 {
    {  4, -1, -2, -2,  0, -1, -1,  0, -2, -1, -1, -1, -1, -2, -1,  1,  0, -3, -2,  0, -2, -1,  0, -4 },
    { -1,  5,  0, -2, -3,  1,  0, -2,  0, -3, -2,  2, -1, -3, -2, -1, -1, -3, -2, -3, -1,  0, -1, -4 },
@@ -72,7 +72,7 @@ inline void UpdateScore(
    const int j )
    noexcept
 {
-   const int p1 = el(score,cols, i-1,j-1) + blosum62[ seqY[i] ][ seqX[j] ];
+   const int p1 = el(score,cols, i-1,j-1) + subst[ seqY[i] ][ seqX[j] ];
    const int p2 = el(score,cols, i-1,j  ) - insdelcost;
    const int p3 = el(score,cols, i  ,j-1) - insdelcost;
    el(score,cols, i,j) = max3( p1, p2, p3 );
@@ -118,7 +118,7 @@ struct NWArgs
 {
    int* seqX;
    int* seqY;
-   // int* blosum62;
+   // int* subst;
    int* score;
 
    int rows;
@@ -142,11 +142,14 @@ struct NWResult
 
 
 using NWVariant = void (*)( NWArgs& nw, NWResult& res );
-void Cpu1_Row( NWArgs& nw, NWResult& res );
-void Cpu2_Diag( NWArgs& nw, NWResult& res );
-void Cpu3_DiagRow( NWArgs& nw, NWResult& res );
-void Gpu3_DiagDiag( NWArgs& nw, NWResult& res );
+void Nw_Cpu1_Row_St( NWArgs& nw, NWResult& res );
+void Nw_Cpu2_Diag_St( NWArgs& nw, NWResult& res );
+void Nw_Cpu3_DiagRow_St( NWArgs& nw, NWResult& res );
+void Nw_Cpu4_DiagRow_Mt( NWArgs& nw, NWResult& res );
+void Nw_Gpu3_DiagDiag_Coop( NWArgs& nw, NWResult& res );
 
+
+void Trace1_Diag( const NWArgs& nw, NWResult& res );
 
 
 

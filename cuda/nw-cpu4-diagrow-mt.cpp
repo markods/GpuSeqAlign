@@ -1,7 +1,7 @@
 #include "common.h"
 
 // parallel cpu implementation of the Needleman Wunsch algorithm
-void Cpu3_DiagRow( NWArgs& nw, NWResult& res )
+void Nw_Cpu4_DiagRow_Mt( NWArgs& nw, NWResult& res )
 {
    // start the timer
    res.sw.lap( "cpu-start" );
