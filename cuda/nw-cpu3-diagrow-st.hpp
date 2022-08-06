@@ -1,4 +1,5 @@
-#include "common.h"
+#pragma once
+#include "common.hpp"
 
 // parallel cpu implementation of the Needleman Wunsch algorithm
 void Nw_Cpu3_DiagRow_St( NWArgs& nw, NWResult& res )
@@ -44,7 +45,7 @@ void Nw_Cpu3_DiagRow_St( NWArgs& nw, NWResult& res )
          for( int i = ibeg; i < iend; i++ )
          for( int j = jbeg; j < jend; j++ )
          {
-            UpdateScore( nw.seqX, nw.seqY, nw.score, nw.adjrows, nw.adjcols, nw.insdelcost, i, j );
+            UpdateScore1_Simple( nw.seqX, nw.seqY, nw.score, nw.adjrows, nw.adjcols, nw.insdelcost, i, j );
          }
       }
    }

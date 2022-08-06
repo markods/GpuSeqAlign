@@ -1,4 +1,5 @@
-#include "common.h"
+#pragma once
+#include "common.hpp"
 
 // sequential cpu implementation of the Needleman Wunsch algorithm
 void Nw_Cpu1_Row_St( NWArgs& nw, NWResult& res )
@@ -20,7 +21,7 @@ void Nw_Cpu1_Row_St( NWArgs& nw, NWResult& res )
    for( int i = 0; i < nw.rows; i++ )
    for( int j = 0; j < nw.cols; j++ )
    {
-      UpdateScore( nw.seqX, nw.seqY, nw.score, nw.adjrows, nw.adjcols, nw.insdelcost, 1+i, 1+j );
+      UpdateScore1_Simple( nw.seqX, nw.seqY, nw.score, nw.adjrows, nw.adjcols, nw.insdelcost, 1+i, 1+j );
    }
 
    // restore the original row and column count

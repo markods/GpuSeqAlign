@@ -1,16 +1,31 @@
 /*
-./build -run  2048  2048 10
-./build -run  6144  6144 10
-./build -run 16384 16384 10
-./build -run 22528 22528 10
+./build -run  2048  2048
+./build -run  6144  6144
+./build -run 16384 16384
+./build -run 22528 22528
 */
 
 #include <cstdio>
 #include <string>
-#include <ctime>
 #include <map>
-#include "common.h"
 
+#include "common.hpp"
+// === NW CPU ===
+#include "nw-cpu1-row-st.hpp"
+#include "nw-cpu2-diag-st.hpp"
+#include "nw-cpu3-diagrow-st.hpp"
+#include "nw-cpu4-diagrow-mt.hpp"
+// === NW GPU ===
+// #include "nw-gpu1.hpp"
+// #include "nw-gpu2.hpp"
+#include "nw-gpu3-diagdiag-coop.hpp"
+// #include "nw-gpu4.hpp"
+// === UTILS ===
+#include "trace1-diag.hpp"
+#include "updatescore1-simple.hpp"
+#include "updatescore2-incremental.hpp"
+
+// TODO: remove
 // number of threads in warp
 #define WARPSZ 32
 // tile sizes for kernels A and B
@@ -21,7 +36,7 @@ const int tileBy = WARPSZ;
 
 
 // call in case of invalid command line arguments
-void Usage( char* argv[] )
+void PrintHelpInfo( char* argv[] )
 {
    fprintf( stderr,
       "nw m n [cost]\n"
@@ -39,12 +54,12 @@ void Usage( char* argv[] )
 int main( int argc, char *argv[] )
 {
    fflush( stdout );
-   if( argc != 4 ) Usage( argv );
+   if( argc != 4 ) PrintHelpInfo( argv );
 
    // number of rows, number of columns and insdelcost
    int rows = atoi( argv[1] );
    int cols = atoi( argv[2] );
-   int insdelcost = atoi( argv[3] );
+   int insdelcost = 4; // TODO: should this be input, or not?
    // add the padding (zeroth row and column) to the matrix
    rows++; cols++;
    // if the number of columns is less than the number of rows, swap them
@@ -76,12 +91,12 @@ int main( int argc, char *argv[] )
 // unsigned int seed = 1605868371;
    srand( seed );
 
-   // initialize the sequences A and B to random values in the range [1-10]
+   // initialize the sequences A and B to random values in the range [0, SUBSTSIZE-1]
    // +   also initialize the padding with zeroes
    seqX[0] = 0;
    seqY[0] = 0;
-   for( int j = 1; j < adjcols; j++ ) seqX[j] = ( j < cols ) ? 1 + rand() % 10 : 0;
-   for( int i = 1; i < adjrows; i++ ) seqY[i] = ( i < rows ) ? 1 + rand() % 10 : 0;
+   for( int j = 1; j < adjcols; j++ ) seqX[j] = ( j < cols ) ? ( rand() % SUBSTSZ ) : 0;
+   for( int i = 1; i < adjrows; i++ ) seqY[i] = ( i < rows ) ? ( rand() % SUBSTSZ ) : 0;
 
    Stopwatch sw {};
 
@@ -128,6 +143,7 @@ int main( int argc, char *argv[] )
       if( firstIter )
       {
          prevhash = res.hash;
+         firstIter = false;
       }
       else if( prevhash != res.hash )
       {

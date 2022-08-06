@@ -1,4 +1,5 @@
-#include "common.h"
+#pragma once
+#include "common.hpp"
 
 // print one of the optimal matching paths to a file
 void Trace1_Diag( const NWArgs& nw, NWResult& res )
