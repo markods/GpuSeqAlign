@@ -1,4 +1,3 @@
-#pragma once
 #include "common.hpp"
 
 // parallel cpu implementation of the Needleman Wunsch algorithm

@@ -1,4 +1,3 @@
-#pragma once
 #include "common.hpp"
 
 #include <cooperative_groups.h>

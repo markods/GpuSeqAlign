@@ -1,8 +1,13 @@
 /*
-./build -run  2048  2048
-./build -run  6144  6144
-./build -run 16384 16384
-./build -run 22528 22528
+./build -run     1     1
+./build -run     6     5
+./build -run    32    32
+./build -run    32    60
+./build -run    33    61
+./build -run  2050  2048
+./build -run  6144  6150
+./build -run 16384 16390
+./build -run 22528 22550
 */
 
 #include <cstdio>
@@ -10,18 +15,6 @@
 #include <map>
 
 #include "common.hpp"
-// === NW CPU ===
-#include "nw-cpu1-row-st.hpp"
-#include "nw-cpu2-diag-st.hpp"
-#include "nw-cpu3-diagrow-st.hpp"
-#include "nw-cpu4-diagrow-mt.hpp"
-// === NW GPU ===
-// #include "nw-gpu1.hpp"
-// #include "nw-gpu2.hpp"
-#include "nw-gpu3-diagdiag-coop.cuh"
-// #include "nw-gpu4.hpp"
-// === UTILS ===
-#include "trace1-diag.hpp"
 
 
 // TODO: read from file

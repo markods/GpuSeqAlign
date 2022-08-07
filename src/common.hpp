@@ -151,6 +151,7 @@ void Nw_Cpu3_DiagRow_St( NwInput& nw, NwMetrics& res );
 void Nw_Cpu4_DiagRow_Mt( NwInput& nw, NwMetrics& res );
 void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res );
 
+void Trace1_Diag( const NwInput& nw, NwMetrics& res );
 
 // update the score given the current score matrix and position
 inline void UpdateScore(

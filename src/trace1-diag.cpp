@@ -1,4 +1,3 @@
-#pragma once
 #include "common.hpp"
 
 // print one of the optimal matching paths to a file
