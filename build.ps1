@@ -38,9 +38,15 @@ function Find-Recursive
     $Result = @();
     if( $Files )
     {
-        Push-Location "./build/pwsh";
-        $Result = @( $Files.FullName | Resolve-Path -Relative | ForEach-Object -Process { $_.ToString() } );
-        Pop-Location;
+        try
+        {
+            Push-Location "./build/pwsh";
+            $Result = @( $Files.FullName | Resolve-Path -Relative | ForEach-Object -Process { $_.ToString() } );
+        }
+        finally
+        {
+            Pop-Location;
+        }
     }
 
     return $Result;
@@ -160,15 +166,20 @@ if( "-build" -in $args )
 
     # print the build command
     Write-Output $BuildCmd;
-    
-    # set current working directory to the project 'build' folder
-    Push-Location "./build/pwsh";
 
-    # invoke the build command
-    Invoke-Expression -Command $BuildCmd;
+    try
+    {
+        # set current working directory to the project 'build' folder
+        Push-Location "./build/pwsh";
 
-    # restore the previous working directory
-    Pop-Location;
+        # invoke the build command
+        Invoke-Expression -Command $BuildCmd;
+    }
+    finally
+    {
+        # restore the previous working directory
+        Pop-Location;
+    }
 
     # exit with the error code of the last native program that was run
     if( $LASTEXITCODE -ne 0 ) { exit $LASTEXITCODE; }
@@ -194,14 +205,19 @@ if( "-run" -in $args )
     # print the run command
     Write-Output $RunCmd;
 
-    # set current working directory to the project 'build' folder to simplify paths
-    Push-Location "./build/pwsh";
-
-    # invoke the run command
-    Invoke-Expression -Command $RunCmd;
-
-    # restore the previous working directory
-    Pop-Location;
+    try
+    {
+        # set current working directory to the project 'build' folder to simplify paths
+        Push-Location "./build/pwsh";
+    
+        # invoke the run command
+        Invoke-Expression -Command $RunCmd;
+    }
+    finally
+    {
+        # restore the previous working directory
+        Pop-Location;
+    }
 
     # exit with the error code of the last native program that was run
     if( $LASTEXITCODE -ne 0 ) { exit $LASTEXITCODE; }

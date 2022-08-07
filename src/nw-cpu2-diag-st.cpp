@@ -23,7 +23,7 @@ void Nw_Cpu2_Diag_St( NwInput& nw, NwMetrics& res )
    {
       int i = 1 +     t;
       int j = 1 + s - t;
-      UpdateScore( nw.seqX, nw.seqY, nw.score, nw.subst, nw.adjcols, nw.insdelcost, i, j );
+      UpdateScore( nw, i, j );
    }
 
    //  x x x x x x
@@ -38,7 +38,7 @@ void Nw_Cpu2_Diag_St( NwInput& nw, NwMetrics& res )
       {
          int i = 1 +     t;
          int j = 1 + s - t;
-         UpdateScore( nw.seqX, nw.seqY, nw.score, nw.subst, nw.adjcols, nw.insdelcost, i, j );
+         UpdateScore( nw, i, j );
       }
    }
 
@@ -51,7 +51,7 @@ void Nw_Cpu2_Diag_St( NwInput& nw, NwMetrics& res )
    {
       int i = 1 +     t;
       int j = 1 + s - t;
-      UpdateScore( nw.seqX, nw.seqY, nw.score, nw.subst, nw.adjcols, nw.insdelcost, i, j );
+      UpdateScore( nw, i, j );
    }
 
    // stop the timer

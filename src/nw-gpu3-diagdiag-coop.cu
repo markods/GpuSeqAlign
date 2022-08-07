@@ -1,36 +1,27 @@
-#include "common.hpp"
-
 #include <cooperative_groups.h>
-
-
-// tile sizes for kernels A and B
-// +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
-// +   tile B must have one dimension fixed to the number of threads in a warp
-constexpr int tileAx = 1*WARPSZ;
-constexpr int tileAy = 32;
-constexpr int tileBx = 60;
-constexpr int tileBy = WARPSZ;
+#include "common.hpp"
 
 
 // cuda kernel A for the parallel implementation
 // +   initializes the score matrix in the gpu
-__global__ static void Nw_Gpu3_KernelA( int* seqX_gpu, int* seqY_gpu, int* score_gpu, int* subst_gpu, int rows, int cols, int insdelcost )
+__global__ static void Nw_Gpu3_KernelA( int* seqX_gpu, int* seqY_gpu, int* score_gpu, int* subst_gpu, int adjrows, int adjcols, int substsz, int insdelcost, unsigned tileAx, unsigned tileAy )
 {
-   // the blosum matrix and relevant parts of the two sequences
+   extern __shared__ int shmem[/*( substsz*substsz + tileAx + tileAy )*/];
+   // the substitution matrix and relevant parts of the two sequences
    // +   stored in shared memory for faster random access
-   __shared__ int subst[SUBSTSZ*SUBSTSZ];
-   __shared__ int seqX[tileAx];
-   __shared__ int seqY[tileAy];
+   int* const subst/*[substsz][substsz]*/ = shmem + 0;
+   int* const seqX/*[tileAx]*/            = subst + substsz*substsz;
+   int* const seqY/*[tileAy]*/            = seqX  + tileAx;
 
-   // initialize the blosum shared memory copy
+   // initialize the substitution shared memory copy
    {
-      // map the threads from the thread block onto the blosum matrix elements
-      int i = threadIdx.y*SUBSTSZ + threadIdx.x;
+      // map the threads from the thread block onto the substitution matrix elements
+      int i = threadIdx.y*substsz + threadIdx.x;
       // while the current thread maps onto an element in the matrix
-      while( i < SUBSTSZ*SUBSTSZ )
+      while( i < substsz*substsz )
       {
-         // copy the current element from the global blosum matrix
-         el(subst,SUBSTSZ, 0,i) = el(subst_gpu,SUBSTSZ, 0,i);
+         // copy the current element from the global substitution matrix
+         el(subst,substsz, 0,i) = el(subst_gpu,substsz, 0,i);
          // map this thread to the next element with stride equal to the number of threads in this block
          i += tileAy*tileAx;
       }
@@ -67,19 +58,19 @@ __global__ static void Nw_Gpu3_KernelA( int* seqX_gpu, int* seqY_gpu, int* score
       int elem = 0;
       
       // if the current thread is outside the score matrix, return
-      if( i >= rows || j >= cols ) return;
+      if( i >= adjrows || j >= adjcols ) return;
 
       // if the current thread is not in the first row or column of the score matrix
-      // +   use the blosum matrix to calculate the score matrix element value
+      // +   use the substitution matrix to calculate the score matrix element value
       // +   increase the value by insert delete cost, since then the formula for calculating the actual element value in kernel B becomes simpler
-      if( i > 0 && j > 0 ) { elem = el(subst,SUBSTSZ, seqY[iY],seqX[iX]) + insdelcost; }
+      if( i > 0 && j > 0 ) { elem = el(subst,substsz, seqY[iY],seqX[iX]) + insdelcost; }
       // otherwise, if the current thread is in the first row or column
       // +   update the score matrix element using the insert delete cost
       else                 { elem = -( i|j )*insdelcost; }
       
       // update the corresponding element in global memory
       // +   fully coallesced memory access
-      el(score_gpu,cols, i,j) = elem;
+      el(score_gpu,adjcols, i,j) = elem;
    }
 }
 
@@ -87,11 +78,12 @@ __global__ static void Nw_Gpu3_KernelA( int* seqX_gpu, int* seqY_gpu, int* score
 // cuda kernel B for the parallel implementation
 // +   calculates the score matrix in the gpu using the initialized score matrix from kernel A
 // +   the given matrix minus the padding (zeroth row and column) must be evenly divisible by the tile B
-__global__ static void Nw_Gpu3_KernelB( int* score_gpu, int trows, int tcols, int insdelcost )
+__global__ static void Nw_Gpu3_KernelB( int* score_gpu, int trows, int tcols, int insdelcost, unsigned tileBx, unsigned tileBy )
 {
+   extern __shared__ int shmem[/*( (1+tileBy)*(1+tileBx) )*/];
    // matrix tile which this thread block maps onto
    // +   stored in shared memory for faster random access
-   __shared__ int tile[(1+tileBy)*(1+tileBx)];
+   int* const tile/*[(1+tileBy)*(1+tileBx)]*/ = shmem + 0;
 
    
    //  / / / . .       . . . / /       . . . . .|/ /
@@ -230,29 +222,40 @@ __global__ static void Nw_Gpu3_KernelB( int* score_gpu, int trows, int tcols, in
 // parallel gpu implementation of the Needleman Wunsch algorithm
 void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
 {
-   // blosum matrix, sequences which will be compared and the score matrix stored in gpu global memory
-   NwInput nw_gpu {
-      nw.seqX,
-      nw.seqY,
-      nw.score,
-      nw.subst,
+   // tile sizes for kernels A and B
+   // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
+   // +   tile B must have one dimension fixed to the number of threads in a warp
+   unsigned tileAx = 1*WARPSZ;
+   unsigned tileAy = 32;
+   unsigned tileBx = 60;
+   unsigned tileBy = WARPSZ;
 
-      nw.adjrows,
-      nw.adjcols,
+   // substitution matrix, sequences which will be compared and the score matrix stored in gpu global memory
+   NwInput nw_gpu = {
+      // nw.seqX,
+      // nw.seqY,
+      // nw.score,
+      // nw.subst,
 
-      nw.insdelcost,
+      // nw.adjrows,
+      // nw.adjcols,
+      // nw.substsz,
+
+      // nw.insdelcost,
    };
 
    // adjusted gpu score matrix dimensions
    // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile B size (in order to be evenly divisible)
    nw_gpu.adjrows = 1 + tileBy*ceil( float( nw.adjrows-1 )/tileBy );
    nw_gpu.adjcols = 1 + tileBx*ceil( float( nw.adjcols-1 )/tileBx );
+   nw_gpu.substsz = nw.substsz;
+   nw_gpu.insdelcost = nw.insdelcost;
 
    // allocate space in the gpu global memory
-   cudaMalloc( &nw_gpu.seqX,  nw_gpu.adjcols             * sizeof( int ) );
-   cudaMalloc( &nw_gpu.seqY,  nw_gpu.adjrows             * sizeof( int ) );
+   cudaMalloc( &nw_gpu.seqX,  nw_gpu.adjcols                * sizeof( int ) );
+   cudaMalloc( &nw_gpu.seqY,  nw_gpu.adjrows                * sizeof( int ) );
    cudaMalloc( &nw_gpu.score, nw_gpu.adjrows*nw_gpu.adjcols * sizeof( int ) );
-   cudaMalloc( &nw_gpu.subst, SUBSTSZ*SUBSTSZ         * sizeof( int ) );
+   cudaMalloc( &nw_gpu.subst, nw_gpu.substsz*nw_gpu.substsz * sizeof( int ) );
    // create events for measuring kernel execution time
    cudaEvent_t start, stop;
    cudaEventCreate( &start );
@@ -264,9 +267,9 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
 
    // copy data from host to device
    // +   gpu padding remains uninitialized, but this is not an issue since padding is only used to simplify kernel code (optimization)
-   cudaMemcpy( nw_gpu.seqX,  nw.seqX,  nw.adjcols         * sizeof( int ), cudaMemcpyHostToDevice );
-   cudaMemcpy( nw_gpu.seqY,  nw.seqY,  nw.adjrows         * sizeof( int ), cudaMemcpyHostToDevice );
-   cudaMemcpy( nw_gpu.subst, nw.subst, SUBSTSZ*SUBSTSZ * sizeof( int ), cudaMemcpyHostToDevice );
+   cudaMemcpy( nw_gpu.seqX,  nw.seqX,  nw.adjcols * sizeof( int ), cudaMemcpyHostToDevice );
+   cudaMemcpy( nw_gpu.seqY,  nw.seqY,  nw.adjrows * sizeof( int ), cudaMemcpyHostToDevice );
+   cudaMemcpy( nw_gpu.subst, nw.subst, nw_gpu.substsz*nw_gpu.substsz * sizeof( int ), cudaMemcpyHostToDevice );
 
 
    // launch kernel A
@@ -277,14 +280,23 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
       gridA.x = ceil( float( nw_gpu.adjcols )/tileAx );
       // block dimensions for kernel A
       dim3 blockA { tileAx, tileAy };
+
+      // calculate size of shared memory per block in bytes
+      int shmemsz = (
+         /*subst[][]*/ nw_gpu.substsz*nw_gpu.substsz
+         /*seqX[]*/ + tileAx
+         /*seqY[]*/ + tileAy
+      ) * sizeof( int );
       
+      // group arguments to be passed to kernel B
+      void* kargs[] { &nw_gpu.seqX, &nw_gpu.seqY, &nw_gpu.score, &nw_gpu.subst, &nw_gpu.adjrows, &nw_gpu.adjcols, &nw_gpu.substsz, &nw_gpu.insdelcost, &tileAx, &tileAy };
+
       // launch the kernel in the given stream (don't statically allocate shared memory)
       // +   capture events around kernel launch as well
       // +   update the stop event when the kernel finishes
-      cudaEventRecord( start, 0/*STREAM_ID*/ );
-      // TODO: replace with cudaLaunchKernel
-      Nw_Gpu3_KernelA<<< gridA, blockA, 0, 0/*STREAM_ID*/ >>>( nw_gpu.seqX, nw_gpu.seqY, nw_gpu.score, nw_gpu.subst, nw_gpu.adjrows, nw_gpu.adjcols, nw_gpu.insdelcost );
-      cudaEventRecord( stop, 0/*STREAM_ID*/ );
+      cudaEventRecord( start, 0/*stream*/ );
+      cudaLaunchKernel( ( void* )Nw_Gpu3_KernelA, gridA, blockA, kargs, shmemsz, 0/*stream*/ );
+      cudaEventRecord( stop, 0/*stream*/ );
       cudaEventSynchronize( stop );
       
       // kernel A execution time
@@ -308,6 +320,11 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
       int trows = ceil( float( nw_gpu.adjrows-1 )/tileBy );
       int tcols = ceil( float( nw_gpu.adjcols-1 )/tileBx );
       
+      // calculate size of shared memory per block in bytes
+      int shmemsz = (
+         /*tile[]*/ ( 1+tileBy )*( 1+tileBx )
+      )*sizeof( int );
+      
       // calculate grid and block dimensions for kernel B
       {
          // take the number of warps on the largest tile diagonal times the number of threads in a warp as the number of threads
@@ -321,24 +338,23 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
          int maxBlocksPerSm = 0;
          // number of threads per block that the kernel will be launched with
          int numThreads = blockB.x;
-         // size of shared memory per block in bytes
-         int sharedMemSz = ( ( 1+tileBy )*( 1+tileBx ) )*sizeof( int );
 
          // calculate the max number of parallel blocks per streaming multiprocessor
-         cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxBlocksPerSm, Nw_Gpu3_KernelB, numThreads, sharedMemSz );
+         cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxBlocksPerSm, Nw_Gpu3_KernelB, numThreads, shmemsz );
          // the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
          gridB.x = min( gridB.x, MPROCS*maxBlocksPerSm );
       }
 
+
       // group arguments to be passed to kernel B
-      void* kargs[] { &nw_gpu.score, &trows, &tcols, &nw_gpu.insdelcost };
+      void* kargs[] { &nw_gpu.score, &trows, &tcols, &nw_gpu.insdelcost, &tileBx, &tileBy };
       
       // launch the kernel in the given stream (don't statically allocate shared memory)
       // +   capture events around kernel launch as well
       // +   update the stop event when the kernel finishes
-      cudaEventRecord( start, 0/*STREAM_ID*/ );
-      cudaLaunchCooperativeKernel( ( void* )Nw_Gpu3_KernelB, gridB, blockB, kargs, 0, 0/*STREAM_ID*/ );
-      cudaEventRecord( stop, 0/*STREAM_ID*/ );
+      cudaEventRecord( start, 0/*stream*/ );
+      cudaLaunchCooperativeKernel( ( void* )Nw_Gpu3_KernelB, gridB, blockB, kargs, shmemsz, 0/*stream*/ );
+      cudaEventRecord( stop, 0/*stream*/ );
       cudaEventSynchronize( stop );
       
       // kernel B execution time
@@ -373,14 +389,14 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
    // save the calculated score matrix
    // +   starts an async data copy from device to host, then waits for the copy to finish
    cudaMemcpy2D(
-       nw    .score,                  // dst    - Destination memory address
+       nw    .score,                     // dst    - Destination memory address
        nw    .adjcols * sizeof( int ),   // dpitch - Pitch of destination memory (padded row size in bytes; in other words distance between the starting points of two rows)
-       nw_gpu.score,                  // src    - Source memory address
+       nw_gpu.score,                     // src    - Source memory address
        nw_gpu.adjcols * sizeof( int ),   // spitch - Pitch of source memory (padded row size in bytes)
        
        nw.adjcols * sizeof( int ),       // width  - Width of matrix transfer (non-padding row size in bytes)
        nw.adjrows,                       // height - Height of matrix transfer (#rows)
-       cudaMemcpyDeviceToHost         // kind   - Type of transfer
+       cudaMemcpyDeviceToHost            // kind   - Type of transfer
    );      
 
    // stop the cpu timer

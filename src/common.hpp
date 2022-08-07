@@ -77,10 +77,6 @@ inline void ZeroOutMatrix(
    }
 }
 
-// TODO: remove
-// block substitution matrix
-#define SUBSTSZ 24
-
 
 
 class Stopwatch
@@ -126,7 +122,7 @@ struct NwInput
 
    int adjrows;
    int adjcols;
-   // int substsz;
+   int substsz;
 
    // TODO: remove
    int insdelcost;
@@ -155,21 +151,12 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res );
 void Trace1_Diag( const NwInput& nw, NwMetrics& res );
 
 // update the score given the current score matrix and position
-inline void UpdateScore(
-   const int* const seqX,
-   const int* const seqY,
-   int* const score,
-   const int* const subst,
-   const int adjcols,
-   const int insdelcost,
-   const int i,
-   const int j )
-   noexcept
+inline void UpdateScore( NwInput& nw, int i, int j ) noexcept
 {
-   int p1 = el(score,adjcols, i-1,j-1) + el(subst,SUBSTSZ, seqY[i], seqX[j]);  // MOVE DOWN-RIGHT
-   int p2 = el(score,adjcols, i-1,j  ) - insdelcost;   // MOVE DOWN    // TODO: inscost
-   int p3 = el(score,adjcols, i  ,j-1) - insdelcost;   // MOVE RIGHT   // TODO: delcost
-   el(score,adjcols, i,j) = max3( p1, p2, p3 );
+   int p1 = el(nw.score,nw.adjcols, i-1,j-1) + el(nw.subst,nw.substsz, nw.seqY[i], nw.seqX[j]);  // MOVE DOWN-RIGHT
+   int p2 = el(nw.score,nw.adjcols, i-1,j  ) - nw.insdelcost;   // MOVE DOWN    // TODO: inscost
+   int p3 = el(nw.score,nw.adjcols, i  ,j-1) - nw.insdelcost;   // MOVE RIGHT   // TODO: delcost
+   el(nw.score,nw.adjcols, i,j) = max3( p1, p2, p3 );
 }
 
 

@@ -21,7 +21,7 @@ void Nw_Cpu1_Row_St( NwInput& nw, NwMetrics& res )
    for( int i = 0; i < rows; i++ )
    for( int j = 0; j < cols; j++ )
    {
-      UpdateScore( nw.seqX, nw.seqY, nw.score, nw.subst, nw.adjcols, nw.insdelcost, 1+i, 1+j );
+      UpdateScore( nw, 1+i, 1+j );
    }
 
    // stop the timer

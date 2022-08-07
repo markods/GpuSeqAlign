@@ -13,13 +13,12 @@
 #include <cstdio>
 #include <string>
 #include <map>
-
 #include "common.hpp"
 
 
 // TODO: read from file
 // block substitution matrix
-#define SUBSTSZ 24
+constexpr int SUBSTSZ = 24;
 static int subst_tmp[SUBSTSZ*SUBSTSZ] =
 {
     4, -1, -2, -2,  0, -1, -1,  0, -2, -1, -1, -1, -1, -2, -1,  1,  0, -3, -2,  0, -2, -1,  0, -4,
@@ -76,6 +75,7 @@ int main( int argc, char *argv[] )
 
       // adjrows,
       // adjcols,
+      // substsz,
 
       // insdelcost,
    };
@@ -84,6 +84,7 @@ int main( int argc, char *argv[] )
    // add the padding (zeroth row and column) to the matrix
    nw.adjrows = 1+ atoi( argv[1] );
    nw.adjcols = 1+ atoi( argv[2] );
+   nw.substsz = SUBSTSZ;
    nw.insdelcost = 4; // TODO: should this be input, or not?
    // if the number of columns is less than the number of rows, swap them
    if( nw.adjcols < nw.adjrows )
@@ -106,7 +107,7 @@ int main( int argc, char *argv[] )
 
       // free allocated memory
       free( nw.seqX ); free( nw.seqY ); free( nw.score );
-      exit(1);
+      exit(-1);
    }
 
 
@@ -120,8 +121,8 @@ int main( int argc, char *argv[] )
    // +   also initialize the padding with zeroes
    nw.seqX[0] = 0;
    nw.seqY[0] = 0;
-   for( int j = 1; j < nw.adjcols; j++ ) nw.seqX[j] = rand() % SUBSTSZ;
-   for( int i = 1; i < nw.adjrows; i++ ) nw.seqY[i] = rand() % SUBSTSZ;
+   for( int j = 1; j < nw.adjcols; j++ ) nw.seqX[j] = rand() % nw.substsz;
+   for( int i = 1; i < nw.adjrows; i++ ) nw.seqY[i] = rand() % nw.substsz;
 
 
    // the tested nw implementations
@@ -134,7 +135,7 @@ int main( int argc, char *argv[] )
    };
 
    // variables for storing the calculation hashes
-   unsigned prevhash = 10;
+   unsigned firsthash = 10;
    // if the test was successful
    bool firstIter = true;
    bool success = true;
@@ -157,10 +158,10 @@ int main( int argc, char *argv[] )
 
       if( firstIter )
       {
-         prevhash = res.hash;
+         firsthash = res.hash;
          firstIter = false;
       }
-      else if( prevhash != res.hash )
+      else if( firsthash != res.hash )
       {
          success = false;
       }
@@ -176,6 +177,7 @@ int main( int argc, char *argv[] )
 
    // free allocated memory
    free( nw.seqX ); free( nw.seqY ); free( nw.score );
+   exit( ( success == true ) ? 0 : 1 );
 }
 
 
