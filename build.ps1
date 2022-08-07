@@ -38,7 +38,7 @@ function Find-Recursive
     $Result = @();
     if( $Files )
     {
-        Push-Location "./build-pwsh";
+        Push-Location "./build/pwsh";
         $Result = @( $Files.FullName | Resolve-Path -Relative | ForEach-Object -Process { $_.ToString() } );
         Pop-Location;
     }
@@ -111,8 +111,7 @@ if( "-clean" -in $args )
     Write-Output "---------------------------------------------------------------------------------------------------------------- <<< CLEAN";
 
     # remove the compiled code directory
-    if( Test-Path "./build-pwsh" -PathType "Container" ) { Remove-Item "./build-pwsh" -Recurse; }
-    if( Test-Path "./build-vs"   -PathType "Container" ) { Remove-Item "./build-vs"   -Recurse; }
+    if( Test-Path "./build" -PathType "Container" ) { Remove-Item "./build" -Recurse; }
 
     # print the build command
     Write-Output "Clean success"
@@ -127,7 +126,7 @@ if( "-build" -in $args )
     Write-Output "---------------------------------------------------------------------------------------------------------------- <<< BUILD";
 
     # create the build folder if it doesn't exist
-    if( !( Test-Path "./build-pwsh" -PathType "Container" ) ) { New-Item -Path "./build-pwsh" -ItemType "Directory" | Out-Null; }
+    if( !( Test-Path "./build/pwsh" -PathType "Container" ) ) { New-Item -Path "./build/pwsh" -ItemType "Directory" | Out-Null; }
 
     # all .cpp and .cu source files
     $SourceFiles = $null;
@@ -147,9 +146,9 @@ if( "-build" -in $args )
         '-Xcompiler', '"',         # pass the string arguments to the underlying c++ compiler (msvc)
             "$Openmp",             # +   use openmp
         '"',                       # 
-        '-Xptxas -v',              # show verbose cuda kernel compilation info
+        '--ptxas-options=-v',      # show verbose cuda kernel compilation info
         '-arch=sm_61',             # architecture - cuda 6.1
-        '-prec-sqrt true',         # use precise sqrt
+      # '-prec-sqrt true',         # use precise sqrt
         '-maxrregcount 32',        # maximum registers available per thread
         "$Debug",                  # define the debug symbol, or optimise code, depending on what is requested
         '   -o "{0}" ' -f $Target; # add the output file name to the build command
@@ -163,7 +162,7 @@ if( "-build" -in $args )
     Write-Output $BuildCmd;
     
     # set current working directory to the project 'build' folder
-    Push-Location "./build-pwsh";
+    Push-Location "./build/pwsh";
 
     # invoke the build command
     Invoke-Expression -Command $BuildCmd;
@@ -196,7 +195,7 @@ if( "-run" -in $args )
     Write-Output $RunCmd;
 
     # set current working directory to the project 'build' folder to simplify paths
-    Push-Location "./build-pwsh";
+    Push-Location "./build/pwsh";
 
     # invoke the run command
     Invoke-Expression -Command $RunCmd;
