@@ -22,8 +22,6 @@
 // #include "nw-gpu4.hpp"
 // === UTILS ===
 #include "trace1-diag.hpp"
-#include "updatescore1-simple.hpp"
-#include "updatescore2-incremental.hpp"
 
 
 // TODO: read from file
@@ -74,33 +72,51 @@ void PrintHelpInfo( char* argv[] )
 // main program
 int main( int argc, char *argv[] )
 {
-   fflush( stdout );
    if( argc != 3 ) PrintHelpInfo( argv );
 
+   // initialize the needleman-wunsch algorithm inputs
+   NwInput nw {
+      // seqX,
+      // seqY,
+      // score,
+      // subst,
+
+      // adjrows,
+      // adjcols,
+
+      // insdelcost,
+   };
+
    // number of rows, number of columns and insdelcost
-   int rows = atoi( argv[1] );
-   int cols = atoi( argv[2] );
-   int insdelcost = 4; // TODO: should this be input, or not?
    // add the padding (zeroth row and column) to the matrix
-   rows++; cols++;
+   nw.adjrows = 1+ atoi( argv[1] );
+   nw.adjcols = 1+ atoi( argv[2] );
+   nw.insdelcost = 4; // TODO: should this be input, or not?
    // if the number of columns is less than the number of rows, swap them
-   if( cols < rows ) { std::swap( rows, cols ); }
+   if( nw.adjcols < nw.adjrows )
+   {
+      std::swap( nw.adjrows, nw.adjcols );
+      // std::swap( nw.inscost, nw.delcost );   // TODO: fix once insert and delete costs are added, instead of them being the same
+   }
 
    // allocate memory for the sequences which will be compared and the score matrix
-   int* const seqX  = ( int* ) malloc( cols * sizeof( int ) );
-   int* const seqY  = ( int* ) malloc( rows * sizeof( int ) );
-   int* const score = ( int* ) malloc( rows*cols * sizeof( int ) );
+   nw.seqX  = ( int* ) malloc( nw.adjcols * sizeof( int ) );
+   nw.seqY  = ( int* ) malloc( nw.adjrows * sizeof( int ) );
+   nw.score = ( int* ) malloc( nw.adjrows*nw.adjcols * sizeof( int ) );
+   nw.subst = subst_tmp;
 
    // if memory hasn't been allocated
-   if( !seqX || !seqY || !score )
+   if( !nw.seqX || !nw.seqY || !nw.score )
    {
       fprintf(stderr, "Error: memory allocation failed\n");
       fflush(stderr);
 
       // free allocated memory
-      free( seqX ); free( seqY ); free( score );
+      free( nw.seqX ); free( nw.seqY ); free( nw.score );
       exit(1);
    }
+
+
 
    // seed the random generator
    unsigned int seed = time( NULL );
@@ -109,31 +125,19 @@ int main( int argc, char *argv[] )
 
    // initialize the sequences A and B to random values in the range [0, SUBSTSIZE-1]
    // +   also initialize the padding with zeroes
-   seqX[0] = 0;
-   seqY[0] = 0;
-   for( int j = 1; j < cols; j++ ) seqX[j] = ( j < cols ) ? ( rand() % SUBSTSZ ) : 0;
-   for( int i = 1; i < rows; i++ ) seqY[i] = ( i < rows ) ? ( rand() % SUBSTSZ ) : 0;
+   nw.seqX[0] = 0;
+   nw.seqY[0] = 0;
+   for( int j = 1; j < nw.adjcols; j++ ) nw.seqX[j] = rand() % SUBSTSZ;
+   for( int i = 1; i < nw.adjrows; i++ ) nw.seqY[i] = rand() % SUBSTSZ;
 
-   Stopwatch sw {};
 
+   // the tested nw implementations
    std::map<std::string, NwVariant> variants {
       { "Nw_Cpu1_Row_St", Nw_Cpu1_Row_St },
       { "Nw_Cpu2_Diag_St", Nw_Cpu2_Diag_St },
       { "Nw_Cpu3_DiagRow_St", Nw_Cpu3_DiagRow_St },
       { "Nw_Cpu4_DiagRow_Mt", Nw_Cpu4_DiagRow_Mt },
       { "Nw_Gpu3_DiagDiag_Coop", Nw_Gpu3_DiagDiag_Coop },
-   };
-
-   NwInput nw {
-      seqX,
-      seqY,
-      score,
-      subst_tmp,
-
-      rows,
-      cols,
-
-      insdelcost,
    };
 
    // variables for storing the calculation hashes
@@ -153,8 +157,8 @@ int main( int argc, char *argv[] )
       fflush( stdout );
 
       variant( nw, res );
-
       Trace1_Diag( nw, res );
+
       if( firstIter )
       {
          prevhash = res.hash;
@@ -175,7 +179,7 @@ int main( int argc, char *argv[] )
    fflush(stdout);
 
    // free allocated memory
-   free( seqX ); free( seqY ); free( score );
+   free( nw.seqX ); free( nw.seqY ); free( nw.score );
 }
 
 

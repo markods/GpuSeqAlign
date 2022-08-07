@@ -29,19 +29,13 @@
     <ClInclude Include="src\trace1-diag.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\updatescore1-simple.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\updatescore2-incremental.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\nw-gpu3-diagdiag-coop.cuh">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\main.cu">
       <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\nw-gpu3-diagdiag-coop.cuh">
+      <Filter>Header Files</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

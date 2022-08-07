@@ -11,19 +11,19 @@ void Trace1_Diag( const NwInput& nw, NwMetrics& res )
 
    // for all elements on one of the optimal paths
    bool loop = true;
-   for( int i = nw.rows-1, j = nw.cols-1;  loop;  )
+   for( int i = nw.adjrows-1, j = nw.adjcols-1;  loop;  )
    {
       // add the current element to the trace and hash
-      int curr = el(nw.score,nw.cols, i,j);
+      int curr = el(nw.score,nw.adjcols, i,j);
       res.trace.push_back( curr );
       hash = ( ( hash<<5 ) + hash ) ^ curr;
 
       int max = std::numeric_limits<int>::min();   // maximum value of the up, left and diagonal neighbouring elements
       int dir = '-';                               // the current movement direction is unknown
 
-      if( i > 0 && j > 0 && max < el(nw.score,nw.cols, i-1,j-1) ) { max = el(nw.score,nw.cols, i-1,j-1); dir = 'i'; }   // diagonal movement if possible
-      if( i > 0          && max < el(nw.score,nw.cols, i-1,j  ) ) { max = el(nw.score,nw.cols, i-1,j  ); dir = 'u'; }   // up       movement if possible
-      if(          j > 0 && max < el(nw.score,nw.cols, i  ,j-1) ) { max = el(nw.score,nw.cols, i  ,j-1); dir = 'l'; }   // left     movement if possible
+      if( i > 0 && j > 0 && max < el(nw.score,nw.adjcols, i-1,j-1) ) { max = el(nw.score,nw.adjcols, i-1,j-1); dir = 'i'; }   // diagonal movement if possible
+      if( i > 0          && max < el(nw.score,nw.adjcols, i-1,j  ) ) { max = el(nw.score,nw.adjcols, i-1,j  ); dir = 'u'; }   // up       movement if possible
+      if(          j > 0 && max < el(nw.score,nw.adjcols, i  ,j-1) ) { max = el(nw.score,nw.adjcols, i  ,j-1); dir = 'l'; }   // left     movement if possible
 
       // move to the neighbour with the maximum value
       switch( dir )

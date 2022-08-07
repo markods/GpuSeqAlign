@@ -4,37 +4,39 @@
 // parallel cpu implementation of the Needleman Wunsch algorithm
 void Nw_Cpu4_DiagRow_Mt( NwInput& nw, NwMetrics& res )
 {
+   // size of block that will be a unit of work
+   // +   8*16 ints on standard architectures, or 8 cache lines
+   const int bsize = 8 * 64/*B*//sizeof( int );
+
+
    // start the timer
    res.sw.lap( "cpu-start" );
 
-
-   // skip the first row and first column in the next calculations
-   nw.rows--; nw.cols--;
-
-   // initialize the first row and column of the score matrix
    #pragma omp parallel
    {
+      // initialize the first row and column of the score matrix
       #pragma omp for schedule( static ) nowait
-      for( int i = 0; i < 1+nw.rows; i++ ) el(nw.score,nw.cols, i,0) = -i*nw.insdelcost;
+      for( int i = 0; i < nw.adjrows; i++ ) el(nw.score,nw.adjcols, i,0) = -i*nw.insdelcost;
       #pragma omp for schedule( static )
-      for( int j = 0; j < 1+nw.cols; j++ ) el(nw.score,nw.cols, 0,j) = -j*nw.insdelcost;
+      for( int j = 0; j < nw.adjcols; j++ ) el(nw.score,nw.adjcols, 0,j) = -j*nw.insdelcost;
       
-      // size of block that will be a unit of work
-      // +   8*16 ints on standard architectures, or 8 cache lines
-      const int bsize = 8 * 64/*B*//sizeof( int );
-      
+      // the dimensions of the matrix without its row and column header
+      const int rows = -1 + nw.adjrows;
+      const int cols = -1 + nw.adjcols;
+
       // number of blocks in a row and column (rounded up)
-      const int brows = ceil( 1.*nw.rows / bsize );
-      const int bcols = ceil( 1.*nw.cols / bsize );
+      const int rowblocks = ceil( float( rows ) / bsize );
+      const int colblocks = ceil( float( cols ) / bsize );
 
 
-      //  / / / . .   +   . . . / /   +   . . . . .|/ /
-      //  / / . . .   +   . . / / .   +   . . . . /|/
-      //  / . . . .   +   . / / . .   +   . . . / /|
-      for( int s = 0; s < bcols-1 + brows; s++ )
+      //  x x x x x x       x x x x x x       x x x x x x
+      //  x / / / . .       x . . . / /       x . . . . .|/ /
+      //  x / / . . .   +   x . . / / .   +   x . . . . /|/
+      //  x / . . . .       x . / / . .       x . . . / /|
+      for( int s = 0; s < colblocks-1 + rowblocks; s++ )
       {
-         int tbeg = max2( 0, s - (bcols-1) );
-         int tend = min2( s, brows-1 );
+         int tbeg = max2( 0, s - (colblocks-1) );
+         int tend = min2( s, rowblocks-1 );
 
          #pragma omp for schedule( static )
          for( int t = tbeg; t <= tend; t++ )
@@ -43,21 +45,18 @@ void Nw_Cpu4_DiagRow_Mt( NwInput& nw, NwMetrics& res )
             int ibeg = 1 + (   t )*bsize;
             int jbeg = 1 + ( s-t )*bsize;
 
-            int iend = min2( ibeg + bsize, 1+nw.rows );
-            int jend = min2( jbeg + bsize, 1+nw.cols );
+            int iend = min2( ibeg + bsize, rows );
+            int jend = min2( jbeg + bsize, cols );
 
             // process the block
             for( int i = ibeg; i < iend; i++ )
             for( int j = jbeg; j < jend; j++ )
             {
-               UpdateScore1_Simple( nw.seqX, nw.seqY, nw.score, nw.subst, nw.rows, nw.cols, nw.insdelcost, i, j );
+               UpdateScore( nw.seqX, nw.seqY, nw.score, nw.subst, nw.adjcols, nw.insdelcost, i, j );
             }
          }
       }
    }
-
-   // restore the original row and column count
-   nw.rows++; nw.cols++;
 
    // stop the timer
    res.sw.lap( "cpu-end" );

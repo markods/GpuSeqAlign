@@ -19,7 +19,7 @@ __global__ static void Nw_Gpu3_KernelA( int* seqX_gpu, int* seqY_gpu, int* score
 {
    // the blosum matrix and relevant parts of the two sequences
    // +   stored in shared memory for faster random access
-   __shared__ int subst[SUBSTSZ][SUBSTSZ];
+   __shared__ int subst[SUBSTSZ*SUBSTSZ];
    __shared__ int seqX[tileAx];
    __shared__ int seqY[tileAy];
 
@@ -31,7 +31,7 @@ __global__ static void Nw_Gpu3_KernelA( int* seqX_gpu, int* seqY_gpu, int* score
       while( i < SUBSTSZ*SUBSTSZ )
       {
          // copy the current element from the global blosum matrix
-         subst[ 0 ][ i ] = el(subst_gpu,SUBSTSZ, 0,i);
+         el(subst,SUBSTSZ, 0,i) = el(subst_gpu,SUBSTSZ, 0,i);
          // map this thread to the next element with stride equal to the number of threads in this block
          i += tileAy*tileAx;
       }
@@ -73,7 +73,7 @@ __global__ static void Nw_Gpu3_KernelA( int* seqX_gpu, int* seqY_gpu, int* score
       // if the current thread is not in the first row or column of the score matrix
       // +   use the blosum matrix to calculate the score matrix element value
       // +   increase the value by insert delete cost, since then the formula for calculating the actual element value in kernel B becomes simpler
-      if( i > 0 && j > 0 ) { elem = subst[ seqY[iY] ][ seqX[iX] ] + insdelcost; }
+      if( i > 0 && j > 0 ) { elem = el(subst,SUBSTSZ, seqY[iY],seqX[iX]) + insdelcost; }
       // otherwise, if the current thread is in the first row or column
       // +   update the score matrix element using the insert delete cost
       else                 { elem = -( i|j )*insdelcost; }
@@ -92,12 +92,12 @@ __global__ static void Nw_Gpu3_KernelB( int* score_gpu, int trows, int tcols, in
 {
    // matrix tile which this thread block maps onto
    // +   stored in shared memory for faster random access
-   __shared__ int tile[1+tileBy][1+tileBx];
+   __shared__ int tile[(1+tileBy)*(1+tileBx)];
 
    
-   //    |/ / / . .   +   . . . / /   +   . . . . .|/ /
-   //   /|/ / . . .   +   . . / / .   +   . . . . /|/
-   // / /|/ . . . .   +   . / / . .   +   . . . / /|
+   //  / / / . .       . . . / /       . . . . .|/ /
+   //  / / . . .   +   . . / / .   +   . . . . /|/
+   //  / . . . .       . / / . .       . . . / /|
 
    // for all diagonals of tiles in the grid of tiles (score matrix)
    for( int s = 0;   s < tcols-1 + trows;   s++ )
@@ -131,7 +131,7 @@ __global__ static void Nw_Gpu3_KernelB( int* score_gpu, int trows, int tcols, in
             while( i < ( 1+tileBy ) )
             {
                // copy the current element from the global score matrix to the tile
-               tile[ i ][ j ] = el(score_gpu,cols, ibeg+i,jbeg+j);
+               el(tile,1+tileBx, i,j) = el(score_gpu,cols, ibeg+i,jbeg+j);
 
                // map the current thread to the next tile element
                i += di; j += dj;
@@ -151,9 +151,10 @@ __global__ static void Nw_Gpu3_KernelB( int* score_gpu, int trows, int tcols, in
             int rows = tileBy;
             int cols = tileBx;
 
-            //    |/ / . . .   +   . . / / /   +   . . . . .|/ /
-            //   /|/ . . . .   +   . / / / .   +   . . . . /|/
-            // / /|. . . . .   +   / / / . .   +   . . . / /|
+            //  x x x x x x       x x x x x x       x x x x x x
+            //  x / / / . .       x . . . / /       x . . . . .|/ /
+            //  x / / . . .   +   x . . / / .   +   x . . . . /|/
+            //  x / . . . .       x . / / . .       x . . . / /|
 
             // for all diagonals in the tile without its first row and column
             for( int d = 0;   d < cols-1 + rows;   d++ )
@@ -173,9 +174,9 @@ __global__ static void Nw_Gpu3_KernelB( int* score_gpu, int trows, int tcols, in
                   
                   // calculate the current element's value
                   // +   always subtract the insert delete cost from the result, since the kernel A added that value to each element of the score matrix
-                  int temp1  =      tile[i-1][j-1] + tile[i  ][j  ];
-                  int temp2  = max( tile[i-1][j  ] , tile[i  ][j-1] );
-                  tile[i][j] = max( temp1, temp2 ) - insdelcost;
+                  int temp1              =      el(tile,1+tileBx, i-1,j-1) + el(tile,1+tileBx, i  ,j  );
+                  int temp2              = max( el(tile,1+tileBx, i-1,j  ) , el(tile,1+tileBx, i  ,j-1) );
+                  el(tile,1+tileBx, i,j) = max( temp1, temp2 ) - insdelcost;
                }
 
                // all threads in this warp should finish calculating the tile's current diagonal
@@ -207,7 +208,7 @@ __global__ static void Nw_Gpu3_KernelB( int* score_gpu, int trows, int tcols, in
             while( i < tileBy )
             {
                // copy the current element from the tile to the global score matrix
-               el(score_gpu,cols, ibeg+i,jbeg+j) = tile[ 1+i ][ 1+j ];
+               el(score_gpu,cols, ibeg+i,jbeg+j) = el(tile,1+tileBx, 1+i,1+j );
 
                // map the current thread to the next tile element
                i += di; j += dj;
@@ -237,21 +238,21 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
       nw.score,
       nw.subst,
 
-      nw.rows,
-      nw.cols,
+      nw.adjrows,
+      nw.adjcols,
 
       nw.insdelcost,
    };
 
    // adjusted gpu score matrix dimensions
    // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile B size (in order to be evenly divisible)
-   nw_gpu.rows = 1 + tileBy*ceil( float( nw.rows-1 )/tileBy );
-   nw_gpu.cols = 1 + tileBx*ceil( float( nw.cols-1 )/tileBx );
+   nw_gpu.adjrows = 1 + tileBy*ceil( float( nw.adjrows-1 )/tileBy );
+   nw_gpu.adjcols = 1 + tileBx*ceil( float( nw.adjcols-1 )/tileBx );
 
    // allocate space in the gpu global memory
-   cudaMalloc( &nw_gpu.seqX,  nw_gpu.cols             * sizeof( int ) );
-   cudaMalloc( &nw_gpu.seqY,  nw_gpu.rows             * sizeof( int ) );
-   cudaMalloc( &nw_gpu.score, nw_gpu.rows*nw_gpu.cols * sizeof( int ) );
+   cudaMalloc( &nw_gpu.seqX,  nw_gpu.adjcols             * sizeof( int ) );
+   cudaMalloc( &nw_gpu.seqY,  nw_gpu.adjrows             * sizeof( int ) );
+   cudaMalloc( &nw_gpu.score, nw_gpu.adjrows*nw_gpu.adjcols * sizeof( int ) );
    cudaMalloc( &nw_gpu.subst, SUBSTSZ*SUBSTSZ         * sizeof( int ) );
    // create events for measuring kernel execution time
    cudaEvent_t start, stop;
@@ -264,8 +265,8 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
 
    // copy data from host to device
    // +   gpu padding remains uninitialized, but this is not an issue since padding is only used to simplify kernel code (optimization)
-   cudaMemcpy( nw_gpu.seqX,  nw.seqX,  nw.cols         * sizeof( int ), cudaMemcpyHostToDevice );
-   cudaMemcpy( nw_gpu.seqY,  nw.seqY,  nw.rows         * sizeof( int ), cudaMemcpyHostToDevice );
+   cudaMemcpy( nw_gpu.seqX,  nw.seqX,  nw.adjcols         * sizeof( int ), cudaMemcpyHostToDevice );
+   cudaMemcpy( nw_gpu.seqY,  nw.seqY,  nw.adjrows         * sizeof( int ), cudaMemcpyHostToDevice );
    cudaMemcpy( nw_gpu.subst, nw.subst, SUBSTSZ*SUBSTSZ * sizeof( int ), cudaMemcpyHostToDevice );
 
 
@@ -273,8 +274,8 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
    {
       // calculate grid dimensions for kernel A
       dim3 gridA;
-      gridA.y = ceil( float( nw_gpu.rows )/tileAy );
-      gridA.x = ceil( float( nw_gpu.cols )/tileAx );
+      gridA.y = ceil( float( nw_gpu.adjrows )/tileAy );
+      gridA.x = ceil( float( nw_gpu.adjcols )/tileAx );
       // block dimensions for kernel A
       dim3 blockA { tileAx, tileAy };
       
@@ -283,16 +284,16 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
       // +   update the stop event when the kernel finishes
       cudaEventRecord( start, 0/*STREAM_ID*/ );
       // TODO: replace with cudaLaunchKernel
-      Nw_Gpu3_KernelA<<< gridA, blockA, 0, 0/*STREAM_ID*/ >>>( nw_gpu.seqX, nw_gpu.seqY, nw_gpu.score, nw_gpu.subst, nw_gpu.rows, nw_gpu.cols, nw_gpu.insdelcost );
+      Nw_Gpu3_KernelA<<< gridA, blockA, 0, 0/*STREAM_ID*/ >>>( nw_gpu.seqX, nw_gpu.seqY, nw_gpu.score, nw_gpu.subst, nw_gpu.adjrows, nw_gpu.adjcols, nw_gpu.insdelcost );
       cudaEventRecord( stop, 0/*STREAM_ID*/ );
       cudaEventSynchronize( stop );
       
       // kernel A execution time
       float ktimeA;
       // calculate the time between the given events
-      cudaEventElapsedTime( &ktimeA, start, stop );
+      cudaEventElapsedTime( &ktimeA, start, stop ); ktimeA /= 1000./*ms*/;
       // update the total kernel execution time
-      res.Tgpu += ktimeA / 1000./*ms*/;
+      res.Tgpu += ktimeA;
    }
    
    // wait for the gpu to finish before going to the next step
@@ -305,8 +306,8 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
       dim3 gridB;
       dim3 blockB;
       // the number of tiles per row and column of the score matrix
-      int trows = ceil( float( nw_gpu.rows-1 )/tileBy );
-      int tcols = ceil( float( nw_gpu.cols-1 )/tileBx );
+      int trows = ceil( float( nw_gpu.adjrows-1 )/tileBy );
+      int tcols = ceil( float( nw_gpu.adjcols-1 )/tileBx );
       
       // calculate grid and block dimensions for kernel B
       {
@@ -344,9 +345,9 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
       // kernel B execution time
       float ktimeB;
       // calculate the time between the given events
-      cudaEventElapsedTime( &ktimeB, start, stop );
+      cudaEventElapsedTime( &ktimeB, start, stop ); ktimeB /= 1000./*ms*/;
       // update the total kernel execution time
-      res.Tgpu += ktimeB / 1000./*ms*/;
+      res.Tgpu += ktimeB;
    }
 
    // wait for the gpu to finish before going to the next step
@@ -374,12 +375,12 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
    // +   starts an async data copy from device to host, then waits for the copy to finish
    cudaMemcpy2D(
        nw    .score,                  // dst    - Destination memory address
-       nw    .cols * sizeof( int ),   // dpitch - Pitch of destination memory (padded row size in bytes; in other words distance between the starting points of two rows)
+       nw    .adjcols * sizeof( int ),   // dpitch - Pitch of destination memory (padded row size in bytes; in other words distance between the starting points of two rows)
        nw_gpu.score,                  // src    - Source memory address
-       nw_gpu.cols * sizeof( int ),   // spitch - Pitch of source memory (padded row size in bytes)
+       nw_gpu.adjcols * sizeof( int ),   // spitch - Pitch of source memory (padded row size in bytes)
        
-       nw.cols * sizeof( int ),       // width  - Width of matrix transfer (non-padding row size in bytes)
-       nw.rows,                       // height - Height of matrix transfer (#rows)
+       nw.adjcols * sizeof( int ),       // width  - Width of matrix transfer (non-padding row size in bytes)
+       nw.adjrows,                       // height - Height of matrix transfer (#rows)
        cudaMemcpyDeviceToHost         // kind   - Type of transfer
    );      
 
