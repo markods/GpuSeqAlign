@@ -3,9 +3,9 @@
 // parallel cpu implementation of the Needleman Wunsch algorithm
 void Nw_Cpu3_DiagRow_St( NwInput& nw, NwMetrics& res )
 {
-   // size of block that will be a unit of work
+   // size of square block (that will be a unit of work)
    // +   8*16 ints on standard architectures, or 8 cache lines
-   const int bsize = 8 * 64/*B*//sizeof( int );
+   const int blocksz = 8 * 64/*B*//sizeof( int );
 
 
    // start the timer
@@ -20,13 +20,12 @@ void Nw_Cpu3_DiagRow_St( NwInput& nw, NwMetrics& res )
    const int cols = -1 + nw.adjcols;
 
    // number of blocks in a row and column (rounded up)
-   const int rowblocks = ceil( float( rows ) / bsize );
-   const int colblocks = ceil( float( cols ) / bsize );
+   const int rowblocks = ceil( float( rows ) / blocksz );
+   const int colblocks = ceil( float( cols ) / blocksz );
 
-   //  x x x x x x       x x x x x x       x x x x x x
-   //  x / / / . .       x . . . / /       x . . . . .|/ /
-   //  x / / . . .   +   x . . / / .   +   x . . . . /|/
-   //  x / . . . .       x . / / . .       x . . . / /|
+   //  / / / . .       . . . / /       . . . . .|/ /
+   //  / / . . .   +   . . / / .   +   . . . . /|/
+   //  / . . . .       . / / . .       . . . / /|
    for( int s = 0; s < colblocks-1 + rowblocks; s++ )
    {
       int tbeg = max2( 0, s - (colblocks-1) );
@@ -35,11 +34,11 @@ void Nw_Cpu3_DiagRow_St( NwInput& nw, NwMetrics& res )
       for( int t = tbeg; t <= tend; t++ )
       {
          // calculate the block boundaries
-         int ibeg = 1 + (   t )*bsize;
-         int jbeg = 1 + ( s-t )*bsize;
+         int ibeg = 1 + (   t )*blocksz;
+         int jbeg = 1 + ( s-t )*blocksz;
 
-         int iend = min2( ibeg + bsize, 1+rows );
-         int jend = min2( jbeg + bsize, 1+cols );
+         int iend = min2( ibeg + blocksz, 1+rows );
+         int jend = min2( jbeg + blocksz, 1+cols );
 
          // process the block
          for( int i = ibeg; i < iend; i++ )

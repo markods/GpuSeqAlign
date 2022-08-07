@@ -7,53 +7,6 @@
 #include <unordered_map>
 
 
-// number of streaming multiprocessors (sm-s) and cores per sm
-constexpr int MPROCS = 28;
-constexpr int CORES = 128;
-// number of threads in warp
-constexpr int WARPSZ = 32;
-
-// get the specified element from the given linearized matrix
-#define el( mat, cols, i, j ) ( mat[(cols)*(i) + (j)] )
-
-// for diagnostic purposes
-inline void PrintMatrix(
-   const int* const matrix,
-   const int rows,
-   const int cols
-)
-{
-   printf( "\n" );
-   for( int i = 0; i < rows; i++ )
-   {
-      for( int j = 0; j < cols; j++ )
-      {
-         printf( "%3d ", el(matrix,cols, i,j) );
-      }
-      printf( "\n" );
-   }
-   fflush(stdout);
-}
-
-// for diagnostic purposes
-inline void ZeroOutMatrix(
-   int* const matrix,
-   const int rows,
-   const int cols
-) noexcept
-{
-   for( int i = 0; i < rows; i++ )
-   for( int j = 0; j < cols; j++ )
-   {
-      el(matrix,cols, i,j) = 0;
-   }
-}
-
-
-// TODO: remove
-// block substitution matrix
-#define SUBSTSZ 24
-
 // TODO: test performance of min2, max2 and max3 without branching
 // +   https://docs.nvidia.com/cuda/parallel-thread-execution/index.html
 
@@ -79,6 +32,54 @@ inline const int& max3( const int& a, const int& b, const int& c ) noexcept
    return ( a >= b ) ? ( ( a >= c ) ? a : c ):
                        ( ( b >= c ) ? b : c );
 }
+
+
+
+// number of streaming multiprocessors (sm-s) and cores per sm
+constexpr int MPROCS = 28;
+constexpr int CORES = 128;
+// number of threads in warp
+constexpr int WARPSZ = 32;
+
+// get the specified element from the given linearized matrix
+#define el( mat, cols, i, j ) ( mat[(cols)*(i) + (j)] )
+
+// for diagnostic purposes
+inline void PrintMatrix(
+   const int* const mat,
+   const int rows,
+   const int cols
+)
+{
+   printf( "\n" );
+   for( int i = 0; i < rows; i++ )
+   {
+      for( int j = 0; j < cols; j++ )
+      {
+         printf( "%4d ", el(mat,cols, i,j) );
+      }
+      printf( "\n" );
+   }
+   fflush(stdout);
+}
+
+// for diagnostic purposes
+inline void ZeroOutMatrix(
+   int* const mat,
+   const int rows,
+   const int cols
+) noexcept
+{
+   for( int i = 0; i < rows; i++ )
+   for( int j = 0; j < cols; j++ )
+   {
+      el(mat,cols, i,j) = 0;
+   }
+}
+
+// TODO: remove
+// block substitution matrix
+#define SUBSTSZ 24
 
 
 

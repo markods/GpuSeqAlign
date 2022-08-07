@@ -149,7 +149,10 @@ int main( int argc, char *argv[] )
       printf( "%-22s:   ", name.c_str() );
       fflush( stdout );
 
+      ZeroOutMatrix( nw.score, nw.adjrows, nw.adjcols );
       variant( nw, res );
+      // PrintMatrix( nw.score, nw.adjrows, nw.adjcols );
+
       Trace1_Diag( nw, res );
 
       if( firstIter )
