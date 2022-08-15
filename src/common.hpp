@@ -1,5 +1,6 @@
-// missing Common.cpp file on purpose, since whole program optimization is disabled
-#pragma once
+#ifndef INCLUDE_COMMON_HPP
+#define INCLUDE_COMMON_HPP
+
 #include <cstdio>
 #include <chrono>
 #include <memory>
@@ -162,3 +163,4 @@ inline void UpdateScore( NwInput& nw, int i, int j ) noexcept
 
 
 
+#endif INCLUDE_COMMON_HPP

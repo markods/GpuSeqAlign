@@ -78,7 +78,7 @@ __global__ static void Nw_Gpu3_KernelA( int* seqX_gpu, int* seqY_gpu, int* score
 // cuda kernel B for the parallel implementation
 // +   calculates the score matrix in the gpu using the initialized score matrix from kernel A
 // +   the given matrix minus the padding (zeroth row and column) must be evenly divisible by the tile B
-__global__ static void Nw_Gpu3_KernelB( int* score_gpu, int trows, int tcols, int insdelcost, unsigned tileBx, unsigned tileBy )
+__global__ static void Nw_Gpu3_KernelB( int* score_gpu, int insdelcost, int trows, int tcols, unsigned tileBx, unsigned tileBy )
 {
    extern __shared__ int shmem[/*( (1+tileBy)*(1+tileBx) )*/];
    // matrix tile which this thread block maps onto
@@ -347,7 +347,7 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
 
 
       // group arguments to be passed to kernel B
-      void* kargs[] { &nw_gpu.score, &trows, &tcols, &nw_gpu.insdelcost, &tileBx, &tileBy };
+      void* kargs[] { &nw_gpu.score, &nw_gpu.insdelcost, &trows, &tcols, &tileBx, &tileBy };
       
       // launch the kernel in the given stream (don't statically allocate shared memory)
       // +   capture events around kernel launch as well

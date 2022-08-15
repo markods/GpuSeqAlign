@@ -11,9 +11,13 @@
 */
 
 #include <cstdio>
+#include <iostream>
+#include <fstream>
 #include <string>
 #include <map>
 #include "common.hpp"
+#include "json.hpp"
+using json = nlohmann::json;
 
 
 // TODO: read from file
@@ -49,23 +53,41 @@ static int subst_tmp[SUBSTSZ*SUBSTSZ] =
 
 
 // call in case of invalid command line arguments
-void PrintHelpInfo( char* argv[] )
+void PrintHelpInfo( FILE* stream, char* argv[] )
 {
-   fprintf( stderr,
+   fprintf( stream,
       "nw m n\n"
       "   m    - length of the first generated sequence\n"
       "   n    - length of the second generated sequence\n"
    );
-   fflush( stderr );
-   exit( 0 );
 }
 
 
 // main program
 int main( int argc, char *argv[] )
 {
-   if( argc != 3 ) PrintHelpInfo( argv );
+   if( argc != 3 )
+   {
+      PrintHelpInfo( stderr, argv );
+      exit(-1);
+   }
 
+   std::map<std::string, std::vector<int>> score_mats;
+
+   std::ifstream ifs;
+   ifs.open( "D:/---/.Marko/GpuNW/resrc/blosum.json", std::ios_base::in );
+   
+      // NOTE: the parser doesn't allow for trailing commas
+      score_mats = json::parse(
+         ifs,
+         /*callback*/ nullptr,
+         /*allow exceptions*/ true,
+         /*ignore_comments*/ true
+      );
+      
+   ifs.close();
+
+   
    // initialize the needleman-wunsch algorithm inputs
    NwInput nw {
       // seqX,
@@ -97,7 +119,7 @@ int main( int argc, char *argv[] )
    nw.seqX  = ( int* ) malloc( nw.adjcols * sizeof( int ) );
    nw.seqY  = ( int* ) malloc( nw.adjrows * sizeof( int ) );
    nw.score = ( int* ) malloc( nw.adjrows*nw.adjcols * sizeof( int ) );
-   nw.subst = subst_tmp;
+   nw.subst = &score_mats["blosum62"][0];
 
    // if memory hasn't been allocated
    if( !nw.seqX || !nw.seqY || !nw.score )

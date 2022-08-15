@@ -12,15 +12,18 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\common.hpp" />
-    <ClInclude Include="src\nw-cpu1-row-st.hpp" />
-    <ClInclude Include="src\nw-cpu2-diag-st.hpp" />
-    <ClInclude Include="src\nw-cpu3-diagrow-st.hpp" />
-    <ClInclude Include="src\nw-cpu4-diagrow-mt.hpp" />
-    <ClInclude Include="src\nw-gpu3-diagdiag-coop.cuh" />
-    <ClInclude Include="src\trace1-diag.hpp" />
+    <ClInclude Include="src\json.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="src\main.cu" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\nw-cpu1-row-st.cpp" />
+    <ClCompile Include="src\nw-cpu2-diag-st.cpp" />
+    <ClCompile Include="src\nw-cpu3-diagrow-st.cpp" />
+    <ClCompile Include="src\nw-cpu4-diagrow-mt.cpp" />
+    <ClCompile Include="src\trace1-diag.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="src\nw-gpu3-diagdiag-coop.cu" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{37991427-3662-484F-A8DE-51F8CD60336E}</ProjectGuid>

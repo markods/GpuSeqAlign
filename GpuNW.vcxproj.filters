@@ -14,28 +14,33 @@
     <ClInclude Include="src\common.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\nw-cpu1-row-st.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\nw-cpu2-diag-st.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\nw-cpu3-diagrow-st.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\nw-cpu4-diagrow-mt.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\trace1-diag.hpp">
+    <ClInclude Include="src\json.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="src\main.cu">
+    <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
-    </CudaCompile>
-    <CudaCompile Include="src\nw-gpu3-diagdiag-coop.cuh">
-      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\nw-cpu1-row-st.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\nw-cpu2-diag-st.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\nw-cpu3-diagrow-st.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\nw-cpu4-diagrow-mt.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\trace1-diag.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="src\nw-gpu3-diagdiag-coop.cu">
+      <Filter>Source Files</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

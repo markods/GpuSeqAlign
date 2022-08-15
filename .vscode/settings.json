@@ -71,7 +71,10 @@
         "xlocmon": "cpp",
         "xloctime": "cpp",
         "xtree": "cpp",
-        "__config": "cpp"
+        "__config": "cpp",
+        "iostream": "cpp",
+        "fstream": "cpp",
+        "filesystem": "cpp"
     },
     "peacock.color": "#832561",
     "workbench.colorCustomizations": {
