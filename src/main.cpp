@@ -67,20 +67,19 @@ int main( int argc, char *argv[] )
       // adjcols,
       // substsz,
 
-      // insdelcost,
+      // indelcost,
    };
 
-   // number of rows, number of columns and insdelcost
+   // number of rows, number of columns and indelcost
    // add the padding (zeroth row and column) to the matrix
    nw.adjrows = 1+ atoi( argv[1] );
    nw.adjcols = 1+ atoi( argv[2] );
    nw.substsz = sqrt( score_mats["blosum62"].size() );
-   nw.insdelcost = 4; // TODO: should this be input, or not?
+   nw.indelcost = 4;
    // if the number of columns is less than the number of rows, swap them
    if( nw.adjcols < nw.adjrows )
    {
       std::swap( nw.adjrows, nw.adjcols );
-      // std::swap( nw.inscost, nw.delcost );   // TODO: fix once insert and delete costs are added, instead of them being the same
    }
 
    // allocate memory for the sequences which will be compared and the score matrix

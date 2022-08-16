@@ -74,7 +74,14 @@
         "__config": "cpp",
         "iostream": "cpp",
         "fstream": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "any": "cpp",
+        "array": "cpp",
+        "codecvt": "cpp",
+        "numeric": "cpp",
+        "ranges": "cpp",
+        "span": "cpp",
+        "valarray": "cpp"
     },
     "peacock.color": "#832561",
     "workbench.colorCustomizations": {

@@ -4,7 +4,7 @@
 
 // cuda kernel A for the parallel implementation
 // +   initializes the score matrix in the gpu
-__global__ static void Nw_Gpu3_KernelA( int* seqX_gpu, int* seqY_gpu, int* score_gpu, int* subst_gpu, int adjrows, int adjcols, int substsz, int insdelcost, unsigned tileAx, unsigned tileAy )
+__global__ static void Nw_Gpu3_KernelA( int* seqX_gpu, int* seqY_gpu, int* score_gpu, int* subst_gpu, int adjrows, int adjcols, int substsz, int indelcost, unsigned tileAx, unsigned tileAy )
 {
    extern __shared__ int shmem[/*( substsz*substsz + tileAx + tileAy )*/];
    // the substitution matrix and relevant parts of the two sequences
@@ -63,10 +63,10 @@ __global__ static void Nw_Gpu3_KernelA( int* seqX_gpu, int* seqY_gpu, int* score
       // if the current thread is not in the first row or column of the score matrix
       // +   use the substitution matrix to calculate the score matrix element value
       // +   increase the value by insert delete cost, since then the formula for calculating the actual element value in kernel B becomes simpler
-      if( i > 0 && j > 0 ) { elem = el(subst,substsz, seqY[iY],seqX[iX]) + insdelcost; }
+      if( i > 0 && j > 0 ) { elem = el(subst,substsz, seqY[iY],seqX[iX]) + indelcost; }
       // otherwise, if the current thread is in the first row or column
       // +   update the score matrix element using the insert delete cost
-      else                 { elem = -( i|j )*insdelcost; }
+      else                 { elem = -( i|j )*indelcost; }
       
       // update the corresponding element in global memory
       // +   fully coallesced memory access
@@ -78,7 +78,7 @@ __global__ static void Nw_Gpu3_KernelA( int* seqX_gpu, int* seqY_gpu, int* score
 // cuda kernel B for the parallel implementation
 // +   calculates the score matrix in the gpu using the initialized score matrix from kernel A
 // +   the given matrix minus the padding (zeroth row and column) must be evenly divisible by the tile B
-__global__ static void Nw_Gpu3_KernelB( int* score_gpu, int insdelcost, int trows, int tcols, unsigned tileBx, unsigned tileBy )
+__global__ static void Nw_Gpu3_KernelB( int* score_gpu, int indelcost, int trows, int tcols, unsigned tileBx, unsigned tileBy )
 {
    extern __shared__ int shmem[/*( (1+tileBy)*(1+tileBx) )*/];
    // matrix tile which this thread block maps onto
@@ -167,7 +167,7 @@ __global__ static void Nw_Gpu3_KernelB( int* score_gpu, int insdelcost, int trow
                   // +   always subtract the insert delete cost from the result, since the kernel A added that value to each element of the score matrix
                   int temp1              =      el(tile,1+tileBx, i-1,j-1) + el(tile,1+tileBx, i  ,j  );
                   int temp2              = max( el(tile,1+tileBx, i-1,j  ) , el(tile,1+tileBx, i  ,j-1) );
-                  el(tile,1+tileBx, i,j) = max( temp1, temp2 ) - insdelcost;
+                  el(tile,1+tileBx, i,j) = max( temp1, temp2 ) - indelcost;
                }
 
                // all threads in this warp should finish calculating the tile's current diagonal
@@ -241,7 +241,7 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
       // nw.adjcols,
       // nw.substsz,
 
-      // nw.insdelcost,
+      // nw.indelcost,
    };
 
    // adjusted gpu score matrix dimensions
@@ -249,7 +249,7 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
    nw_gpu.adjrows = 1 + tileBy*ceil( float( nw.adjrows-1 )/tileBy );
    nw_gpu.adjcols = 1 + tileBx*ceil( float( nw.adjcols-1 )/tileBx );
    nw_gpu.substsz = nw.substsz;
-   nw_gpu.insdelcost = nw.insdelcost;
+   nw_gpu.indelcost = nw.indelcost;
 
    // allocate space in the gpu global memory
    cudaMalloc( &nw_gpu.seqX,  nw_gpu.adjcols                * sizeof( int ) );
@@ -289,7 +289,7 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
       ) * sizeof( int );
       
       // group arguments to be passed to kernel B
-      void* kargs[] { &nw_gpu.seqX, &nw_gpu.seqY, &nw_gpu.score, &nw_gpu.subst, &nw_gpu.adjrows, &nw_gpu.adjcols, &nw_gpu.substsz, &nw_gpu.insdelcost, &tileAx, &tileAy };
+      void* kargs[] { &nw_gpu.seqX, &nw_gpu.seqY, &nw_gpu.score, &nw_gpu.subst, &nw_gpu.adjrows, &nw_gpu.adjcols, &nw_gpu.substsz, &nw_gpu.indelcost, &tileAx, &tileAy };
 
       // launch the kernel in the given stream (don't statically allocate shared memory)
       // +   capture events around kernel launch as well
@@ -347,7 +347,7 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
 
 
       // group arguments to be passed to kernel B
-      void* kargs[] { &nw_gpu.score, &nw_gpu.insdelcost, &trows, &tcols, &tileBx, &tileBy };
+      void* kargs[] { &nw_gpu.score, &nw_gpu.indelcost, &trows, &tcols, &tileBx, &tileBy };
       
       // launch the kernel in the given stream (don't statically allocate shared memory)
       // +   capture events around kernel launch as well

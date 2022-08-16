@@ -125,10 +125,7 @@ struct NwInput
    int adjcols;
    int substsz;
 
-   // TODO: remove
-   int insdelcost;
-   // int inscost;
-   // int delcost;
+   int indelcost;
 };
 
 // results which the Needleman-Wunsch algorithm variants return
@@ -155,8 +152,8 @@ void Trace1_Diag( const NwInput& nw, NwMetrics& res );
 inline void UpdateScore( NwInput& nw, int i, int j ) noexcept
 {
    int p1 = el(nw.score,nw.adjcols, i-1,j-1) + el(nw.subst,nw.substsz, nw.seqY[i], nw.seqX[j]);  // MOVE DOWN-RIGHT
-   int p2 = el(nw.score,nw.adjcols, i-1,j  ) - nw.insdelcost;   // MOVE DOWN    // TODO: inscost
-   int p3 = el(nw.score,nw.adjcols, i  ,j-1) - nw.insdelcost;   // MOVE RIGHT   // TODO: delcost
+   int p2 = el(nw.score,nw.adjcols, i-1,j  ) - nw.indelcost;   // MOVE DOWN
+   int p3 = el(nw.score,nw.adjcols, i  ,j-1) - nw.indelcost;   // MOVE RIGHT
    el(nw.score,nw.adjcols, i,j) = max3( p1, p2, p3 );
 }
 

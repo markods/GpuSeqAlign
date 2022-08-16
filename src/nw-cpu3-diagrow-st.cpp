@@ -12,8 +12,8 @@ void Nw_Cpu3_DiagRow_St( NwInput& nw, NwMetrics& res )
    res.sw.lap( "cpu-start" );
 
    // initialize the first row and column of the score matrix
-   for( int i = 0; i < nw.adjrows; i++ ) el(nw.score,nw.adjcols, i,0) = -i*nw.insdelcost;
-   for( int j = 0; j < nw.adjcols; j++ ) el(nw.score,nw.adjcols, 0,j) = -j*nw.insdelcost;
+   for( int i = 0; i < nw.adjrows; i++ ) el(nw.score,nw.adjcols, i,0) = -i*nw.indelcost;
+   for( int j = 0; j < nw.adjcols; j++ ) el(nw.score,nw.adjcols, 0,j) = -j*nw.indelcost;
 
    // the dimensions of the matrix without its row and column header
    const int rows = -1 + nw.adjrows;
