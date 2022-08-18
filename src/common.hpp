@@ -1,7 +1,6 @@
 #ifndef INCLUDE_COMMON_HPP
 #define INCLUDE_COMMON_HPP
 
-#include <cstdio>
 #include <chrono>
 #include <memory>
 #include <limits>
@@ -45,38 +44,8 @@ constexpr int WARPSZ = 32;
 // get the specified element from the given linearized matrix
 #define el( mat, cols, i, j ) ( mat[(cols)*(i) + (j)] )
 
-// for diagnostic purposes
-inline void PrintMatrix(
-   const int* const mat,
-   const int rows,
-   const int cols
-)
-{
-   printf( "\n" );
-   for( int i = 0; i < rows; i++ )
-   {
-      for( int j = 0; j < cols; j++ )
-      {
-         printf( "%4d ", el(mat,cols, i,j) );
-      }
-      printf( "\n" );
-   }
-   fflush(stdout);
-}
-
-// for diagnostic purposes
-inline void ZeroOutMatrix(
-   int* const mat,
-   const int rows,
-   const int cols
-) noexcept
-{
-   for( int i = 0; i < rows; i++ )
-   for( int j = 0; j < cols; j++ )
-   {
-      el(mat,cols, i,j) = 0;
-   }
-}
+void HashAndZeroOutMatrix( int* const mat, const int rows, const int cols, unsigned& hash ) noexcept;
+void PrintMatrix( const int* const mat, const int rows, const int cols );
 
 
 
@@ -161,4 +130,4 @@ inline void UpdateScore( NwInput& nw, int i, int j ) noexcept
 
 
 
-#endif INCLUDE_COMMON_HPP
+#endif // INCLUDE_COMMON_HPP

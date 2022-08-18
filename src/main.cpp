@@ -140,11 +140,11 @@ int main( int argc, char *argv[] )
       printf( "%-23s:   ", name.c_str() );
       fflush( stdout );
 
-      ZeroOutMatrix( nw.score, nw.adjrows, nw.adjcols );
       variant( nw, res );
-      // PrintMatrix( nw.score, nw.adjrows, nw.adjcols );
+      // Trace1_Diag( nw, res );
 
-      Trace1_Diag( nw, res );
+      // PrintMatrix( nw.score, nw.adjrows, nw.adjcols );
+      HashAndZeroOutMatrix( nw.score, nw.adjrows, nw.adjcols, res.hash );
 
       if( firstIter )
       {
