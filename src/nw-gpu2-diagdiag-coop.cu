@@ -2,90 +2,88 @@
 #include "common.hpp"
 
 
-// cuda kernel A for the parallel implementation
-// +   initializes the score matrix in the gpu
-__global__ static void Nw_Gpu3_KernelA( int* seqX_gpu, int* seqY_gpu, int* score_gpu, int* subst_gpu, int adjrows, int adjcols, int substsz, int indelcost, unsigned tileAx, unsigned tileAy )
+// cuda kernel for the parallel implementation
+__global__ static void Nw_Gpu2_Kernel(
+   // nw input
+   const int* const seqX_gpu,
+   const int* const seqY_gpu,
+         int* const score_gpu,
+   const int* const subst_gpu,
+// const int adjrows,   // can be calculated as 1 + trows*tileBy
+// const int adjcols,   // can be calculated as 1 + tcols*tileBx
+   const int substsz,
+   const int indelcost,
+   // tile size
+   const int trows,
+   const int tcols,
+   const unsigned tileBx,
+   const unsigned tileBy
+)
 {
-   extern __shared__ int shmem[/*( substsz*substsz + tileAx + tileAy )*/];
+   extern __shared__ int shmem[/* max2( substsz*substsz + tileBx + tileBy, (1+tileBy)*(1+tileBx) ) */];
    // the substitution matrix and relevant parts of the two sequences
-   // +   stored in shared memory for faster random access
-   int* const subst/*[substsz][substsz]*/ = shmem + 0;
-   int* const seqX/*[tileAx]*/            = subst + substsz*substsz;
-   int* const seqY/*[tileAy]*/            = seqX  + tileAx;
+   // TODO: align allocations to 0-th shared memory bank?
+   int* const subst/*[substsz*substsz]*/      = shmem + 0;
+   int* const seqX/*[tileBx]*/                = subst + substsz*substsz;
+   int* const seqY/*[tileBy]*/                = seqX  + tileBx;
+   int* const tile/*[(1+tileBy)*(1+tileBx)]*/ = seqY  + tileBy;
 
    // initialize the substitution shared memory copy
    {
       // map the threads from the thread block onto the substitution matrix elements
-      int i = threadIdx.y*substsz + threadIdx.x;
+      int i = threadIdx.x;
       // while the current thread maps onto an element in the matrix
       while( i < substsz*substsz )
       {
          // copy the current element from the global substitution matrix
          el(subst,substsz, 0,i) = el(subst_gpu,substsz, 0,i);
          // map this thread to the next element with stride equal to the number of threads in this block
-         i += tileAy*tileAx;
+         i += blockDim.x;
       }
    }
 
-   // initialize the X and Y sequences' shared memory copies
+   // initialize the global score's header row and column
    {
-      // position of the current thread in the global X and Y sequences
-      int x = blockIdx.x*blockDim.x;
-      int y = blockIdx.y*blockDim.y;
-      // map the threads from the first            row  to the shared X sequence part
-      // map the threads from the second and later rows to the shared Y sequence part
-      int iX = ( threadIdx.y     )*tileAx + threadIdx.x;
-      int iY = ( threadIdx.y - 1 )*tileAx + threadIdx.x;
+      // the number of rows in the score matrix
+      int adjrows = 1 + trows*tileBy;
+      // the number of columns in the score matrix
+      int adjcols = 1 + tcols*tileBx;
 
-      // if the current thread maps to the first row, initialize the corresponding element
-      if( iX < tileAx )        seqX[ iX ] = seqX_gpu[ x + iX ];
-      // otherwise, remap it to the first column and initialize the corresponding element
-      else if( iY < tileAy )   seqY[ iY ] = seqY_gpu[ y + iY ];
+      // map the threads from the thread grid onto the global score's header row elements
+      // +   stride equal to the number of threads in this grid
+      int j  = blockIdx.x*blockDim.x + threadIdx.x;
+      int dj = gridDim.x *blockDim.x;
+      // while the current thread maps onto an element in the header row
+      while( j < adjcols )
+      {
+         // initialize that header row element
+         el(score_gpu,adjcols, 0,j) = -j*indelcost;
+
+         // map this thread to the next element
+         j += dj;
+      }
+
+      // map the threads from the thread grid onto the global score's header column elements
+      // +   stride equal to the number of threads in this grid
+      // NOTE: the zeroth element of the header column is skipped since it is already initialized
+      int i  = 1+ blockIdx.x*blockDim.x + threadIdx.x;
+      int di = gridDim.x *blockDim.x;
+      // while the current thread maps onto an element in the header column
+      while( i < adjrows )
+      {
+         // initialize that header column element
+         el(score_gpu,adjcols, i,0) = -i*indelcost;
+
+         // map this thread to the next element
+         i += di;
+      }
    }
-   
-   // make sure that all threads have finished initializing their corresponding elements
-   __syncthreads();
 
-   // initialize the score matrix in global memory
-   {
-      // position of the current thread in the score matrix
-      int i = blockIdx.y*blockDim.y + threadIdx.y;
-      int j = blockIdx.x*blockDim.x + threadIdx.x;
-      // position of the current thread in the sequences
-      int iX = threadIdx.x;
-      int iY = threadIdx.y;
-      // the current element value
-      int elem = 0;
-      
-      // if the current thread is outside the score matrix, return
-      if( i >= adjrows || j >= adjcols ) return;
-
-      // if the current thread is not in the first row or column of the score matrix
-      // +   use the substitution matrix to calculate the score matrix element value
-      // +   increase the value by insert delete cost, since then the formula for calculating the actual element value in kernel B becomes simpler
-      if( i > 0 && j > 0 ) { elem = el(subst,substsz, seqY[iY],seqX[iX]) + indelcost; }
-      // otherwise, if the current thread is in the first row or column
-      // +   update the score matrix element using the insert delete cost
-      else                 { elem = -( i|j )*indelcost; }
-      
-      // update the corresponding element in global memory
-      // +   fully coallesced memory access
-      el(score_gpu,adjcols, i,j) = elem;
-   }
-}
+   // all threads in this grid should finish initializing their substitution shared memory + the global score's header row and column
+   cooperative_groups::this_grid().sync();
 
 
-// cuda kernel B for the parallel implementation
-// +   calculates the score matrix in the gpu using the initialized score matrix from kernel A
-// +   the given matrix minus the padding (zeroth row and column) must be evenly divisible by the tile B
-__global__ static void Nw_Gpu3_KernelB( int* score_gpu, int indelcost, int trows, int tcols, unsigned tileBx, unsigned tileBy )
-{
-   extern __shared__ int shmem[/*( (1+tileBy)*(1+tileBx) )*/];
-   // matrix tile which this thread block maps onto
-   // +   stored in shared memory for faster random access
-   int* const tile/*[(1+tileBy)*(1+tileBx)]*/ = shmem + 0;
 
-   
    //  / / / . .       . . . / /       . . . . .|/ /
    //  / / . . .   +   . . / / .   +   . . . . /|/
    //  / . . . .       . / / . .       . . . / /|
@@ -102,32 +100,119 @@ __global__ static void Nw_Gpu3_KernelB( int* score_gpu, int indelcost, int trows
       // +   then go to the next tile on the diagonal with stride equal to the number of thread blocks in the thread grid
       for( int t = tbeg + blockIdx.x;   t <= tend;   t += gridDim.x )
       {
+
+
+         // initialize the tile's window into the global X and Y sequences
+         {
+            //       x x x x x
+            //       | | | | |
+            //     h h h h h h     // note the x and y seqences on this schematic
+            // y --h u . . . .     // +   they don't! need to be extended by 1 to the left and by 1 to the top
+            // y --h . . . . .
+            // y --h . . . . .
+            // position of the top left uninitialized! element <u> of the current tile in the score matrix
+            // +   only the uninitialized elements will be calculated, and they need the corresponding global sequence X and Y elements
+            int ibeg = 1 + (   t )*tileBy;
+            int jbeg = 1 + ( s-t )*tileBx;
+
+            // map the threads from the thread block onto the global X sequence's elements (which will be used in this tile)
+            int j = threadIdx.x;
+            // while the current thread maps onto an element in the tile's X sequence
+            while( j < tileBx )
+            {
+               // initialize that element in the X seqence's shared window
+               seqX[ j ] = seqX_gpu[ jbeg + j ];
+
+               // map this thread to the next element with stride equal to the number of threads in this block
+               j += blockDim.x;
+            }
+
+            // map the threads from the thread block onto the global Y sequence's elements (which will be used in this tile)
+            int i = threadIdx.x;
+            // while the current thread maps onto an element in the tile's Y sequence
+            while( i < tileBy )
+            {
+               // initialize that element in the Y seqence's shared window
+               seqY[ i ] = seqY_gpu[ ibeg + i ];
+
+               // map this thread to the next element with stride equal to the number of threads in this block
+               i += blockDim.x;
+            }
+         }
+
+         // initialize the tile's header row and column
+         {
+            //       x x x x x
+            //       | | | | |
+            //     p h h h h h
+            // y --h . . . . .
+            // y --h . . . . .
+            // y --h . . . . .
+            // position of the top left element <p> of the current tile in the score matrix
+            // +   start indexes from the header, since the tile header (<h>) should be copied from the global score matrix
+            int ibeg = ( 1 + (   t )*tileBy ) - 1/*header*/;
+            int jbeg = ( 1 + ( s-t )*tileBx ) - 1/*header*/;
+            // the number of columns in the score matrix
+            int adjcols = 1 + tcols*tileBx;
+
+            // map the threads from the thread block onto the tile's header row (stored in the global score matrix)
+            int j = threadIdx.x;
+            // while the current thread maps onto an element in the tile's header row (stored in the global score matrix)
+            while( j < 1+tileBx )
+            {
+               // initialize that element in the tile's shared memory
+               el(tile,1+tileBx, 0,j) = el(score_gpu,adjcols, ibeg+0,jbeg+j);
+
+               // map this thread to the next element with stride equal to the number of threads in this block
+               j += blockDim.x;
+            }
+
+            // map the threads from the thread block onto the tile's header column (stored in the global score matrix)
+            // +   skip the zeroth element since it is already initialized
+            int i = 1+ threadIdx.x;
+            // while the current thread maps onto an element in the tile's header column (stored in the global score matrix)
+            while( i < 1+tileBy )
+            {
+               // initialize that element in the tile's shared memory
+               el(tile,1+tileBx, i,0) = el(score_gpu,adjcols, ibeg+i,jbeg+0);
+
+               // map this thread to the next element with stride equal to the number of threads in this block
+               i += blockDim.x;
+            }
+         }
+
+         // make sure that all threads have finished initializing their corresponding elements in the shared X and Y sequences, and the tile's header row and column sequences
+         __syncthreads();
+         
          // initialize the score matrix tile
          {
-            // position of the top left element of the current tile in the score matrix
-            int ibeg = ( 1 + (   t )*tileBy ) - 1;
-            int jbeg = ( 1 + ( s-t )*tileBx ) - 1;
-            // the number of colums in the score matrix
-            int cols = 1 + tcols*tileBx;
-
+            //       x x x x x
+            //       | | | | |
+            //     p h h h h h
+            // y --h . . . . .
+            // y --h . . . . .
+            // y --h . . . . .
+            // position of the top left element <p> of the current tile in the score matrix
+            
             // current thread position in the tile
-            int i = threadIdx.x / ( tileBx+1 );
-            int j = threadIdx.x % ( tileBx+1 );
+            int i = threadIdx.x / tileBx;
+            int j = threadIdx.x % tileBx;
             // stride on the current thread position in the tile, equal to the number of threads in this thread block
-            // +   it is split into row and column increments for the tread's position for performance reasons (avoids using division and modulo operator in the inner cycle)
-            int di = blockDim.x / ( tileBx+1 );
-            int dj = blockDim.x % ( tileBx+1 );
+            // +   it is split into row and column increments for the thread's position for performance reasons (avoids using division and modulo operator in the inner cycle)
+            int di = blockDim.x / tileBx;
+            int dj = blockDim.x % tileBx;
             
             // while the current thread maps onto an element in the tile
-            while( i < ( 1+tileBy ) )
+            while( i < tileBy )
             {
-               // copy the current element from the global score matrix to the tile
-               el(tile,1+tileBx, i,j) = el(score_gpu,cols, ibeg+i,jbeg+j);
+               // use the substitution matrix to partially calculate the score matrix element value
+               // +   increase the value by insert delete cost, since then the formula for calculating the actual element value later on becomes simpler
+               el(tile,1+tileBx, 1+i,1+j) = el(subst,substsz, seqY[i],seqX[j]) + indelcost;
 
                // map the current thread to the next tile element
                i += di; j += dj;
                // if the column index is out of bounds, increase the row index by one and wrap around the column index
-               if( j >= ( 1+tileBx ) ) { i++; j -= ( 1+tileBx ); }
+               if( j >= tileBx ) { i++; j -= tileBx; }
             }
          }
 
@@ -138,7 +223,7 @@ __global__ static void Nw_Gpu3_KernelB( int* score_gpu, int indelcost, int trows
          // +   only threads in the first warp from this block are active here, other warps have to wait
          if( threadIdx.x < WARPSZ )
          {
-            // the number of rows and colums in the tile without its first row and column (the part of the tile to be calculated)
+            // the number of rows and columns in the tile without its first row and column (the part of the tile to be calculated)
             int rows = tileBy;
             int cols = tileBx;
 
@@ -151,13 +236,13 @@ __global__ static void Nw_Gpu3_KernelB( int* score_gpu, int indelcost, int trows
             for( int d = 0;   d < cols-1 + rows;   d++ )
             {
                // (d,p) -- element coordinates in the tile
-               int tbeg = max( 0, d - (cols-1) );
-               int tend = min( d, rows-1 );
+               int dbeg = max( 0, d - (cols-1) );
+               int dend = min( d, rows-1 );
                // position of the current thread's element on the tile diagonal
-               int p = tbeg + threadIdx.x;
+               int p = dbeg + threadIdx.x;
 
                // if the thread maps onto an element on the current tile diagonal
-               if( p <= tend )
+               if( p <= dend )
                {
                   // position of the current element
                   int i = 1 + (   p );
@@ -184,14 +269,14 @@ __global__ static void Nw_Gpu3_KernelB( int* score_gpu, int indelcost, int trows
             // position of the first (top left) calculated element of the current tile in the score matrix
             int ibeg = ( 1 + (   t )*tileBy );
             int jbeg = ( 1 + ( s-t )*tileBx );
-            // the number of colums in the score matrix
-            int cols = 1 + tcols*tileBx;
+            // the number of columns in the score matrix
+            int adjcols = 1 + tcols*tileBx;
 
             // current thread position in the tile
             int i = threadIdx.x / tileBx;
             int j = threadIdx.x % tileBx;
             // stride on the current thread position in the tile, equal to the number of threads in this thread block
-            // +   it is split into row and column increments for the tread's position for performance reasons (avoids using division and modulo operator in the inner cycle)
+            // +   it is split into row and column increments for the thread's position for performance reasons (avoids using division and modulo operator in the inner cycle)
             int di = blockDim.x / tileBx;
             int dj = blockDim.x % tileBx;
             
@@ -199,7 +284,7 @@ __global__ static void Nw_Gpu3_KernelB( int* score_gpu, int indelcost, int trows
             while( i < tileBy )
             {
                // copy the current element from the tile to the global score matrix
-               el(score_gpu,cols, ibeg+i,jbeg+j) = el(tile,1+tileBx, 1+i,1+j );
+               el(score_gpu,adjcols, ibeg+i,jbeg+j) = el(tile,1+tileBx, 1+i,1+j );
 
                // map the current thread to the next tile element
                i += di; j += dj;
@@ -220,14 +305,11 @@ __global__ static void Nw_Gpu3_KernelB( int* score_gpu, int indelcost, int trows
 
 
 // parallel gpu implementation of the Needleman Wunsch algorithm
-void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
+void Nw_Gpu2_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
 {
-   // tile sizes for kernels A and B
-   // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
+   // tile size for the kernel
    // +   tile B must have one dimension fixed to the number of threads in a warp
-   unsigned tileAx = 1*WARPSZ;
-   unsigned tileAy = 32;
-   unsigned tileBx = 60;
+   unsigned tileBx = 40;
    unsigned tileBy = WARPSZ;
 
    // substitution matrix, sequences which will be compared and the score matrix stored in gpu global memory
@@ -272,65 +354,28 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
    cudaMemcpy( nw_gpu.subst, nw.subst, nw_gpu.substsz*nw_gpu.substsz * sizeof( int ), cudaMemcpyHostToDevice );
 
 
-   // launch kernel A
+   // launch kernel
    {
-      // calculate grid dimensions for kernel A
-      dim3 gridA;
-      gridA.y = ceil( float( nw_gpu.adjrows )/tileAy );
-      gridA.x = ceil( float( nw_gpu.adjcols )/tileAx );
-      // block dimensions for kernel A
-      dim3 blockA { tileAx, tileAy };
-
-      // calculate size of shared memory per block in bytes
-      int shmemsz = (
-         /*subst[][]*/ nw_gpu.substsz*nw_gpu.substsz
-         /*seqX[]*/ + tileAx
-         /*seqY[]*/ + tileAy
-      ) * sizeof( int );
-      
-      // group arguments to be passed to kernel B
-      void* kargs[] { &nw_gpu.seqX, &nw_gpu.seqY, &nw_gpu.score, &nw_gpu.subst, &nw_gpu.adjrows, &nw_gpu.adjcols, &nw_gpu.substsz, &nw_gpu.indelcost, &tileAx, &tileAy };
-
-      // launch the kernel in the given stream (don't statically allocate shared memory)
-      // +   capture events around kernel launch as well
-      // +   update the stop event when the kernel finishes
-      cudaEventRecord( start, 0/*stream*/ );
-      cudaLaunchKernel( ( void* )Nw_Gpu3_KernelA, gridA, blockA, kargs, shmemsz, 0/*stream*/ );
-      cudaEventRecord( stop, 0/*stream*/ );
-      cudaEventSynchronize( stop );
-      
-      // kernel A execution time
-      float ktimeA;
-      // calculate the time between the given events
-      cudaEventElapsedTime( &ktimeA, start, stop ); ktimeA /= 1000./*ms*/;
-      // update the total kernel execution time
-      res.Tgpu += ktimeA;
-   }
-   
-   // wait for the gpu to finish before going to the next step
-   cudaDeviceSynchronize();
-
-
-   // launch kernel B
-   {
-      // grid and block dimensions for kernel B
-      dim3 gridB;
-      dim3 blockB;
+      // grid and block dimensions for kernel
+      dim3 gridB {};
+      dim3 blockB {};
       // the number of tiles per row and column of the score matrix
       int trows = ceil( float( nw_gpu.adjrows-1 )/tileBy );
       int tcols = ceil( float( nw_gpu.adjcols-1 )/tileBx );
-      
+
       // calculate size of shared memory per block in bytes
       int shmemsz = (
-         /*tile[]*/ ( 1+tileBy )*( 1+tileBx )
-      )*sizeof( int );
+         /*subst[]*/ nw_gpu.substsz*nw_gpu.substsz *sizeof( int )
+         /*seqX[]*/ + tileBx                       *sizeof( int )
+         /*seqY[]*/ + tileBy                       *sizeof( int )
+         /*tile[]*/ + ( 1+tileBy )*( 1+tileBx )    *sizeof( int )
+      );
       
-      // calculate grid and block dimensions for kernel B
+      // calculate grid and block dimensions for kernel
       {
-         // take the number of warps on the largest tile diagonal times the number of threads in a warp as the number of threads
-         // +   also multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-         blockB.x  = ceil( min( tileBy, tileBx )*1./WARPSZ )*WARPSZ;
-         blockB.x *= ceil( max( tileBy, tileBx )*2./WARPSZ );
+         // take the number of threads on the largest diagonal of the tile
+         // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
+         blockB.x = WARPSZ * ceil( max( tileBy, tileBx )*2./WARPSZ );
          // take the number of tiles on the largest score matrix diagonal as the only dimension
          gridB.x = min( trows, tcols );
 
@@ -340,29 +385,29 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
          int numThreads = blockB.x;
 
          // calculate the max number of parallel blocks per streaming multiprocessor
-         cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxBlocksPerSm, Nw_Gpu3_KernelB, numThreads, shmemsz );
+         cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxBlocksPerSm, Nw_Gpu2_Kernel, numThreads, shmemsz );
          // the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
          gridB.x = min( gridB.x, MPROCS*maxBlocksPerSm );
       }
 
 
-      // group arguments to be passed to kernel B
-      void* kargs[] { &nw_gpu.score, &nw_gpu.indelcost, &trows, &tcols, &tileBx, &tileBy };
+      // group arguments to be passed to kernel
+      void* kargs[] { &nw_gpu.seqX, &nw_gpu.seqY, &nw_gpu.score, &nw_gpu.subst, /*&nw_gpu.adjrows,*/ /*&nw_gpu.adjcols,*/ &nw_gpu.substsz, &nw_gpu.indelcost, &trows, &tcols, &tileBx, &tileBy };
       
       // launch the kernel in the given stream (don't statically allocate shared memory)
       // +   capture events around kernel launch as well
       // +   update the stop event when the kernel finishes
       cudaEventRecord( start, 0/*stream*/ );
-      cudaLaunchCooperativeKernel( ( void* )Nw_Gpu3_KernelB, gridB, blockB, kargs, shmemsz, 0/*stream*/ );
+      cudaLaunchCooperativeKernel( ( void* )Nw_Gpu2_Kernel, gridB, blockB, kargs, shmemsz, 0/*stream*/ );
       cudaEventRecord( stop, 0/*stream*/ );
       cudaEventSynchronize( stop );
       
-      // kernel B execution time
-      float ktimeB;
+      // kernel execution time
+      float ktime {};
       // calculate the time between the given events
-      cudaEventElapsedTime( &ktimeB, start, stop ); ktimeB /= 1000./*ms*/;
+      cudaEventElapsedTime( &ktime, start, stop ); ktime /= 1000./*ms*/;
       // update the total kernel execution time
-      res.Tgpu += ktimeB;
+      res.Tgpu += ktime;
    }
 
    // wait for the gpu to finish before going to the next step

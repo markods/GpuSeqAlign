@@ -75,7 +75,7 @@ int main( int argc, char *argv[] )
    nw.adjrows = 1+ atoi( argv[1] );
    nw.adjcols = 1+ atoi( argv[2] );
    nw.substsz = sqrt( score_mats["blosum62"].size() );
-   nw.indelcost = 4;
+   nw.indelcost = 10;
    // if the number of columns is less than the number of rows, swap them
    if( nw.adjcols < nw.adjrows )
    {
@@ -120,7 +120,8 @@ int main( int argc, char *argv[] )
       { "Nw_Cpu2_Diag_St", Nw_Cpu2_Diag_St },
       { "Nw_Cpu3_DiagRow_St", Nw_Cpu3_DiagRow_St },
       { "Nw_Cpu4_DiagRow_Mt", Nw_Cpu4_DiagRow_Mt },
-      { "Nw_Gpu3_DiagDiag_Coop", Nw_Gpu3_DiagDiag_Coop },
+      { "Nw_Gpu2_DiagDiag_Coop", Nw_Gpu2_DiagDiag_Coop },
+      { "Nw_Gpu3_DiagDiag_Coop2K", Nw_Gpu3_DiagDiag_Coop2K },
    };
 
    // variables for storing the calculation hashes
@@ -136,7 +137,7 @@ int main( int argc, char *argv[] )
 
       NwMetrics res {};
 
-      printf( "%-22s:   ", name.c_str() );
+      printf( "%-23s:   ", name.c_str() );
       fflush( stdout );
 
       ZeroOutMatrix( nw.score, nw.adjrows, nw.adjcols );

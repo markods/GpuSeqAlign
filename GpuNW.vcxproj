@@ -23,7 +23,8 @@
     <ClCompile Include="src\trace1-diag.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="src\nw-gpu3-diagdiag-coop.cu" />
+    <CudaCompile Include="src\nw-gpu2-diagdiag-coop.cu" />
+    <CudaCompile Include="src\nw-gpu3-diagdiag-coop2k.cu" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{37991427-3662-484F-A8DE-51F8CD60336E}</ProjectGuid>

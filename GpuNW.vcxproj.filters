@@ -39,7 +39,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="src\nw-gpu3-diagdiag-coop.cu">
+    <CudaCompile Include="src\nw-gpu2-diagdiag-coop.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\nw-gpu3-diagdiag-coop2k.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
   </ItemGroup>
