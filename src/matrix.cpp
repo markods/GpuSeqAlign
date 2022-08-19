@@ -31,20 +31,21 @@ void HashAndZeroOutMatrix(
 
 // for diagnostic purposes
 void PrintMatrix(
+   FILE* stream,
    const int* const mat,
    const int rows,
    const int cols
 )
 {
-   printf( "\n" );
+   fprintf( stream, "\n" );
    for( int i = 0; i < rows; i++ )
    {
       for( int j = 0; j < cols; j++ )
       {
-         printf( "%4d ", el(mat,cols, i,j) );
+         fprintf( stream, "%4d ", el(mat,cols, i,j) );
       }
-      printf( "\n" );
+      fprintf( stream, "\n" );
    }
-   fflush(stdout);
+   fflush( stream );
 }
 

@@ -168,13 +168,13 @@ __global__ static void Nw_Gpu3_KernelB(
             for( int d = 0;   d < cols-1 + rows;   d++ )
             {
                // (d,p) -- element coordinates in the tile
-               int dbeg = max( 0, d - (cols-1) );
-               int dend = min( d, rows-1 );
+               int pbeg = max( 0, d - (cols-1) );
+               int pend = min( d, rows-1 );
                // position of the current thread's element on the tile diagonal
-               int p = dbeg + threadIdx.x;
+               int p = pbeg + threadIdx.x;
 
                // if the thread maps onto an element on the current tile diagonal
-               if( p <= dend )
+               if( p <= pend )
                {
                   // position of the current element
                   int i = 1 + (   p );
@@ -226,7 +226,7 @@ __global__ static void Nw_Gpu3_KernelB(
          }
          
          // all threads in this block should finish saving this tile
-         // +   block synchronization unnecessary since the tiles on the current diagonal are independent
+         __syncthreads();
       }
 
       // all threads in this grid should finish calculating the diagonal of tiles

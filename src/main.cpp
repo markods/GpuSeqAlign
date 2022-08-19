@@ -13,6 +13,8 @@
 #include <cstdio>
 #include <iostream>
 #include <fstream>
+#include <sstream>
+#include <chrono>
 #include <string>
 #include <map>
 #include "common.hpp"
@@ -30,6 +32,18 @@ void PrintHelpInfo( FILE* stream, char* argv[] )
    );
 }
 
+// get the current time as an ISO string
+std::string IsoTime()
+{
+   auto now = std::chrono::system_clock::now();
+   auto time_t = std::chrono::system_clock::to_time_t( now );
+
+   std::stringstream ss;
+   // https://en.cppreference.com/w/cpp/io/manip/put_time
+   ss << std::put_time( std::localtime( &time_t ), "%Y%m%d_%H%M%S" );
+   return ss.str();
+}
+
 
 // main program
 int main( int argc, char *argv[] )
@@ -40,20 +54,23 @@ int main( int argc, char *argv[] )
       exit(-1);
    }
 
-   std::map<std::string, std::vector<int>> score_mats;
+   std::map<std::string, std::vector<int>> subst_mats;
 
-   std::ifstream ifs;
-   ifs.open( "D:/---/.Marko/GpuNW/resrc/blosum.json", std::ios_base::in );
-   
-      // NOTE: the parser doesn't allow for trailing commas
-      score_mats = json::parse(
-         ifs,
-         /*callback*/ nullptr,
-         /*allow exceptions*/ true,
-         /*ignore_comments*/ true
-      );
+   // read the substitution matrixes from memory
+   {
+      std::ifstream ifs;
+      ifs.open( "D:/---/.Marko/GpuNW/resrc/blosum.json", std::ios_base::in );
       
-   ifs.close();
+         // NOTE: the parser doesn't allow for trailing commas
+         subst_mats = json::parse(
+            ifs,
+            /*callback*/ nullptr,
+            /*allow exceptions*/ true,
+            /*ignore_comments*/ true
+         );
+         
+      ifs.close();
+   }
 
    
    // initialize the needleman-wunsch algorithm inputs
@@ -72,9 +89,9 @@ int main( int argc, char *argv[] )
 
    // number of rows, number of columns and indelcost
    // add the padding (zeroth row and column) to the matrix
-   nw.adjrows = 1+ atoi( argv[1] );
-   nw.adjcols = 1+ atoi( argv[2] );
-   nw.substsz = sqrt( score_mats["blosum62"].size() );
+   nw.adjrows = 1+ atoi( argv[1] );   if( nw.adjrows < 1 ) nw.adjrows = 1;
+   nw.adjcols = 1+ atoi( argv[2] );   if( nw.adjcols < 1 ) nw.adjcols = 1;
+   nw.substsz = sqrt( subst_mats["blosum62"].size() );
    nw.indelcost = 10;
    // if the number of columns is less than the number of rows, swap them
    if( nw.adjcols < nw.adjrows )
@@ -86,7 +103,7 @@ int main( int argc, char *argv[] )
    nw.seqX  = ( int* ) malloc( nw.adjcols * sizeof( int ) );
    nw.seqY  = ( int* ) malloc( nw.adjrows * sizeof( int ) );
    nw.score = ( int* ) malloc( nw.adjrows*nw.adjcols * sizeof( int ) );
-   nw.subst = &score_mats["blosum62"][0];
+   nw.subst = &subst_mats["blosum62"][0];
 
    // if memory hasn't been allocated
    if( !nw.seqX || !nw.seqY || !nw.score )
@@ -114,12 +131,16 @@ int main( int argc, char *argv[] )
    for( int i = 1; i < nw.adjrows; i++ ) nw.seqY[i] = rand() % nw.substsz;
 
 
+   // output file
+   // FILE* stream = fopen( ("../../log/" + IsoTime() + ".log" ).c_str(), "w" );
+
    // the tested nw implementations
    std::map<std::string, NwVariant> variants {
       { "Nw_Cpu1_Row_St", Nw_Cpu1_Row_St },
       { "Nw_Cpu2_Diag_St", Nw_Cpu2_Diag_St },
       { "Nw_Cpu3_DiagRow_St", Nw_Cpu3_DiagRow_St },
       { "Nw_Cpu4_DiagRow_Mt", Nw_Cpu4_DiagRow_Mt },
+      { "Nw_Gpu1_Diag_Ml", Nw_Gpu1_Diag_Ml },
       { "Nw_Gpu2_DiagDiag_Coop", Nw_Gpu2_DiagDiag_Coop },
       { "Nw_Gpu3_DiagDiag_Coop2K", Nw_Gpu3_DiagDiag_Coop2K },
    };
@@ -142,8 +163,7 @@ int main( int argc, char *argv[] )
 
       variant( nw, res );
       // Trace1_Diag( nw, res );
-
-      // PrintMatrix( nw.score, nw.adjrows, nw.adjcols );
+      // PrintMatrix( stream, nw.score, nw.adjrows, nw.adjcols );
       HashAndZeroOutMatrix( nw.score, nw.adjrows, nw.adjcols, res.hash );
 
       if( firstIter )
@@ -159,6 +179,7 @@ int main( int argc, char *argv[] )
       printf( "hash=%10u   Tcpu=%6.3fs   Tgpu=%6.3fs\n", res.hash, res.Tcpu, res.Tgpu );
       fflush( stdout );
    }
+   // fclose( stream );
 
    // +   compare the implementations
    if( success ) printf( "TEST PASSED\n" );
