@@ -4,7 +4,7 @@
 
 // cuda kernel A for the parallel implementation
 // +   initializes the score matrix in the gpu
-__global__ static void Nw_Gpu3_KernelA(
+__global__ static void Nw_Gpu4_KernelA(
    const int* const seqX_gpu,
    const int* const seqY_gpu,
          int* const score_gpu,
@@ -88,7 +88,7 @@ __global__ static void Nw_Gpu3_KernelA(
 // cuda kernel B for the parallel implementation
 // +   calculates the score matrix in the gpu using the initialized score matrix from kernel A
 // +   the given matrix minus the padding (zeroth row and column) must be evenly divisible by the tile B
-__global__ static void Nw_Gpu3_KernelB(
+__global__ static void Nw_Gpu4_KernelB(
          int* const score_gpu,
    const int indelcost,
    const int trows,
@@ -237,7 +237,7 @@ __global__ static void Nw_Gpu3_KernelB(
 
 
 // parallel gpu implementation of the Needleman Wunsch algorithm
-void Nw_Gpu3_DiagDiag_Coop2K( NwInput& nw, NwMetrics& res )
+void Nw_Gpu4_DiagDiag_Coop2K( NwInput& nw, NwMetrics& res )
 {
    // tile sizes for kernels A and B
    // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
@@ -312,7 +312,7 @@ void Nw_Gpu3_DiagDiag_Coop2K( NwInput& nw, NwMetrics& res )
       // +   capture events around kernel launch as well
       // +   update the stop event when the kernel finishes
       cudaEventRecord( start, 0/*stream*/ );
-      cudaLaunchKernel( ( void* )Nw_Gpu3_KernelA, gridA, blockA, kargs, shmemsz, 0/*stream*/ );
+      cudaLaunchKernel( ( void* )Nw_Gpu4_KernelA, gridA, blockA, kargs, shmemsz, 0/*stream*/ );
       cudaEventRecord( stop, 0/*stream*/ );
       cudaEventSynchronize( stop );
       
@@ -356,7 +356,7 @@ void Nw_Gpu3_DiagDiag_Coop2K( NwInput& nw, NwMetrics& res )
          int numThreads = blockB.x;
 
          // calculate the max number of parallel blocks per streaming multiprocessor
-         cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxBlocksPerSm, Nw_Gpu3_KernelB, numThreads, shmemsz );
+         cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxBlocksPerSm, Nw_Gpu4_KernelB, numThreads, shmemsz );
          // the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
          gridB.x = min( gridB.x, MPROCS*maxBlocksPerSm );
       }
@@ -369,7 +369,7 @@ void Nw_Gpu3_DiagDiag_Coop2K( NwInput& nw, NwMetrics& res )
       // +   capture events around kernel launch as well
       // +   update the stop event when the kernel finishes
       cudaEventRecord( start, 0/*stream*/ );
-      cudaLaunchCooperativeKernel( ( void* )Nw_Gpu3_KernelB, gridB, blockB, kargs, shmemsz, 0/*stream*/ );
+      cudaLaunchCooperativeKernel( ( void* )Nw_Gpu4_KernelB, gridB, blockB, kargs, shmemsz, 0/*stream*/ );
       cudaEventRecord( stop, 0/*stream*/ );
       cudaEventSynchronize( stop );
       
