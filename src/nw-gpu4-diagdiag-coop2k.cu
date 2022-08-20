@@ -317,11 +317,11 @@ void Nw_Gpu4_DiagDiag_Coop2K( NwInput& nw, NwMetrics& res )
       cudaEventSynchronize( stop );
       
       // kernel A execution time
-      float ktimeA {};
+      float ktime {};
       // calculate the time between the given events
-      cudaEventElapsedTime( &ktimeA, start, stop ); ktimeA /= 1000./*ms*/;
+      cudaEventElapsedTime( &ktime, start, stop ); ktime /= 1000./*ms*/;
       // update the total kernel execution time
-      res.Tgpu += ktimeA;
+      res.Tgpu += ktime;
    }
    
    // wait for the gpu to finish before going to the next step
@@ -374,11 +374,11 @@ void Nw_Gpu4_DiagDiag_Coop2K( NwInput& nw, NwMetrics& res )
       cudaEventSynchronize( stop );
       
       // kernel B execution time
-      float ktimeB {};
+      float ktime {};
       // calculate the time between the given events
-      cudaEventElapsedTime( &ktimeB, start, stop ); ktimeB /= 1000./*ms*/;
+      cudaEventElapsedTime( &ktime, start, stop ); ktime /= 1000./*ms*/;
       // update the total kernel execution time
-      res.Tgpu += ktimeB;
+      res.Tgpu += ktime;
    }
 
    // wait for the gpu to finish before going to the next step
@@ -405,14 +405,14 @@ void Nw_Gpu4_DiagDiag_Coop2K( NwInput& nw, NwMetrics& res )
    // save the calculated score matrix
    // +   starts an async data copy from device to host, then waits for the copy to finish
    cudaMemcpy2D(
-       nw    .score,                     // dst    - Destination memory address
-       nw    .adjcols * sizeof( int ),   // dpitch - Pitch of destination memory (padded row size in bytes; in other words distance between the starting points of two rows)
-       nw_gpu.score,                     // src    - Source memory address
-       nw_gpu.adjcols * sizeof( int ),   // spitch - Pitch of source memory (padded row size in bytes)
-       
-       nw.adjcols * sizeof( int ),       // width  - Width of matrix transfer (non-padding row size in bytes)
-       nw.adjrows,                       // height - Height of matrix transfer (#rows)
-       cudaMemcpyDeviceToHost            // kind   - Type of transfer
+      nw    .score,                     // dst    - Destination memory address
+      nw    .adjcols * sizeof( int ),   // dpitch - Pitch of destination memory (padded row size in bytes; in other words distance between the starting points of two rows)
+      nw_gpu.score,                     // src    - Source memory address
+      nw_gpu.adjcols * sizeof( int ),   // spitch - Pitch of source memory (padded row size in bytes)
+      
+      nw.adjcols * sizeof( int ),       // width  - Width of matrix transfer (non-padding row size in bytes)
+      nw.adjrows,                       // height - Height of matrix transfer (#rows)
+      cudaMemcpyDeviceToHost            // kind   - Type of transfer
    );      
 
    // stop the cpu timer

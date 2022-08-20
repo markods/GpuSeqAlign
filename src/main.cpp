@@ -141,6 +141,7 @@ int main( int argc, char *argv[] )
       { "Nw_Cpu3_DiagRow_St", Nw_Cpu3_DiagRow_St },
       { "Nw_Cpu4_DiagRow_Mt", Nw_Cpu4_DiagRow_Mt },
       { "Nw_Gpu1_Diag_Ml", Nw_Gpu1_Diag_Ml },
+      { "Nw_Gpu2_DiagRow_Ml2K", Nw_Gpu2_DiagRow_Ml2K },
       { "Nw_Gpu3_DiagDiag_Coop", Nw_Gpu3_DiagDiag_Coop },
       { "Nw_Gpu4_DiagDiag_Coop2K", Nw_Gpu4_DiagDiag_Coop2K },
    };

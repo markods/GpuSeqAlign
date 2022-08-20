@@ -14,15 +14,15 @@ __global__ static void Nw_Gpu1_Kernel(
    const int d   // the current minor diagonal in the score matrix (exclude the header row and column)
 )
 {
-   //  x x x x x x       x x x x x x       x x x x x x
-   //  x / / / . .       x . . . / /       x . . . . .|/ /
-   //  x / / . . .   +   x . . / / .   +   x . . . . /|/
-   //  x / . . . .       x . / / . .       x . . . / /|
-
    // the dimensions of the matrix without its row and column header
    const int rows = -1 + adjrows;
    const int cols = -1 + adjcols;
    
+
+   //  x x x x x x       x x x x x x       x x x x x x
+   //  x / / / . .       x . . . / /       x . . . . .|/ /
+   //  x / / . . .   +   x . . / / .   +   x . . . . /|/
+   //  x / . . . .       x . / / . .       x . . . / /|
 
    // (d,p) -- element coordinates on the score matrix diagonal
    int pbeg = max( 0, d - (cols-1) );
@@ -74,9 +74,9 @@ __global__ static void Nw_Gpu1_Kernel(
 // parallel gpu implementation of the Needleman Wunsch algorithm
 void Nw_Gpu1_Diag_Ml( NwInput& nw, NwMetrics& res )
 {
-   // tile sizes for kernel
+   // number of threads per block
    // +   the tile is one-dimensional
-   unsigned tileAx = 4*WARPSZ;
+   unsigned threadsPerBlock = 8*WARPSZ;
 
 
    // substitution matrix, sequences which will be compared and the score matrix stored in gpu global memory
@@ -94,7 +94,6 @@ void Nw_Gpu1_Diag_Ml( NwInput& nw, NwMetrics& res )
    };
 
    // adjusted gpu score matrix dimensions
-   // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile B size (in order to be evenly divisible)
    nw_gpu.adjrows = nw.adjrows;
    nw_gpu.adjcols = nw.adjcols;
    nw_gpu.substsz = nw.substsz;
@@ -152,10 +151,10 @@ void Nw_Gpu1_Diag_Ml( NwInput& nw, NwMetrics& res )
             // the number of elements on the current diagonal
             int dsize = pend-pbeg + 1;
 
-            // take the number of threads in the tile as the only dimension
-            blockA.x = tileAx;
-            // take the number of tiles on the current score matrix diagonal as the only dimension
-            gridA.x = ceil( float( dsize ) / tileAx )*tileAx;
+            // take the number of threads per block as the only dimension
+            blockA.x = threadsPerBlock;
+            // take the number of blocks on the current score matrix diagonal as the only dimension
+            gridA.x = ceil( float( dsize ) / threadsPerBlock )*threadsPerBlock;
          }
 
 
@@ -194,12 +193,6 @@ void Nw_Gpu1_Diag_Ml( NwInput& nw, NwMetrics& res )
    // allowed on systems that support unified virtual addressing. Calling
    // ::cudaMemcpy() with dst and src pointers that do not match the direction of
    // the copy results in an undefined behavior.
-   // 
-   // \param dst   - Destination memory address
-   // \param src   - Source memory address
-   // \param count - 
-   // \param kind  - Type of transfer
-   // 
 
    // save the calculated score matrix
    // +   starts an async data copy from device to host, then waits for the copy to finish

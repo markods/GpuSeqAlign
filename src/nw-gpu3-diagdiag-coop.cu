@@ -434,14 +434,14 @@ void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res )
    // save the calculated score matrix
    // +   starts an async data copy from device to host, then waits for the copy to finish
    cudaMemcpy2D(
-       nw    .score,                     // dst    - Destination memory address
-       nw    .adjcols * sizeof( int ),   // dpitch - Pitch of destination memory (padded row size in bytes; in other words distance between the starting points of two rows)
-       nw_gpu.score,                     // src    - Source memory address
-       nw_gpu.adjcols * sizeof( int ),   // spitch - Pitch of source memory (padded row size in bytes)
-       
-       nw.adjcols * sizeof( int ),       // width  - Width of matrix transfer (non-padding row size in bytes)
-       nw.adjrows,                       // height - Height of matrix transfer (#rows)
-       cudaMemcpyDeviceToHost            // kind   - Type of transfer
+      nw    .score,                     // dst    - Destination memory address
+      nw    .adjcols * sizeof( int ),   // dpitch - Pitch of destination memory (padded row size in bytes; in other words distance between the starting points of two rows)
+      nw_gpu.score,                     // src    - Source memory address
+      nw_gpu.adjcols * sizeof( int ),   // spitch - Pitch of source memory (padded row size in bytes)
+      
+      nw.adjcols * sizeof( int ),       // width  - Width of matrix transfer (non-padding row size in bytes)
+      nw.adjrows,                       // height - Height of matrix transfer (#rows)
+      cudaMemcpyDeviceToHost            // kind   - Type of transfer
    );      
 
    // stop the cpu timer
