@@ -5,12 +5,12 @@
             "name": "Windows",
             "includePath": [
                 "${workspaceFolder}/**",
-                "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.1/include"   // cuda include folder
+                "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.5/include"   // cuda include folder
             ],
             "defines": [ "UNICODE", "_UNICODE" ],
          // "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/VC/Tools/Llvm/x64/bin/clang-cl.exe",   // plain c
-            "compilerPath": "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.1/bin/nvcc.exe",                                 // cuda
-            "windowsSdkVersion": "10.0.18362.0"
+            "compilerPath": "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.5/bin/nvcc.exe",                                 // cuda
+            "windowsSdkVersion": "10.1.19041.6"
         },
 
         // UBUNTU WSL

@@ -43,29 +43,29 @@ __global__ static void Nw_Gpu1_Kernel(
       if( d < cols && p == 0 )
       {
          // initialize TOP header element
-         el(score_gpu,adjcols, 0,j) = -j*indelcost;
+         el(score_gpu,adjcols, 0,j) = j*indelcost;
          // if this is also the zeroth diagonal (with only one element on it)
          if( d == 0 )
          {
             // initialize TOP-LEFT header element
-            el(score_gpu,adjcols, 0,0) = -0*indelcost;
+            el(score_gpu,adjcols, 0,0) = 0*indelcost;
          }
       }
       // if the thread maps onto the end of the diagonal
       if( d < rows && p == pend )
       {
          // initialize LEFT header element
-         el(score_gpu,adjcols, i,0) = -i*indelcost;
+         el(score_gpu,adjcols, i,0) = i*indelcost;
       }
 
       // calculate the current element's value
       // +   always subtract the insert delete cost from the result, since that value was added to the initial temporary
-      int p0 = el(subst_gpu,substsz, seqY_gpu[i], seqX_gpu[j]) + indelcost;
+      int p0 = el(subst_gpu,substsz, seqY_gpu[i], seqX_gpu[j]) - indelcost;
       
       int p1 =      el(score_gpu,adjcols, i-1,j-1) + p0;     // MOVE DOWN-RIGHT
       int p2 = max( el(score_gpu,adjcols, i-1,j  ) , p1 );   // MOVE DOWN
       int p3 = max( el(score_gpu,adjcols, i  ,j-1) , p2 );   // MOVE RIGHT
-      el(score_gpu,adjcols, i,j) = p3 - indelcost;
+      el(score_gpu,adjcols, i,j) = p3 + indelcost;
    }
 }
 

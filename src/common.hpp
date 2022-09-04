@@ -117,15 +117,17 @@ void Nw_Gpu1_Diag_Ml( NwInput& nw, NwMetrics& res );
 void Nw_Gpu2_DiagRow_Ml2K( NwInput& nw, NwMetrics& res );
 void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res );
 void Nw_Gpu4_DiagDiag_Coop2K( NwInput& nw, NwMetrics& res );
+void Nw_Gpu5_DiagDiagDiag_Ml( NwInput& nw, NwMetrics& res );
 
 void Trace1_Diag( const NwInput& nw, NwMetrics& res );
 
 // update the score given the current score matrix and position
+// NOTE: indelcost and most elements in the substitution matrix are negative, therefore find the maximum of them (instead of the minimum)
 inline void UpdateScore( NwInput& nw, int i, int j ) noexcept
 {
    int p1 = el(nw.score,nw.adjcols, i-1,j-1) + el(nw.subst,nw.substsz, nw.seqY[i], nw.seqX[j]);  // MOVE DOWN-RIGHT
-   int p2 = el(nw.score,nw.adjcols, i-1,j  ) - nw.indelcost;   // MOVE DOWN
-   int p3 = el(nw.score,nw.adjcols, i  ,j-1) - nw.indelcost;   // MOVE RIGHT
+   int p2 = el(nw.score,nw.adjcols, i-1,j  ) + nw.indelcost;   // MOVE DOWN
+   int p3 = el(nw.score,nw.adjcols, i  ,j-1) + nw.indelcost;   // MOVE RIGHT
    el(nw.score,nw.adjcols, i,j) = max3( p1, p2, p3 );
 }
 

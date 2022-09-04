@@ -13,14 +13,14 @@ __global__ static void Nw_Gpu2_KernelA(
    int j = ( blockDim.x*blockIdx.x + threadIdx.x );
    if( j < adjcols )
    {
-      el(score_gpu,adjcols, 0,j) = -j*indelcost;
+      el(score_gpu,adjcols, 0,j) = j*indelcost;
    }
 
    // skip the zeroth element in the zeroth column, since it is already initialized
    int i = 1+ j;
    if( i < adjrows )
    {
-      el(score_gpu,adjcols, i,0) = -i*indelcost;
+      el(score_gpu,adjcols, i,0) = i*indelcost;
    }
 }
 
@@ -40,10 +40,10 @@ __global__ static void Nw_Gpu2_KernelB(
    const int tcols,
    const unsigned tileBx,
    const unsigned tileBy,
-   const int d   // the current minor diagonal in the score matrix (exclude the header row and column)
+   const int d   // the current minor tile diagonal in the score matrix (exclude the header row and column)
 )
 {
-   extern __shared__ int shmem[/*( substsz*substsz )*/];
+   extern __shared__ int shmem[/* substsz*substsz */];
    // the substitution matrix and relevant parts of the two sequences
    int* const subst/*[substsz*substsz]*/ = shmem + 0;
 
@@ -96,12 +96,12 @@ __global__ static void Nw_Gpu2_KernelB(
       {
          // calculate the current element's value
          // +   always subtract the insert delete cost from the result, since that value was added to the initial temporary
-         int p0 = el(subst,substsz, seqY_gpu[i], seqX_gpu[j]) + indelcost;
+         int p0 = el(subst,substsz, seqY_gpu[i], seqX_gpu[j]) - indelcost;
          
          int p1 =      el(score_gpu,adjcols, i-1,j-1) + p0;     // MOVE DOWN-RIGHT
          int p2 = max( el(score_gpu,adjcols, i-1,j  ) , p1 );   // MOVE DOWN
          int p3 = max( el(score_gpu,adjcols, i  ,j-1) , p2 );   // MOVE RIGHT
-         el(score_gpu,adjcols, i,j) = p3 - indelcost;
+         el(score_gpu,adjcols, i,j) = p3 + indelcost;
       }
    }
 }

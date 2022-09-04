@@ -15,7 +15,7 @@ __global__ static void Nw_Gpu4_KernelA(
    const int indelcost
 )
 {
-   extern __shared__ int shmem[/*( substsz*substsz + tileAx + tileAy )*/];
+   extern __shared__ int shmem[/* substsz*substsz + tileAx + tileAy */];
    // the substitution matrix and relevant parts of the two sequences
    // +   stored in shared memory for faster random access
    // TODO: align allocations to 0-th shared memory bank?
@@ -73,10 +73,10 @@ __global__ static void Nw_Gpu4_KernelA(
       // if the current thread is not in the first row or column of the score matrix
       // +   use the substitution matrix to calculate the score matrix element value
       // +   increase the value by insert delete cost, since then the formula for calculating the actual element value in kernel B becomes simpler
-      if( i > 0 && j > 0 ) { elem = el(subst,substsz, seqY[iY],seqX[iX]) + indelcost; }
+      if( i > 0 && j > 0 ) { elem = el(subst,substsz, seqY[iY],seqX[iX]) - indelcost; }
       // otherwise, if the current thread is in the first row or column
       // +   update the score matrix element using the insert delete cost
-      else                 { elem = -( i|j )*indelcost; }
+      else                 { elem = ( i|j )*indelcost; }
       
       // update the corresponding element in global memory
       // +   fully coallesced memory access
@@ -97,7 +97,7 @@ __global__ static void Nw_Gpu4_KernelB(
    const unsigned tileBy
 )
 {
-   extern __shared__ int shmem[/*( (1+tileBy)*(1+tileBx) )*/];
+   extern __shared__ int shmem[/* (1+tileBy)*(1+tileBx) */];
    // matrix tile which this thread block maps onto
    // +   stored in shared memory for faster random access
    int* const tile/*[(1+tileBy)*(1+tileBx)]*/ = shmem + 0;
@@ -184,7 +184,7 @@ __global__ static void Nw_Gpu4_KernelB(
                   // +   always subtract the insert delete cost from the result, since the kernel A added that value to each element of the score matrix
                   int temp1              =      el(tile,1+tileBx, i-1,j-1) + el(tile,1+tileBx, i  ,j  );
                   int temp2              = max( el(tile,1+tileBx, i-1,j  ) , el(tile,1+tileBx, i  ,j-1) );
-                  el(tile,1+tileBx, i,j) = max( temp1, temp2 ) - indelcost;
+                  el(tile,1+tileBx, i,j) = max( temp1, temp2 ) + indelcost;
                }
 
                // all threads in this warp should finish calculating the tile's current diagonal

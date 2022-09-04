@@ -92,7 +92,7 @@ int main( int argc, char *argv[] )
    nw.adjrows = 1+ atoi( argv[1] );   if( nw.adjrows < 1 ) nw.adjrows = 1;
    nw.adjcols = 1+ atoi( argv[2] );   if( nw.adjcols < 1 ) nw.adjcols = 1;
    nw.substsz = sqrt( subst_mats["blosum62"].size() );
-   nw.indelcost = 10;
+   nw.indelcost = -10;
    // if the number of columns is less than the number of rows, swap them
    if( nw.adjcols < nw.adjrows )
    {
@@ -144,6 +144,7 @@ int main( int argc, char *argv[] )
       { "Nw_Gpu2_DiagRow_Ml2K", Nw_Gpu2_DiagRow_Ml2K },
       { "Nw_Gpu3_DiagDiag_Coop", Nw_Gpu3_DiagDiag_Coop },
       { "Nw_Gpu4_DiagDiag_Coop2K", Nw_Gpu4_DiagDiag_Coop2K },
+   // { "Nw_Gpu5_DiagDiagDiag_Ml", Nw_Gpu5_DiagDiagDiag_Ml },
    };
 
    // variables for storing the calculation hashes
