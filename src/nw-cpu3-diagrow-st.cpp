@@ -1,19 +1,21 @@
 #include "common.hpp"
 
-// parallel cpu implementation of the Needleman Wunsch algorithm
-void Nw_Cpu3_DiagRow_St( NwInput& nw, NwMetrics& res )
+// parallel cpu implementation of the Needleman-Wunsch algorithm
+NwStat NwAlign_Cpu3_DiagRow_St( NwParams& pr, NwInput& nw, NwResult& res )
 {
    // size of square block (that will be a unit of work)
-   // +   8*16 ints on standard architectures, or 8 cache lines
-   const int blocksz = 8 * 64/*B*//sizeof( int );
+   // +   8*(16 ints) on standard architectures, or 8 cache lines
+   int blocksz;
 
-
-   // start the timer
-   res.sw.lap( "cpu-start" );
-
-   // initialize the first row and column of the score matrix
-   for( int i = 0; i < nw.adjrows; i++ ) el(nw.score,nw.adjcols, i,0) = i*nw.indelcost;
-   for( int j = 0; j < nw.adjcols; j++ ) el(nw.score,nw.adjcols, 0,j) = j*nw.indelcost;
+   // get the parameter values (this can throw)
+   try
+   {
+      blocksz = pr["blocksz"].curr();
+   }
+   catch( const std::out_of_range& ex )
+   {
+      return NwStat::errorInvalidValue;
+   }
 
    // the dimensions of the matrix without its row and column header
    const int rows = -1 + nw.adjrows;
@@ -22,6 +24,33 @@ void Nw_Cpu3_DiagRow_St( NwInput& nw, NwMetrics& res )
    // number of blocks in a row and column (rounded up)
    const int rowblocks = ceil( float( rows ) / blocksz );
    const int colblocks = ceil( float( cols ) / blocksz );
+
+   // start the timer
+   res.sw.start();
+
+
+   // reserve space in the ram (this can throw)
+   try
+   {
+      nw.score.init( nw.adjrows * nw.adjcols );
+   }
+   catch( const std::exception& ex )
+   {
+      return NwStat::errorMemoryAllocation;
+   }
+
+   // measure allocation time
+   res.sw.lap( "alloc" );
+
+
+   // initialize the first row and column of the score matrix
+   for( int i = 0; i < nw.adjrows; i++ ) el(nw.score,nw.adjcols, i,0) = i*nw.indel;
+   for( int j = 0; j < nw.adjcols; j++ ) el(nw.score,nw.adjcols, 0,j) = j*nw.indel;
+
+   // measure header initialization time
+   res.sw.lap( "init-hdr" );
+
+
 
    //  / / / . .       . . . / /       . . . . .|/ /
    //  / / . . .   +   . . / / .   +   . . . . /|/
@@ -49,9 +78,10 @@ void Nw_Cpu3_DiagRow_St( NwInput& nw, NwMetrics& res )
       }
    }
 
-   // stop the timer
-   res.sw.lap( "cpu-end" );
-   res.Tcpu = res.sw.dt( "cpu-end", "cpu-start" );
+   // measure calculation time
+   res.sw.lap( "calc" );
+
+   return NwStat::success;
 }
 
 

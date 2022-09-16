@@ -12,7 +12,7 @@ __global__ static void Nw_Gpu4_KernelA(
    const int adjrows,
    const int adjcols,
    const int substsz,
-   const int indelcost
+   const int indel
 )
 {
    extern __shared__ int shmem[/* substsz*substsz + tileAx + tileAy */];
@@ -73,10 +73,10 @@ __global__ static void Nw_Gpu4_KernelA(
       // if the current thread is not in the first row or column of the score matrix
       // +   use the substitution matrix to calculate the score matrix element value
       // +   increase the value by insert delete cost, since then the formula for calculating the actual element value in kernel B becomes simpler
-      if( i > 0 && j > 0 ) { elem = el(subst,substsz, seqY[iY],seqX[iX]) - indelcost; }
+      if( i > 0 && j > 0 ) { elem = el(subst,substsz, seqY[iY],seqX[iX]) - indel; }
       // otherwise, if the current thread is in the first row or column
       // +   update the score matrix element using the insert delete cost
-      else                 { elem = ( i|j )*indelcost; }
+      else                 { elem = ( i|j )*indel; }
       
       // update the corresponding element in global memory
       // +   fully coallesced memory access
@@ -90,7 +90,7 @@ __global__ static void Nw_Gpu4_KernelA(
 // +   the given matrix minus the padding (zeroth row and column) must be evenly divisible by the tile B
 __global__ static void Nw_Gpu4_KernelB(
          int* const score_gpu,
-   const int indelcost,
+   const int indel,
    const int trows,
    const int tcols,
    const unsigned tileBx,
@@ -184,7 +184,7 @@ __global__ static void Nw_Gpu4_KernelB(
                   // +   always subtract the insert delete cost from the result, since the kernel A added that value to each element of the score matrix
                   int temp1              =      el(tile,1+tileBx, i-1,j-1) + el(tile,1+tileBx, i  ,j  );
                   int temp2              = max( el(tile,1+tileBx, i-1,j  ) , el(tile,1+tileBx, i  ,j-1) );
-                  el(tile,1+tileBx, i,j) = max( temp1, temp2 ) + indelcost;
+                  el(tile,1+tileBx, i,j) = max( temp1, temp2 ) + indel;
                }
 
                // all threads in this warp should finish calculating the tile's current diagonal
@@ -236,96 +236,95 @@ __global__ static void Nw_Gpu4_KernelB(
 
 
 
-// parallel gpu implementation of the Needleman Wunsch algorithm
-void Nw_Gpu4_DiagDiag_Coop2K( NwInput& nw, NwMetrics& res )
+// parallel gpu implementation of the Needleman-Wunsch algorithm
+NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
 {
    // tile sizes for kernels A and B
    // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
    // +   tile B must have one dimension fixed to the number of threads in a warp
-   unsigned tileAx = 1*WARPSZ;
-   unsigned tileAy = 32;
-   unsigned tileBx = 60;
-   unsigned tileBy = WARPSZ;
+   unsigned tileAx;
+   unsigned tileAy;
+   unsigned tileBx;
+   unsigned tileBy;
 
-   // substitution matrix, sequences which will be compared and the score matrix stored in gpu global memory
-   NwInput nw_gpu = {
-      // nw.seqX,
-      // nw.seqY,
-      // nw.score,
-      // nw.subst,
-
-      // nw.adjrows,
-      // nw.adjcols,
-      // nw.substsz,
-
-      // nw.indelcost,
-   };
+   // get the parameter values (this can throw)
+   try
+   {
+      tileAx = pr["tileAx"].curr();
+      tileAy = pr["tileAy"].curr();
+      tileBx = pr["tileBx"].curr();
+      tileBy = pr["tileBy"].curr();
+   }
+   catch( const std::out_of_range& ex )
+   {
+      return NwStat::errorInvalidValue;
+   }
 
    // adjusted gpu score matrix dimensions
    // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile B size (in order to be evenly divisible)
-   nw_gpu.adjrows = 1 + tileBy*ceil( float( nw.adjrows-1 )/tileBy );
-   nw_gpu.adjcols = 1 + tileBx*ceil( float( nw.adjcols-1 )/tileBx );
-   nw_gpu.substsz = nw.substsz;
-   nw_gpu.indelcost = nw.indelcost;
+   int adjrows = 1 + tileBy*ceil( float( nw.adjrows-1 )/tileBy );
+   int adjcols = 1 + tileBx*ceil( float( nw.adjcols-1 )/tileBx );
 
-   // allocate space in the gpu global memory
-   cudaMalloc( &nw_gpu.seqX,  nw_gpu.adjcols                * sizeof( int ) );
-   cudaMalloc( &nw_gpu.seqY,  nw_gpu.adjrows                * sizeof( int ) );
-   cudaMalloc( &nw_gpu.score, nw_gpu.adjrows*nw_gpu.adjcols * sizeof( int ) );
-   cudaMalloc( &nw_gpu.subst, nw_gpu.substsz*nw_gpu.substsz * sizeof( int ) );
-   // create events for measuring kernel execution time
-   cudaEvent_t start, stop;
-   cudaEventCreate( &start );
-   cudaEventCreate( &stop );
+   // start the timer
+   res.sw.start();
 
-   // start the host timer and initialize the gpu timer
-   res.sw.lap( "cpu-start" );
-   res.Tgpu = 0;
 
+   // reserve space in the ram and gpu global memory (this can throw)
+   try
+   {
+      nw.seqX_gpu .init(              nw.adjcols );
+      nw.seqY_gpu .init( nw.adjrows              );
+      nw.score_gpu.init( nw.adjrows * nw.adjcols );
+      nw.score    .init( nw.adjrows * nw.adjcols );
+   }
+   catch( const std::exception& ex )
+   {
+      return NwStat::errorMemoryAllocation;
+   }
+
+   // measure allocation time
+   res.sw.lap( "alloc" );
+
+   
    // copy data from host to device
    // +   gpu padding remains uninitialized, but this is not an issue since padding is only used to simplify kernel code (optimization)
-   cudaMemcpy( nw_gpu.seqX,  nw.seqX,  nw.adjcols * sizeof( int ), cudaMemcpyHostToDevice );
-   cudaMemcpy( nw_gpu.seqY,  nw.seqY,  nw.adjrows * sizeof( int ), cudaMemcpyHostToDevice );
-   cudaMemcpy( nw_gpu.subst, nw.subst, nw_gpu.substsz*nw_gpu.substsz * sizeof( int ), cudaMemcpyHostToDevice );
+   if( !memTransfer( nw.seqX_gpu, nw.seqX, nw.adjcols ) ) return NwStat::errorMemoryTransfer;
+   if( !memTransfer( nw.seqY_gpu, nw.seqY, nw.adjrows ) ) return NwStat::errorMemoryTransfer;
+
+   // measure memory transfer time
+   res.sw.lap( "mem-to-device" );
+
 
 
    // launch kernel A
    {
       // calculate grid dimensions for kernel A
       dim3 gridA {};
-      gridA.y = ceil( float( nw_gpu.adjrows )/tileAy );
-      gridA.x = ceil( float( nw_gpu.adjcols )/tileAx );
+      gridA.y = ceil( float( adjrows )/tileAy );
+      gridA.x = ceil( float( adjcols )/tileAx );
       // block dimensions for kernel A
       dim3 blockA { tileAx, tileAy };
 
       // calculate size of shared memory per block in bytes
       int shmemsz = (
-         /*subst[][]*/ nw_gpu.substsz*nw_gpu.substsz *sizeof( int )
+         /*subst[][]*/ nw.substsz*nw.substsz *sizeof( int )
          /*seqX[]*/ + tileAx *sizeof( int )
          /*seqY[]*/ + tileAy *sizeof( int )
       );
       
       // group arguments to be passed to kernel A
-      void* kargs[] { &nw_gpu.seqX, &nw_gpu.seqY, &nw_gpu.score, &nw_gpu.subst, &nw_gpu.adjrows, &nw_gpu.adjcols, &nw_gpu.substsz, &nw_gpu.indelcost };
+      void* kargs[] { &nw.seqX_gpu, &nw.seqY_gpu, &nw.score_gpu, &nw.subst_gpu, &adjrows, &adjcols, &nw.substsz, &nw.indel };
 
       // launch the kernel in the given stream (don't statically allocate shared memory)
-      // +   capture events around kernel launch as well
-      // +   update the stop event when the kernel finishes
-      cudaEventRecord( start, 0/*stream*/ );
-      cudaLaunchKernel( ( void* )Nw_Gpu4_KernelA, gridA, blockA, kargs, shmemsz, 0/*stream*/ );
-      cudaEventRecord( stop, 0/*stream*/ );
-      cudaEventSynchronize( stop );
-      
-      // kernel A execution time
-      float ktime {};
-      // calculate the time between the given events
-      cudaEventElapsedTime( &ktime, start, stop ); ktime /= 1000./*ms*/;
-      // update the total kernel execution time
-      res.Tgpu += ktime;
+      if( cudaSuccess != cudaLaunchKernel( ( void* )Nw_Gpu4_KernelA, gridA, blockA, kargs, shmemsz, nullptr/*stream*/ ) ) return NwStat::errorKernelFailure;
    }
    
    // wait for the gpu to finish before going to the next step
-   cudaDeviceSynchronize();
+   if( cudaSuccess != cudaDeviceSynchronize() ) return NwStat::errorSynchronization;
+
+   // measure calculation init time
+   res.sw.lap( "calc-init" );
+
 
 
    // launch kernel B
@@ -334,8 +333,8 @@ void Nw_Gpu4_DiagDiag_Coop2K( NwInput& nw, NwMetrics& res )
       dim3 gridB {};
       dim3 blockB {};
       // the number of tiles per row and column of the score matrix
-      int trows = ceil( float( nw_gpu.adjrows-1 )/tileBy );
-      int tcols = ceil( float( nw_gpu.adjcols-1 )/tileBx );
+      int trows = ceil( float( adjrows-1 )/tileBy );
+      int tcols = ceil( float( adjcols-1 )/tileBx );
       
       // calculate size of shared memory per block in bytes
       int shmemsz = (
@@ -356,78 +355,33 @@ void Nw_Gpu4_DiagDiag_Coop2K( NwInput& nw, NwMetrics& res )
          int numThreads = blockB.x;
 
          // calculate the max number of parallel blocks per streaming multiprocessor
-         cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxBlocksPerSm, Nw_Gpu4_KernelB, numThreads, shmemsz );
+         if( cudaSuccess != cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxBlocksPerSm, Nw_Gpu4_KernelB, numThreads, shmemsz ) ) return NwStat::errorKernelFailure;
          // the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
          gridB.x = min( gridB.x, MPROCS*maxBlocksPerSm );
       }
 
 
       // group arguments to be passed to kernel B
-      void* kargs[] { &nw_gpu.score, &nw_gpu.indelcost, &trows, &tcols, &tileBx, &tileBy };
+      void* kargs[] { &nw.score_gpu, &nw.indel, &trows, &tcols, &tileBx, &tileBy };
       
       // launch the kernel in the given stream (don't statically allocate shared memory)
-      // +   capture events around kernel launch as well
-      // +   update the stop event when the kernel finishes
-      cudaEventRecord( start, 0/*stream*/ );
-      cudaLaunchCooperativeKernel( ( void* )Nw_Gpu4_KernelB, gridB, blockB, kargs, shmemsz, 0/*stream*/ );
-      cudaEventRecord( stop, 0/*stream*/ );
-      cudaEventSynchronize( stop );
-      
-      // kernel B execution time
-      float ktime {};
-      // calculate the time between the given events
-      cudaEventElapsedTime( &ktime, start, stop ); ktime /= 1000./*ms*/;
-      // update the total kernel execution time
-      res.Tgpu += ktime;
+      if( cudaSuccess != cudaLaunchCooperativeKernel( ( void* )Nw_Gpu4_KernelB, gridB, blockB, kargs, shmemsz, nullptr/*stream*/ ) ) return NwStat::errorKernelFailure;
    }
 
    // wait for the gpu to finish before going to the next step
-   cudaDeviceSynchronize();
+   if( cudaSuccess != cudaDeviceSynchronize() ) return NwStat::errorSynchronization;
 
-   // \brief Copies data between host and device
-   // 
-   // Copies a matrix (\p height rows of \p width bytes each) from the memory
-   // area pointed to by \p src to the memory area pointed to by \p dst, where
-   // \p kind specifies the direction of the copy, and must be one of
-   // ::cudaMemcpyHostToHost, ::cudaMemcpyHostToDevice, ::cudaMemcpyDeviceToHost,
-   // ::cudaMemcpyDeviceToDevice, or ::cudaMemcpyDefault. Passing
-   // ::cudaMemcpyDefault is recommended, in which case the type of transfer is
-   // inferred from the pointer values. However, ::cudaMemcpyDefault is only
-   // allowed on systems that support unified virtual addressing. \p dpitch and
-   // \p spitch are the widths in memory in bytes of the 2D arrays pointed to by
-   // \p dst and \p src, including any padding added to the end of each row. The
-   // memory areas may not overlap. \p width must not exceed either \p dpitch or
-   // \p spitch. Calling ::cudaMemcpy2D() with \p dst and \p src pointers that do
-   // not match the direction of the copy results in an undefined behavior.
-   // ::cudaMemcpy2D() returns an error if \p dpitch or \p spitch exceeds
-   // the maximum allowed.
+   // measure calculation time
+   res.sw.lap( "calc" );
+
 
    // save the calculated score matrix
-   // +   starts an async data copy from device to host, then waits for the copy to finish
-   cudaMemcpy2D(
-      nw    .score,                     // dst    - Destination memory address
-      nw    .adjcols * sizeof( int ),   // dpitch - Pitch of destination memory (padded row size in bytes; in other words distance between the starting points of two rows)
-      nw_gpu.score,                     // src    - Source memory address
-      nw_gpu.adjcols * sizeof( int ),   // spitch - Pitch of source memory (padded row size in bytes)
-      
-      nw.adjcols * sizeof( int ),       // width  - Width of matrix transfer (non-padding row size in bytes)
-      nw.adjrows,                       // height - Height of matrix transfer (#rows)
-      cudaMemcpyDeviceToHost            // kind   - Type of transfer
-   );      
+   if( !memTransfer( nw.score, nw.score_gpu, nw.adjrows, nw.adjcols, adjcols ) ) return NwStat::errorMemoryTransfer;
 
-   // stop the cpu timer
-   res.sw.lap( "cpu-end" );
-   res.Tcpu = res.sw.dt( "cpu-end", "cpu-start" );
+   // measure memory transfer time
+   res.sw.lap( "mem-to-host" );
 
-   
-   // free allocated space in the gpu global memory
-   cudaFree( nw_gpu.seqX );
-   cudaFree( nw_gpu.seqY );
-   cudaFree( nw_gpu.score );
-   cudaFree( nw_gpu.subst );
-   // free events' memory
-   cudaEventDestroy( start );
-   cudaEventDestroy( stop );
+   return NwStat::success;
 }
 
 

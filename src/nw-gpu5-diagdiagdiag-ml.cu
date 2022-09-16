@@ -21,7 +21,7 @@
 // // const int adjrows,   // can be calculated as 1 + trows*tileAy
 // // const int adjcols,   // can be calculated as 1 + tcols*tileAx
 //    const int substsz,
-//    const int indelcost,
+//    const int indel,
 //    // tile size and miscellaneous
 //          int* const hrowTD_gpui,   // input header_row tile_diagonal, consisting of the header rows for all tiles on the current tile diagonal
 //          int* const hcolTD_gpui,   // input header_column tile_diagonal, consisting of the header columns for all tiles on the current tile diagonal
@@ -293,8 +293,8 @@
 //             // calculate the current element's value
 //             {
 //                curr = upleft + el(subst,substsz, seqY[i],seqX[j]);  // MOVE DOWN-RIGHT
-//                curr = max( curr, up   + indelcost );   // MOVE DOWN
-//                curr = max( curr, left + indelcost );   // MOVE RIGHT
+//                curr = max( curr, up   + indel );   // MOVE DOWN
+//                curr = max( curr, left + indel );   // MOVE RIGHT
 //             }
 
 //             // save the results to the header_row and header_column
@@ -427,8 +427,8 @@
 
 
 
-// // parallel gpu implementation of the Needleman Wunsch algorithm
-// void Nw_Gpu3_DiagDiagDiag_Coop( NwInput& nw, NwMetrics& res )
+// // parallel gpu implementation of the Needleman-Wunsch algorithm
+// NwStat NwAlign_Gpu5_DiagDiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
 // {
 //    // TODO: allocate header row and column memory
 //    // TODO: initialize the header row and column for the score matrix
@@ -451,7 +451,7 @@
 //       // nw.adjcols,
 //       // nw.substsz,
 
-//       // nw.indelcost,
+//       // nw.indel,
 //    };
 
 //    // adjusted gpu score matrix dimensions
@@ -459,7 +459,7 @@
 //    nw_gpu.adjrows = 1 + tileAy*ceil( float( nw.adjrows-1 )/tileAy );
 //    nw_gpu.adjcols = 1 + tileAx*ceil( float( nw.adjcols-1 )/tileAx );
 //    nw_gpu.substsz = nw.substsz;
-//    nw_gpu.indelcost = nw.indelcost;
+//    nw_gpu.indel = nw.indel;
 
 //    // allocate space in the gpu global memory
 //    cudaMalloc( &nw_gpu.seqX,  nw_gpu.adjcols                * sizeof( int ) );
@@ -521,14 +521,14 @@
 
 
 //       // group arguments to be passed to kernel
-//       void* kargs[] { &nw_gpu.seqX, &nw_gpu.seqY, &nw_gpu.score, &nw_gpu.subst, /*&nw_gpu.adjrows,*/ /*&nw_gpu.adjcols,*/ &nw_gpu.substsz, &nw_gpu.indelcost, &trows, &tcols, &tileAx, &tileAy, &chunksz };
+//       void* kargs[] { &nw_gpu.seqX, &nw_gpu.seqY, &nw_gpu.score, &nw_gpu.subst, /*&nw_gpu.adjrows,*/ /*&nw_gpu.adjcols,*/ &nw_gpu.substsz, &nw_gpu.indel, &trows, &tcols, &tileAx, &tileAy, &chunksz };
       
 //       // launch the kernel in the given stream (don't statically allocate shared memory)
 //       // +   capture events around kernel launch as well
 //       // +   update the stop event when the kernel finishes
-//       cudaEventRecord( start, 0/*stream*/ );
-//       cudaLaunchCooperativeKernel( ( void* )Nw_Gpu5_Kernel, gridA, blockA, kargs, shmemsz, 0/*stream*/ );
-//       cudaEventRecord( stop, 0/*stream*/ );
+//       cudaEventRecord( start, nullptr/*stream*/ );
+//       cudaLaunchCooperativeKernel( ( void* )Nw_Gpu5_Kernel, gridA, blockA, kargs, shmemsz, nullptr/*stream*/ );
+//       cudaEventRecord( stop, nullptr/*stream*/ );
 //       cudaEventSynchronize( stop );
       
 //       // kernel execution time

@@ -59,20 +59,22 @@ function Find-Recursive
 
 if( "-help" -in $args -or "--help" -in $args )
 {
-    Write-Output "build   [[-]-help]   [-clean] [-build]   [-run ...]";
+    Write-Output "build   [[-]-help]   [=clean] [=build]   [=run scores params seqs\n]";
     Write-Output "";
-    Write-Output "Default:        build -build";
+    Write-Output "Default:        build =build";
     Write-Output "";
     Write-Output "Switches:";
     Write-Output "    --help      shows the help menu";
     Write-Output "    -help       same as --help";
     Write-Output "";
-    Write-Output "    -clean      cleans the project";
-    Write-Output "    -build      builds the project";
+    Write-Output "    =clean      cleans the project";
+    Write-Output "    =build      builds the project";
     Write-Output "      -debug    +   don't optimise and define the DEBUG symbol";
     Write-Output "";
-    Write-Output "    -run        runs the compiled program";
-    Write-Output "      ...       +   run arguments";
+    Write-Output "    =run        runs the compiled program";
+    Write-Output "      scores    +   path to json file (relative to /resrc) with score matrices\n";
+    Write-Output "      params    +   path to json file (relative to /resrc) with parameters for the Needleman-Wunsch algorithms\n";
+    Write-Output "      seqs      +   path to json file (relative to /resrc) with sequences to be compared\n";
     Write-Output "";
     exit 0;
 }
@@ -82,7 +84,7 @@ if( "-help" -in $args -or "--help" -in $args )
 if( $args.count -eq 0 )
 {
     # leave powershell array constructor ( @() ) even if there is only one argument (otherwise it won't be a powershell array due to unpacking)
-    $args = @( "-build" );
+    $args = @( "=build" );
 }
 
 # calculate the "run" command's position in the argument list
@@ -91,8 +93,8 @@ $RunArgs = $null;
 
 if( $true )
 {
-    $BuildArgs_Beg, $BuildArgs_End = [array]::indexof( $args, "-build" ), $args.count;
-    $RunArgs_Beg,   $RunArgs_End   = [array]::indexof( $args, "-run" ),   $args.count;
+    $BuildArgs_Beg, $BuildArgs_End = [array]::indexof( $args, "=build" ), $args.count;
+    $RunArgs_Beg,   $RunArgs_End   = [array]::indexof( $args, "=run" ),   $args.count;
 
     if( $BuildArgs_Beg -ge 0 )
     {
@@ -112,7 +114,7 @@ $Target = 'nw.exe';
 
 
 # clean project
-if( "-clean" -in $args )
+if( "=clean" -in $args )
 {
     Write-Output "---------------------------------------------------------------------------------------------------------------- <<< CLEAN";
 
@@ -120,14 +122,13 @@ if( "-clean" -in $args )
     if( Test-Path "./build" -PathType "Container" ) { Remove-Item "./build" -Recurse; }
 
     # print the build command
-    Write-Output "Clean success"
-    Write-Output ""
+    Write-Output "Clean success\n"
 }
 
 
 
 # build project
-if( "-build" -in $args )
+if( "=build" -in $args )
 {
     Write-Output "---------------------------------------------------------------------------------------------------------------- <<< BUILD";
 
@@ -141,14 +142,27 @@ if( "-build" -in $args )
     if( $SourceFiles.Count -eq 0 ) { "No source files given"; exit -1; }
 
 
-    # set the openmp flag for the compiler (visual studio c++ on windows or gcc on linux)
-    $Openmp = ( $isWindows ) ? '/openmp' : '-openmp';
+    if( $isWindows )
+    {
+        # set the c++ compiler standard
+        $StdCpp = '/std:c++20';
+        # set the openmp flag for the compiler (visual studio c++ on windows or gcc on linux)
+        $Openmp = '/openmp';
+    }
+    else
+    {
+        # set the c++ compiler standard
+        $StdCpp = '-std:c++20';
+        # set the openmp flag for the compiler (visual studio c++ on windows or gcc on linux)
+        $Openmp = '-openmp';
+    }
     # if debugging is requested, don't optimize the code
     $Debug = ( '-debug' -in $args ) ? '-DDEBUG' : '-O2';
 
     # create the build command
     $BuildCmd = $null;
     $BuildCmd = 'nvcc',            # call the nvidia c++ compiler wrapper
+        "$StdCpp",                 # use the c++20 standard
         '-Xcompiler', '"',         # pass the string arguments to the underlying c++ compiler (msvc)
             "$Openmp",             # +   use openmp
         '"',                       # 
@@ -188,7 +202,7 @@ if( "-build" -in $args )
 
 
 # run the compiled code
-if( "-run" -in $args )
+if( "=run" -in $args )
 {
     Write-Output "---------------------------------------------------------------------------------------------------------------- <<< RUN";
 

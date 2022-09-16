@@ -17,9 +17,15 @@
     <ClInclude Include="src\json.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\nw-algorithm.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\nw-algorithm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\nw-cpu1-row-st.cpp">
@@ -34,15 +40,24 @@
     <ClCompile Include="src\nw-cpu4-diagrow-mt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\trace1-diag.cpp">
+    <ClCompile Include="src\nw-trace1-plain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="src\nw-gpu2-diagdiag-coop.cu">
+    <CudaCompile Include="src\nw-gpu1-diag-ml.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
-    <CudaCompile Include="src\nw-gpu3-diagdiag-coop2k.cu">
+    <CudaCompile Include="src\nw-gpu2-diagrow-ml2k.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\nw-gpu3-diagdiag-coop.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\nw-gpu4-diagdiag-coop2k.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\nw-gpu5-diagdiagdiag-ml.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
   </ItemGroup>

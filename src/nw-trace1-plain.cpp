@@ -1,0 +1,115 @@
+#include <limits>
+#include "common.hpp"
+
+// get one of the optimal matching paths to a file
+NwStat NwTrace1_Plain( const NwInput& nw, NwResult& res )
+{
+   // variable used to calculate the hash function
+   // http://www.cse.yorku.ca/~oz/hash.html
+   // the starting value is a magic constant
+   unsigned hash = 5381;
+
+   // start the timer
+   res.sw.start();
+
+
+   // reserve space in the ram (this can throw)
+   try
+   {
+      res.trace.reserve( nw.adjrows + nw.adjcols );
+   }
+   catch( const std::exception& ex )
+   {
+      return NwStat::errorMemoryAllocation;
+   }
+
+   // measure trace time
+   res.sw.lap( "alloc-trace" );
+
+
+   // for all elements on one of the optimal paths
+   bool loop = true;
+   for( int i = nw.adjrows-1, j = nw.adjcols-1;  loop;  )
+   {
+      // add the current element to the trace and hash
+      int curr = el(nw.score,nw.adjcols, i,j);
+      res.trace.push_back( curr );
+
+      int max = std::numeric_limits<int>::min();   // maximum value of the up, left and diagonal neighbouring elements
+      int dir = '-';                               // the current movement direction is unknown
+
+      if( i > 0 && j > 0 && max < el(nw.score,nw.adjcols, i-1,j-1) ) { max = el(nw.score,nw.adjcols, i-1,j-1); dir = 'i'; }   // diagonal movement if possible
+      if( i > 0          && max < el(nw.score,nw.adjcols, i-1,j  ) ) { max = el(nw.score,nw.adjcols, i-1,j  ); dir = 'u'; }   // up       movement if possible
+      if(          j > 0 && max < el(nw.score,nw.adjcols, i  ,j-1) ) { max = el(nw.score,nw.adjcols, i  ,j-1); dir = 'l'; }   // left     movement if possible
+
+      // move to the neighbour with the maximum value
+      switch( dir )
+      {
+      case 'i': i--; j--; break;
+      case 'u': i--;      break;
+      case 'l':      j--; break;
+      default:  loop = false; break;
+      }
+   }
+
+   // reverse the trace, so it starts from the top-left corner of the matrix
+   std::reverse( res.trace.begin(), res.trace.end() );
+
+   // measure trace time
+   res.sw.lap( "trace" );
+
+
+   // calculate the hash value
+   for( auto& curr : res.trace )
+   {
+      hash = ( ( hash<<5 ) + hash ) ^ curr;
+   }
+
+   // save the hash value
+   res.trace_hash = hash;
+
+   // measure trace time
+   res.sw.lap( "hash-trace" );
+
+   return NwStat::success;
+}
+
+
+// hash the score matrix
+NwStat NwHash1_Plain( const int* const mat, const int rows, const int cols, unsigned& _hash )
+{
+   // variable used to calculate the hash function
+   // http://www.cse.yorku.ca/~oz/hash.html
+   // the starting value is a magic constant
+   unsigned hash = 5381;
+
+   for( int i = 0; i < rows; i++ )
+   for( int j = 0; j < cols; j++ )
+   {
+      // add the current element to the hash
+      int curr = el(mat,cols, i,j);
+      hash = ( ( hash<<5 ) + hash ) ^ curr;
+   }
+
+   // save the resulting hash
+   _hash = hash;
+
+   return NwStat::success;
+}
+
+
+// print the score matrix
+NwStat NwPrint1_Plain( std::ostream& os, const int* const mat, const int rows, const int cols )
+{
+   FormatFlagsGuard fg { os, 4 };
+
+   // print the score matrix
+   for( int i = 0; i < rows; i++ )
+   {
+      for( int j = 0; j < cols; j++ ) { os << el(mat,cols, i,j) << ' '; }
+      os << "\n";
+   }
+
+   return NwStat::success;
+}
+

@@ -1,13 +1,30 @@
 #ifndef INCLUDE_COMMON_HPP
 #define INCLUDE_COMMON_HPP
 
+#include <cstdlib>
+#include <iostream>
+#include <iomanip>
 #include <chrono>
 #include <memory>
-#include <limits>
-#include <unordered_map>
+#include <string>
+#include <vector>
+#include <map>
+#include <cuda_runtime.h>
+using namespace std::string_literals;
+
+// TODO: remove
+// number of streaming multiprocessors (sm-s) and cores per sm
+constexpr int MPROCS = 28;
+constexpr int CORES = 128;
+// number of threads in warp
+constexpr int WARPSZ = 32;
 
 
-// TODO: test performance of min2, max2 and max3 without branching
+// get the specified element from the given linearized matrix
+#define el( mat, cols, i, j ) ( mat[(cols)*(i) + (j)] )
+
+
+// FIX: test performance of min2, max2 and max3 without branching
 // +   https://docs.nvidia.com/cuda/parallel-thread-execution/index.html
 
 // calculate the minimum of two numbers
@@ -34,102 +51,377 @@ inline const int& max3( const int& a, const int& b, const int& c ) noexcept
 }
 
 
+// Needleman-Wunsch status
+enum class NwStat : int
+{
+   success               = 0,
+   errorMemoryAllocation = 1,
+   errorMemoryTransfer   = 2,
+   errorSynchronization  = 3,
+   errorKernelFailure    = 4,
+   errorIoStream         = 5,
+   errorInvalidFormat    = 6,
+   errorInvalidValue     = 7,
+};
 
-// number of streaming multiprocessors (sm-s) and cores per sm
-constexpr int MPROCS = 28;
-constexpr int CORES = 128;
-// number of threads in warp
-constexpr int WARPSZ = 32;
-
-// get the specified element from the given linearized matrix
-#define el( mat, cols, i, j ) ( mat[(cols)*(i) + (j)] )
-
-void HashAndZeroOutMatrix( int* const mat, const int rows, const int cols, unsigned& hash ) noexcept;
-void PrintMatrix( FILE* stream, const int* const mat, const int rows, const int cols );
 
 
+// create an uninitialized array on the host
+template< typename T >
+class HostArray
+{
+public:
+   HostArray():
+      _arr { nullptr, []( T* ptr ) {} },
+      _size {}
+   { }
 
+   void init( size_t size )
+   {
+      if( _size == size ) return;
+
+      T* pAlloc = nullptr;
+      if( size > 0 )
+      {
+         pAlloc = ( T* )malloc( size*sizeof( T ) );
+         if( pAlloc == nullptr ) throw std::bad_alloc();
+      }
+
+      pointer arr
+      {
+         pAlloc,
+         []( T* ptr ) { if( ptr != nullptr ) free( ptr ); }
+      };
+
+      std::swap( _arr, arr );
+      _size = size;
+   }
+   void clear()
+   {
+      init( 0 );
+   }
+
+   T& operator[] ( size_t pos ) { return data()[ pos ]; }
+   const T& operator[] ( size_t pos ) const { return data()[ pos ]; }
+
+   T* data() { return _arr.get(); }
+   const T* data() const { return _arr.get(); }
+
+   size_t size() const { return _size; }
+
+
+private:
+   using pointer = std::unique_ptr<T, void(*)(T*)>;
+   pointer _arr;
+   size_t _size;
+};
+
+
+// create an uninitialized array on the device
+template< typename T >
+class DeviceArray
+{
+public:
+   DeviceArray():
+      _arr { nullptr, []( T* ptr ) {} },
+      _size {}
+   { }
+
+   void init( size_t size )
+   {
+      if( _size == size ) return;
+
+      T* pAlloc = nullptr;
+      if( size > 0 )
+      {
+         cudaError_t status = cudaMalloc( &pAlloc, size*sizeof( T ) );
+         if( status != cudaSuccess ) throw std::bad_alloc();
+      }
+
+      pointer arr
+      {
+         pAlloc,
+         []( T* ptr ) { if( ptr != nullptr ) cudaFree( ptr ); }
+      };
+
+      std::swap( _arr, arr );
+      _size = size;
+   }
+   void clear()
+   {
+      init( 0 );
+   }
+
+   T* data() { return _arr.get(); }
+   const T* data() const { return _arr.get(); }
+
+   size_t size() const { return _size; }
+
+
+private:
+   using pointer = std::unique_ptr<T, void(*)(T*)>;
+   pointer _arr;
+   size_t _size;
+};
+
+
+// measure time between events
 class Stopwatch
 {
 public:
+   void start()
+   {
+      _start = Clock::now();
+   }
    void lap( std::string lap_name )
    {
-      laps.insert_or_assign( lap_name, Clock::now() );
-   }
+      auto curr = Clock::now();
+      auto diff = std::chrono::duration_cast<Millis>( curr - _start ).count() / 1000.f;
+      _start = curr;
 
+      _laps.insert_or_assign( lap_name, diff );
+   }
    void reset() noexcept
    {
-      laps.clear();
-   }
-
-
-   float dt( std::string lap1_name, std::string lap2_name )
-   {
-      auto p1_iter = laps.find( lap1_name );
-      auto p2_iter = laps.find( lap2_name );
-
-      auto p1 = p1_iter->second;
-      auto p2 = p2_iter->second;
-      return std::chrono::duration_cast<Resolution>( p1 - p2 ).count() / 1000.;
+      _start = {};
+      _laps.clear();
    }
 
 private:
    using Clock = std::chrono::steady_clock;
-   using Resolution = std::chrono::milliseconds;
+   using TimePoint = std::chrono::time_point<Clock>;
+   using Millis = std::chrono::milliseconds;
 
-   std::unordered_map< std::string, std::chrono::time_point<Clock> > laps;
+   TimePoint _start;
+   std::map< std::string, float > _laps;
 };
 
 
+// parameter that takes values from a vector
+struct NwParam
+{
+public:
+   NwParam() = default;
+   NwParam( std::vector<int> values )
+   {
+      _values = values;
+      _curr = 0;
+   }
 
-// arguments for the Needleman-Wunsch algorithm variants
+   int curr() { return _values[ _curr ]; }
+   bool hasCurr() { return _curr < _values.size(); }
+   void next() { _curr++; }
+   void reset() { _curr = 0; }
+
+   std::vector<int> _values;
+   int _curr;
+};
+
+// parameters for the Needleman-Wunsch algorithm variant
+struct NwParams
+{
+   NwParams()
+   {
+      _params = { };
+      _isEnd = false;
+   }
+   NwParams( std::map< std::string, NwParam > params )
+   {
+      _params = params;
+      // always allow the inital iteration, even if there are no params
+      _isEnd = false;
+   }
+
+   NwParam& operator[] ( const std::string name ) { return _params.at( name ); }
+
+   bool hasCurr() { return !_isEnd; }
+   void next()   // updates starting from the last parameter and so on
+   {
+      for( auto iter = _params.rbegin();   iter != _params.rend();   iter++ )
+      {
+         auto param = iter->second;
+         param.next();
+         
+         if( param.hasCurr() ) return;
+         param.reset();
+      }
+      _isEnd = true;
+   }
+   void reset()
+   {
+      for( auto iter = _params.rbegin();   iter != _params.rend();   iter++ )
+      {
+         auto param = iter->second;
+         param.reset();
+      }
+      _isEnd = false;
+   }
+
+   std::map< std::string, NwParam > _params;
+   bool _isEnd;
+};
+
+// input for the Needleman-Wunsch algorithm variant
 struct NwInput
 {
-   int* seqX;
-   int* seqY;
-   int* score;
-   int* subst;
+   // IMPORTANT: dont't use .size() on vectors to get the number of elements, since it is not accurate
+   // +   instead, use the alignment parameters below
 
+   // host specific memory
+   std::vector<int> subst;
+   std::vector<int> seqX;
+   std::vector<int> seqY;
+   HostArray<int> score;
+   
+   // device specific memory
+   DeviceArray<int> subst_gpu;
+   DeviceArray<int> seqX_gpu;
+   DeviceArray<int> seqY_gpu;
+   DeviceArray<int> score_gpu;
+
+   // alignment parameters
+   int substsz;
    int adjrows;
    int adjcols;
-   int substsz;
 
-   int indelcost;
+   int indel;
+
+   // free all memory allocated by the Needleman-Wunsch algorithms
+   void resetAllocs()
+   {
+      score.clear();
+
+      seqX_gpu.clear();
+      seqY_gpu.clear();
+      score_gpu.clear();
+   }
 };
 
-// results which the Needleman-Wunsch algorithm variants return
-struct NwMetrics
+// results which the Needleman-Wunsch algorithm variant returns
+struct NwResult
 {
    Stopwatch sw;
-   float Tcpu;
-   float Tgpu;
    std::vector<int> trace;
-   unsigned hash;
+   unsigned score_hash;
+   unsigned trace_hash;
 };
 
-
-using NwVariant = void (*)( NwInput& nw, NwMetrics& res );
-void Nw_Cpu1_Row_St( NwInput& nw, NwMetrics& res );
-void Nw_Cpu2_Diag_St( NwInput& nw, NwMetrics& res );
-void Nw_Cpu3_DiagRow_St( NwInput& nw, NwMetrics& res );
-void Nw_Cpu4_DiagRow_Mt( NwInput& nw, NwMetrics& res );
-void Nw_Gpu1_Diag_Ml( NwInput& nw, NwMetrics& res );
-void Nw_Gpu2_DiagRow_Ml2K( NwInput& nw, NwMetrics& res );
-void Nw_Gpu3_DiagDiag_Coop( NwInput& nw, NwMetrics& res );
-void Nw_Gpu4_DiagDiag_Coop2K( NwInput& nw, NwMetrics& res );
-void Nw_Gpu5_DiagDiagDiag_Ml( NwInput& nw, NwMetrics& res );
-
-void Trace1_Diag( const NwInput& nw, NwMetrics& res );
-
 // update the score given the current score matrix and position
-// NOTE: indelcost and most elements in the substitution matrix are negative, therefore find the maximum of them (instead of the minimum)
+// NOTE: indel and most elements in the substitution matrix are negative, therefore find the maximum of them (instead of the minimum)
 inline void UpdateScore( NwInput& nw, int i, int j ) noexcept
 {
    int p1 = el(nw.score,nw.adjcols, i-1,j-1) + el(nw.subst,nw.substsz, nw.seqY[i], nw.seqX[j]);  // MOVE DOWN-RIGHT
-   int p2 = el(nw.score,nw.adjcols, i-1,j  ) + nw.indelcost;   // MOVE DOWN
-   int p3 = el(nw.score,nw.adjcols, i  ,j-1) + nw.indelcost;   // MOVE RIGHT
+   int p2 = el(nw.score,nw.adjcols, i-1,j  ) + nw.indel;   // MOVE DOWN
+   int p3 = el(nw.score,nw.adjcols, i  ,j-1) + nw.indel;   // MOVE RIGHT
    el(nw.score,nw.adjcols, i,j) = max3( p1, p2, p3 );
 }
+
+
+
+// transfer data between the host and the device
+template< typename T >
+bool memTransfer(
+   T* const dst,
+   const T* const src,
+   int elemcnt,
+   cudaMemcpyKind kind
+)
+{
+   return cudaSuccess == cudaMemcpy(
+      /*dst*/   dst,                     // Destination memory address
+      /*src*/   src,                     // Source memory address
+      /*count*/ elemcnt * sizeof( T ),   // Size in bytes to copy
+      /*kind*/  kind                     // Type of transfer
+   );
+}
+template< typename T >
+bool memTransfer(
+   DeviceArray<T>& dst,
+   const std::vector<T>& src,
+   int elemcnt
+)
+{
+   return memTransfer( dst.data(), src.data(), elemcnt, cudaMemcpyHostToDevice );
+}
+template< typename T >
+bool memTransfer(
+   HostArray<T>& dst,
+   const DeviceArray<T>& src,
+   int elemcnt
+)
+{
+   return memTransfer( dst.data(), src.data(), elemcnt, cudaMemcpyDeviceToHost );
+}
+
+// transfer a pitched matrix to a contiguous matrix, between the host and the device
+// + NOTE: dst and src cannot overlap
+template< typename T >
+bool memTransfer(
+   T* const dst,
+   const T* const src,
+   int dst_rows,
+   int dst_cols,
+   int src_cols,
+   cudaMemcpyKind kind
+)
+{
+   return cudaSuccess == cudaMemcpy2D(
+      /*dst*/    dst,                      // Destination memory address
+      /*dpitch*/ dst_cols * sizeof( T ),   // Pitch of destination memory (padded row size in bytes; in other words distance between the starting points of two rows)
+      /*src*/    src,                      // Source memory address
+      /*spitch*/ src_cols * sizeof( T ),   // Pitch of source memory (padded row size in bytes)
+      
+      /*width*/  dst_cols * sizeof( T ),   // Width of matrix transfer (non-padding row size in bytes)
+      /*height*/ dst_rows,                 // Height of matrix transfer (#rows)
+      /*kind*/   kind                      // Type of transfer
+   );
+}
+template< typename T >
+bool memTransfer(
+   HostArray<T>& dst,
+   const DeviceArray<T>& src,
+   int dst_rows,
+   int dst_cols,
+   int src_cols
+)
+{
+   return memTransfer( dst.data(), src.data(), dst_rows, dst_cols, src_cols, cudaMemcpyDeviceToHost );
+}
+
+
+// iostream format flags guard
+template< typename T >
+class FormatFlagsGuard
+{
+public:
+   FormatFlagsGuard( T& stream, int fwidth = 1, char ffill = ' ' )
+      : _stream { stream }
+   {
+      // backup format flags and set the fill character and width
+      _fflags = _stream.flags();
+      _fwidth = _stream.width( fwidth );
+      _ffill = _stream.fill( ffill );
+   }
+
+   ~FormatFlagsGuard()
+   {
+      // restore the format flags, fill character and width
+      _stream.flags( _fflags );
+      _stream.width( _fwidth );
+      _stream.fill( _ffill );
+   }
+
+private:
+   T& _stream;
+   std::ios_base::fmtflags _fflags;
+   std::streamsize _fwidth;
+   char _ffill;
+};
+
+
+
+
+
 
 
 
