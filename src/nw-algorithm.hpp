@@ -126,7 +126,10 @@ NwStat readFromJson( const std::string& path, T& res )
    try
    {
       ifs.open( path, std::ios_base::in );
-      if( !ifs ) return NwStat::errorIoStream;
+      if( !ifs )
+      {
+         return NwStat::errorIoStream;
+      }
    }
    catch( const std::exception& ex )
    {

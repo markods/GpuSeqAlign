@@ -139,7 +139,10 @@ NwStat openOutFile( const std::string& path, std::ofstream& ofs )
    try
    {
       ofs.open( path, std::ios_base::out );
-      if( !ofs ) { return NwStat::errorIoStream; }
+      if( !ofs )
+      {
+         return NwStat::errorIoStream;
+      }
    }
    catch( const std::exception& ex )
    {

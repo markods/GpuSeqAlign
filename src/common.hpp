@@ -76,7 +76,10 @@ public:
       if( size > 0 )
       {
          pAlloc = ( T* )malloc( size*sizeof( T ) );
-         if( pAlloc == nullptr ) throw std::bad_alloc();
+         if( pAlloc == nullptr )
+         {
+            throw std::bad_alloc();
+         }
       }
 
       pointer arr
@@ -126,8 +129,11 @@ public:
       T* pAlloc = nullptr;
       if( size > 0 )
       {
-         cudaError_t status = cudaMalloc( &pAlloc, size*sizeof( T ) );
-         if( status != cudaSuccess ) throw std::bad_alloc();
+         cudaError_t cudaStatus;
+         if( cudaSuccess != ( cudaStatus = cudaMalloc( &pAlloc, size*sizeof( T ) ) ) )
+         {
+            throw std::bad_alloc();
+         }
       }
 
       pointer arr
@@ -316,22 +322,24 @@ inline void UpdateScore( NwInput& nw, int i, int j ) noexcept
 
 // transfer data between the host and the device
 template< typename T >
-bool memTransfer(
+cudaError_t memTransfer(
    T* const dst,
    const T* const src,
    int elemcnt,
    cudaMemcpyKind kind
 )
 {
-   return cudaSuccess == cudaMemcpy(
+   cudaError_t status = cudaMemcpy(
       /*dst*/   dst,                     // Destination memory address
       /*src*/   src,                     // Source memory address
       /*count*/ elemcnt * sizeof( T ),   // Size in bytes to copy
       /*kind*/  kind                     // Type of transfer
    );
+
+   return status;
 }
 template< typename T >
-bool memTransfer(
+cudaError_t memTransfer(
    DeviceArray<T>& dst,
    const std::vector<T>& src,
    int elemcnt
@@ -340,7 +348,7 @@ bool memTransfer(
    return memTransfer( dst.data(), src.data(), elemcnt, cudaMemcpyHostToDevice );
 }
 template< typename T >
-bool memTransfer(
+cudaError_t memTransfer(
    HostArray<T>& dst,
    const DeviceArray<T>& src,
    int elemcnt
@@ -352,7 +360,7 @@ bool memTransfer(
 // transfer a pitched matrix to a contiguous matrix, between the host and the device
 // + NOTE: dst and src cannot overlap
 template< typename T >
-bool memTransfer(
+cudaError_t memTransfer(
    T* const dst,
    const T* const src,
    int dst_rows,
@@ -361,7 +369,7 @@ bool memTransfer(
    cudaMemcpyKind kind
 )
 {
-   return cudaSuccess == cudaMemcpy2D(
+   cudaError_t status = cudaMemcpy2D(
       /*dst*/    dst,                      // Destination memory address
       /*dpitch*/ dst_cols * sizeof( T ),   // Pitch of destination memory (padded row size in bytes; in other words distance between the starting points of two rows)
       /*src*/    src,                      // Source memory address
@@ -371,9 +379,11 @@ bool memTransfer(
       /*height*/ dst_rows,                 // Height of matrix transfer (#rows)
       /*kind*/   kind                      // Type of transfer
    );
+
+   return status;
 }
 template< typename T >
-bool memTransfer(
+cudaError_t memTransfer(
    HostArray<T>& dst,
    const DeviceArray<T>& src,
    int dst_rows,

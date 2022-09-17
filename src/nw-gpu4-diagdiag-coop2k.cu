@@ -240,6 +240,8 @@ __global__ static void Nw_Gpu4_KernelB(
 // parallel gpu implementation of the Needleman-Wunsch algorithm
 NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
 {
+   // cuda status, used for getting the return status of cuda functions
+   cudaError_t cudaStatus;
    // tile sizes for kernels A and B
    // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
    // +   tile B must have one dimension fixed to the number of threads in a warp
@@ -248,7 +250,7 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
    unsigned tileBx;
    unsigned tileBy;
 
-   // get the parameter values (this can throw)
+   // get the parameter values
    try
    {
       tileAx = pr["tileAx"].curr();
@@ -273,7 +275,7 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
    res.sw.start();
 
 
-   // reserve space in the ram and gpu global memory (this can throw)
+   // reserve space in the ram and gpu global memory
    try
    {
       nw.seqX_gpu .init(              nw.adjcols );
@@ -292,8 +294,14 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
    
    // copy data from host to device
    // +   gpu padding remains uninitialized, but this is not an issue since padding is only used to simplify kernel code (optimization)
-   if( !memTransfer( nw.seqX_gpu, nw.seqX, nw.adjcols ) ) return NwStat::errorMemoryTransfer;
-   if( !memTransfer( nw.seqY_gpu, nw.seqY, nw.adjrows ) ) return NwStat::errorMemoryTransfer;
+   if( cudaSuccess != ( cudaStatus = memTransfer( nw.seqX_gpu, nw.seqX, nw.adjcols ) ) )
+   {
+      return NwStat::errorMemoryTransfer;
+   }
+   if( cudaSuccess != ( cudaStatus = memTransfer( nw.seqY_gpu, nw.seqY, nw.adjrows ) ) )
+   {
+      return NwStat::errorMemoryTransfer;
+   }
 
    // measure memory transfer time
    res.sw.lap( "mem-to-device" );
@@ -337,11 +345,17 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
       };
 
       // launch the kernel in the given stream (don't statically allocate shared memory)
-      if( cudaSuccess != cudaLaunchKernel( ( void* )Nw_Gpu4_KernelA, gridA, blockA, kargs, shmemsz, nullptr/*stream*/ ) ) return NwStat::errorKernelFailure;
+      if( cudaSuccess != ( cudaStatus = cudaLaunchKernel( ( void* )Nw_Gpu4_KernelA, gridA, blockA, kargs, shmemsz, nullptr/*stream*/ ) ) )
+      {
+         return NwStat::errorKernelFailure;
+      }
    }
    
    // wait for the gpu to finish before going to the next step
-   if( cudaSuccess != cudaDeviceSynchronize() ) return NwStat::errorKernelFailure;
+   if( cudaSuccess != ( cudaStatus = cudaDeviceSynchronize() ) )
+   {
+      return NwStat::errorKernelFailure;
+   }
 
    // measure calculation init time
    res.sw.lap( "calc-init" );
@@ -376,7 +390,10 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
          int numThreads = blockB.x;
 
          // calculate the max number of parallel blocks per streaming multiprocessor
-         if( cudaSuccess != cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxBlocksPerSm, Nw_Gpu4_KernelB, numThreads, shmemsz ) ) return NwStat::errorKernelFailure;
+         if( cudaSuccess != ( cudaStatus = cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxBlocksPerSm, Nw_Gpu4_KernelB, numThreads, shmemsz ) ) )
+         {
+            return NwStat::errorKernelFailure;
+         }
          // the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
          gridB.x = min( gridB.x, nw.MPROCS*maxBlocksPerSm );
       }
@@ -398,18 +415,27 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
       };
       
       // launch the kernel in the given stream (don't statically allocate shared memory)
-      if( cudaSuccess != cudaLaunchCooperativeKernel( ( void* )Nw_Gpu4_KernelB, gridB, blockB, kargs, shmemsz, nullptr/*stream*/ ) ) return NwStat::errorKernelFailure;
+      if( cudaSuccess != ( cudaStatus = cudaLaunchCooperativeKernel( ( void* )Nw_Gpu4_KernelB, gridB, blockB, kargs, shmemsz, nullptr/*stream*/ ) ) )
+      {
+         return NwStat::errorKernelFailure;
+      }
    }
 
    // wait for the gpu to finish before going to the next step
-   if( cudaSuccess != cudaDeviceSynchronize() ) return NwStat::errorKernelFailure;
+   if( cudaSuccess != ( cudaStatus = cudaDeviceSynchronize() ) )
+   {
+      return NwStat::errorKernelFailure;
+   }
 
    // measure calculation time
    res.sw.lap( "calc" );
 
 
    // save the calculated score matrix
-   if( !memTransfer( nw.score, nw.score_gpu, nw.adjrows, nw.adjcols, adjcols ) ) return NwStat::errorMemoryTransfer;
+   if( cudaSuccess != ( cudaStatus = memTransfer( nw.score, nw.score_gpu, nw.adjrows, nw.adjcols, adjcols ) ) )
+   {
+      return NwStat::errorMemoryTransfer;
+   }
 
    // measure memory transfer time
    res.sw.lap( "mem-to-host" );

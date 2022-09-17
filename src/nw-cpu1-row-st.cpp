@@ -11,7 +11,7 @@ NwStat NwAlign_Cpu1_Row_St( NwParams& pr, NwInput& nw, NwResult& res )
    res.sw.start();
 
 
-   // reserve space in the ram (this can throw)
+   // reserve space in the ram
    try
    {
       nw.score.init( nw.adjrows * nw.adjcols );

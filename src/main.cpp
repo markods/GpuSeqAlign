@@ -48,14 +48,32 @@ int main( int argc, char *argv[] )
    NwSeqMap seqMap;
    std::ofstream ofsLog;
 
-   if( NwStat::success != readFromJson( substPath, substMap ) ) { std::cerr << "ERR - could not open/read json from substs file"; exit( -1 ); }
-   if( NwStat::success != readFromJson( paramPath, paramMap ) ) { std::cerr << "ERR - could not open/read json from params file"; exit( -1 ); }
-   if( NwStat::success != readFromJson( seqPath,   seqMap   ) ) { std::cerr << "ERR - could not open/read json from seqs file";   exit( -1 ); }
-   if( NwStat::success != openOutFile ( logPath,   ofsLog   ) ) { std::cerr << "ERR - could not open output log file";            exit( -1 ); }
+   if( NwStat::success != readFromJson( substPath, substMap ) )
+   {
+      std::cerr << "ERR - could not open/read json from substs file"; exit( -1 );
+   }
+   if( NwStat::success != readFromJson( paramPath, paramMap ) )
+   {
+      std::cerr << "ERR - could not open/read json from params file"; exit( -1 );
+   }
+   if( NwStat::success != readFromJson( seqPath,   seqMap   ) )
+   {
+      std::cerr << "ERR - could not open/read json from seqs file"; exit( -1 );
+   }
+   if( NwStat::success != openOutFile ( logPath,   ofsLog   ) )
+   {
+      std::cerr << "ERR - could not open output log file"; exit( -1 );
+   }
+   
+   // cuda status, used for getting the return status of cuda functions
+   cudaError_t cudaStatus;
    
    // get the device properties
    cudaDeviceProp deviceProps;
-   if( cudaSuccess != cudaGetDeviceProperties( &deviceProps, 0/*deviceId*/ ) )  { std::cerr << "ERR - could not get device properties"; exit( -1 ); }
+   if( cudaSuccess != ( cudaStatus = cudaGetDeviceProperties( &deviceProps, 0/*deviceId*/ ) ) )
+   {
+      std::cerr << "ERR - could not get device properties"; exit( -1 );
+   }
 
    // number of streaming multiprocessors (sm-s) and threads in a warp
    const int MPROCS = deviceProps.multiProcessorCount;   // 28 on GTX 1080Ti
@@ -97,7 +115,7 @@ int main( int argc, char *argv[] )
       nw.subst = substMap.substs[ seqMap.substName ];
       nw.substsz = std::sqrt( nw.subst.size() );
 
-      // reserve space in the gpu global memory (this can throw)
+      // reserve space in the gpu global memory
       try
       {
          nw.subst_gpu.init( nw.substsz*nw.substsz );
@@ -108,7 +126,7 @@ int main( int argc, char *argv[] )
       }
 
       // transfer the substitution matrix to the gpu global memory
-      if( !memTransfer( nw.subst_gpu, nw.subst, nw.substsz*nw.substsz ) )
+      if( cudaSuccess != ( cudaStatus = memTransfer( nw.subst_gpu, nw.subst, nw.substsz*nw.substsz ) ) )
       {
          std::cerr << "ERR - could not transfer substitution matrix to the gpu"; exit( -1 );
       }

@@ -13,7 +13,7 @@ NwStat NwTrace1_Plain( const NwInput& nw, NwResult& res )
    res.sw.start();
 
 
-   // reserve space in the ram (this can throw)
+   // reserve space in the ram
    try
    {
       res.trace.reserve( nw.adjrows + nw.adjcols );
