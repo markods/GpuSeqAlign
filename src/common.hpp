@@ -286,8 +286,8 @@ struct NwInput
    int indel;
 
    // device parameters
-   int MPROCS;
-   int WARPSZ;
+   int sm_count;
+   int warpsz;
 
    // free all memory allocated by the Needleman-Wunsch algorithms
    void resetAllocs()

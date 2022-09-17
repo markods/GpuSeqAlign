@@ -13,7 +13,7 @@ __global__ static void Nw_Gpu3_Kernel(
 // const int adjcols,   // can be calculated as 1 + tcols*tileAx
    const int substsz,
    const int indel,
-   const int WARPSZ,
+   const int warpsz,
    // tile size
    const int trows,
    const int tcols,
@@ -222,7 +222,7 @@ __global__ static void Nw_Gpu3_Kernel(
          
          // calculate the tile elements
          // +   only threads in the first warp from this block are active here, other warps have to wait
-         if( threadIdx.x < WARPSZ )
+         if( threadIdx.x < warpsz )
          {
             // the number of rows and columns in the tile without its first row and column (the part of the tile to be calculated)
             int rows = tileAy;
@@ -391,7 +391,7 @@ NwStat NwAlign_Gpu3_DiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
       {
          // take the number of threads on the largest diagonal of the tile
          // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-         blockA.x = nw.WARPSZ * ceil( max( tileAy, tileAx )*2./nw.WARPSZ );
+         blockA.x = nw.warpsz * ceil( max( tileAy, tileAx )*2./nw.warpsz );
          // take the number of tiles on the largest score matrix diagonal as the only dimension
          gridA.x = min( trows, tcols );
 
@@ -406,7 +406,7 @@ NwStat NwAlign_Gpu3_DiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
             return NwStat::errorKernelFailure;
          }
          // the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
-         gridA.x = min( gridA.x, nw.MPROCS*maxBlocksPerSm );
+         gridA.x = min( gridA.x, nw.sm_count*maxBlocksPerSm );
       }
 
 
@@ -427,7 +427,7 @@ NwStat NwAlign_Gpu3_DiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
          /*&adjcols,*/
          &nw.substsz,
          &nw.indel,
-         &nw.WARPSZ,
+         &nw.warpsz,
          &trows,
          &tcols,
          &tileAx,

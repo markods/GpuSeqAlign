@@ -22,7 +22,7 @@
 // // const int adjcols,   // can be calculated as 1 + tcols*tileAx
 //    const int substsz,
 //    const int indel,
-//    const int WARPSZ,
+//    const int warpsz,
 //    // tile size and miscellaneous
 //          int* const hrowTD_gpui,   // input header_row tile_diagonal, consisting of the header rows for all tiles on the current tile diagonal
 //          int* const hcolTD_gpui,   // input header_column tile_diagonal, consisting of the header columns for all tiles on the current tile diagonal
@@ -181,8 +181,8 @@
 //    // initialize the warps' state
 //    {
 //       // the thread's warp and index inside the warp
-//       const int warpIdx       = threadIdx.x / WARPSZ;
-//       const int warpThreadIdx = threadIdx.x % WARPSZ;
+//       const int warpIdx       = threadIdx.x / warpsz;
+//       const int warpThreadIdx = threadIdx.x % warpsz;
 
 //       // if this is the first thread in the warp
 //       if( warpThreadIdx == 0 )
@@ -205,19 +205,19 @@
 //       //       chunksz           chunksz           chunksz           chunksz    
 //       //     x                     x x x x x       x x x x x x       x x x x x x
 //       //  y                                                                     
-//       //       . . . . . .    y  . . / / 1 .       . . . . . .       . . . . . .     WARPSZ
+//       //       . . . . . .    y  . . / / 1 .       . . . . . .       . . . . . .     warpsz
 //       //       . . . . . .    y  . / / 1 . .       . . . . . .       . . . . . .
 //       //       . . . . . .    y  / / 1 . . .       . . . . . .       . . . . . .
 //       //       . . . . . .    y  / 1 . . . .       . . . . . .       . . . . . .
 //       //                              ^----                                     
 //       //             x x x       x   <----- issue                               
-//       //       . . . . . /    y  / 2 . . . .       . . . . . .       . . . . . .     WARPSZ
+//       //       . . . . . /    y  / 2 . . . .       . . . . . .       . . . . . .     warpsz
 //       //  y    . . . . / /    y  2 . . . . .       . . . . . .       . . . . . .
 //       //  y    . . . / / 2       . . . . . .       . . . . . .       . . . . . .
 //       //  y    . . . / 2 .       . . . . . .       . . . . . .       . . . . . .
 //       //                                                                        
 //       //       x x x x                                                          
-//       //  y   3. . . . . .       . . . . . .       . . . . . .       . . . . . .     WARPSZ
+//       //  y   3. . . . . .       . . . . . .       . . . . . .       . . . . . .     warpsz
 //       //  y   3. . . . . .       . . . . . .       . . . . . .       . . . . . .
 //       //  y   3. . . . . .       . . . . . .       . . . . . .       . . . . . .
 //       //  y   3. . . . . .       . . . . . .       . . . . . .       . . . . . .
@@ -238,8 +238,8 @@
 //       //  |. . . . . . . . . . . . . . . . . . . . . . . .   |. . . . . . . . . . . . . . . . . . . . . . . .   |. . . . . . . . . . . . . . . . . . . . . . . .                  if c < w swap them
 
 //       // the thread's warp and index inside the warp
-//       const int warpIdx       = threadIdx.x / WARPSZ;
-//       const int warpThreadIdx = threadIdx.x % WARPSZ;
+//       const int warpIdx       = threadIdx.x / warpsz;
+//       const int warpThreadIdx = threadIdx.x % warpsz;
 
 //       // the elements needed in order to slide the calculation window to the right each iteration
 //       // +   save the left element before any calculation (to simplify the algorithm; the thread now only needs to worry how it's going to get its 'up' element)
@@ -250,8 +250,8 @@
 
 //       // the width of phase A and B
 //       // +   phase A's width has to be longer than phase B's width in order for this warp to never access not-yet-initialized! header_row elements (see the refined idea schematic)
-//       const int phAwid = max( chunksz, WARPSZ );
-//       const int phBwid = min( chunksz, WARPSZ );
+//       const int phAwid = max( chunksz, warpsz );
+//       const int phBwid = min( chunksz, warpsz );
 
 //       // wait until the header_row for the warp is ready, and then wait for the warp's diagonal to reach the current thread
 //       // +   also initialize the thread's up element
@@ -301,7 +301,7 @@
 //             // save the results to the header_row and header_column
 //             {
 //                // if this is the last thread in the warp
-//                if( warpThreadIdx == WARPSZ-1 )
+//                if( warpThreadIdx == warpsz-1 )
 //                {
 //                   // always save its current element to the header_row
 //                   hrow[ 1+ (j) ] = curr;
@@ -438,7 +438,7 @@
 
 //    // tile size for the kernel
 //    unsigned tileAx = 320;
-//    unsigned tileAy = 4*nw.WARPSZ;   // must be a multiple of the warp size
+//    unsigned tileAy = 4*nw.warpsz;   // must be a multiple of the warp size
 //    int chunksz = 32;
 
 //    // substitution matrix, sequences which will be compared and the score matrix stored in gpu global memory
@@ -501,7 +501,7 @@
 //       {
 //          // take the number of threads on the largest diagonal of the tile
 //          // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-//          blockA.x = nw.WARPSZ * ceil( max( tileAy, tileAx )*2./nw.WARPSZ );
+//          blockA.x = nw.warpsz * ceil( max( tileAy, tileAx )*2./nw.warpsz );
 //          // take the number of tiles on the largest score matrix diagonal as the only dimension
 //          gridA.x = min( trows, tcols );
 
@@ -513,7 +513,7 @@
 //          // calculate the max number of parallel blocks per streaming multiprocessor
 //          cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxBlocksPerSm, Nw_Gpu5_Kernel, numThreads, shmemsz );
 //          // the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
-//          gridA.x = min( gridA.x, nw.MPROCS*maxBlocksPerSm );
+//          gridA.x = min( gridA.x, nw.sm_count*maxBlocksPerSm );
 //       }
 
 
@@ -534,7 +534,7 @@
 //          /*&nw.adjcols,*/
 //          &nw.substsz,
 //          &nw.indel,
-//          &nw.WARPSZ,
+//          &nw.warpsz,
 //          &trows,
 //          &tcols,
 //          &tileAx,

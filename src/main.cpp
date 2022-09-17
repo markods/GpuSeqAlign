@@ -73,8 +73,8 @@ int main( int argc, char *argv[] )
    }
 
    // number of streaming multiprocessors (sm-s) and threads in a warp
-   const int MPROCS = deviceProps.multiProcessorCount;   // 28 on GTX 1080Ti
-   const int WARPSZ = deviceProps.warpSize;              // 32 on GTX 1080Ti
+   const int sm_count = deviceProps.multiProcessorCount;   // 28 on GTX 1080Ti
+   const int warpsz   = deviceProps.warpSize;              // 32 on GTX 1080Ti
 
 
    NwInput nw
@@ -99,13 +99,13 @@ int main( int argc, char *argv[] )
       // indel;   <-- once
 
       ////// device parameters
-      // MPROCS;
-      // WARPSZ;
+      // sm_count;
+      // warpsz;
    };
 
    // initialize the device parameters
-   nw.MPROCS = MPROCS;
-   nw.WARPSZ = WARPSZ;
+   nw.sm_count = sm_count;
+   nw.warpsz = warpsz;
 
    // initialize the substitution matrix on the cpu and gpu
    {
@@ -154,22 +154,22 @@ int main( int argc, char *argv[] )
       NwParams& pr = paramData.params[algName];
 
 
-      // for all X sequences
-      for( int iX = 0; iX < seqMap.size(); iX++ )
+      // for all Y sequences
+      for( int iY = 0; iY < seqMap.size(); iY++ )
       {
-         // get the X sequence
-         nw.seqX = seqMap[ iX ];
+         // get the Y sequence
+         nw.seqY = seqMap[ iY ];
          // NOTE: the padding (zeroth element) was already added to the sequence
-         nw.adjcols = nw.seqX.size();
+         nw.adjrows = nw.seqY.size();
 
 
-         // for all Y sequences
-         for( int iY = iX+1; iY < seqMap.size(); iY++ )
+         // for all X sequences
+         for( int iX = iY+1; iX < seqMap.size(); iX++ )
          {
-            // get the Y sequence
-            nw.seqY = seqMap[ iY ];
+            // get the X sequence
+            nw.seqX = seqMap[ iX ];
             // NOTE: the padding (zeroth element) was already added to the sequence
-            nw.adjrows = nw.seqY.size();
+            nw.adjcols = nw.seqX.size();
 
             // if the number of columns is less than the number of rows, swap them and the sequences
             if( nw.adjcols < nw.adjrows )
@@ -199,9 +199,9 @@ int main( int argc, char *argv[] )
                // TODO: print results to .json file
                // print the algorithm name and info
                FormatFlagsGuard fg { std::cout };
-               std::cout << std::setw( 2) << std::right << iX << " "
-                         << std::setw( 2) << std::right << iY << "   "
-                         << std::setw(15) << std::left  << algName << "   ";
+               std::cout << std::setw( 2) << std::right << iY << " "
+                         << std::setw( 2) << std::right << iX << "   "
+                         << std::setw(20) << std::left  << algName << "   ";
 
                if( !errstep ) { std::cout << std::setw(10) << std::right << res.score_hash                       << std::endl; }
                else           { std::cout << "<STEP_" << errstep << " FAILED WITH STAT_" << ( (int)stat ) << ">" << std::endl; }

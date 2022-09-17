@@ -91,7 +91,7 @@ __global__ static void Nw_Gpu4_KernelA(
 __global__ static void Nw_Gpu4_KernelB(
          int* const score_gpu,
    const int indel,
-   const int WARPSZ,
+   const int warpsz,
    const int trows,
    const int tcols,
    const unsigned tileBx,
@@ -154,7 +154,7 @@ __global__ static void Nw_Gpu4_KernelB(
          
          // calculate the tile elements
          // +   only threads in the first warp from this block are active here, other warps have to wait
-         if( threadIdx.x < WARPSZ )
+         if( threadIdx.x < warpsz )
          {
             // the number of rows and columns in the tile without its first row and column (the part of the tile to be calculated)
             int rows = tileBy;
@@ -379,7 +379,7 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
       {
          // take the number of threads on the largest diagonal of the tile
          // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-         blockB.x = nw.WARPSZ * ceil( max( tileBy, tileBx )*2./nw.WARPSZ );
+         blockB.x = nw.warpsz * ceil( max( tileBy, tileBx )*2./nw.warpsz );
          // take the number of tiles on the largest score matrix diagonal as the only dimension
          gridB.x = min( trows, tcols );
 
@@ -394,7 +394,7 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
             return NwStat::errorKernelFailure;
          }
          // the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
-         gridB.x = min( gridB.x, nw.MPROCS*maxBlocksPerSm );
+         gridB.x = min( gridB.x, nw.sm_count*maxBlocksPerSm );
       }
 
 
@@ -406,7 +406,7 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
       {
          &score_gpu,
          &nw.indel,
-         &nw.WARPSZ,
+         &nw.warpsz,
          &trows,
          &tcols,
          &tileBx,

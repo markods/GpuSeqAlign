@@ -22,7 +22,7 @@
    {
       // // number of threads per block
       // // +   the tile is one-dimensional
-      // unsigned threadsPerBlock = 8*WARPSZ;
+      // unsigned threadsPerBlock = 8*warpsz;
       "threadsPerBlock": [ 32, 64, 128, 192, 256, 384, 512 ]
    },
    "Gpu2_DiagRow_Ml2K":
@@ -33,8 +33,8 @@
       // unsigned tileBy = 4;
       "tileBy": [ 4, 6, 8, 16, 32 ],
       // // number of threads per block for kernels A and B
-      // unsigned threadsPerBlockA = 16*WARPSZ;
-      // unsigned threadsPerBlockB = 8*WARPSZ;
+      // unsigned threadsPerBlockA = 16*warpsz;
+      // unsigned threadsPerBlockB = 8*warpsz;
       "threadsPerBlock": [ 32, 64, 128, 192, 256, 384, 512 ]
    },
    "Gpu3_DiagDiag_Coop":
@@ -43,7 +43,7 @@
       // // +   tile A must have one dimension fixed to the number of threads in a warp
       // unsigned tileAx = 40;
       "tileAx": [ 32, 34, 36, 38, 40, 42, 44, 46, 48, 50 ],
-      // unsigned tileAy = WARPSZ;
+      // unsigned tileAy = warpsz;
       "tileAy": [ 32 ]
    },
    "Gpu4_DiagDiag_Coop2K":
@@ -51,13 +51,13 @@
       // // tile sizes for kernels A and B
       // // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
       // // +   tile B must have one dimension fixed to the number of threads in a warp
-      // unsigned tileAx = 1*WARPSZ;
+      // unsigned tileAx = 1*warpsz;
       "tileAx": [ 32, 64, 96, 128 ],
       // unsigned tileAy = 32;
       "tileAy": [ 16, 20, 32, 40 ],
       // unsigned tileBx = 60;
       "tileBx": [ 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64 ],
-      // unsigned tileBy = WARPSZ;
+      // unsigned tileBy = warpsz;
       "tileBy": [ 32 ]
    }
 // Gpu5_DiagDiagDiag_Ml:
