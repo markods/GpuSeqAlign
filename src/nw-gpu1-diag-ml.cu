@@ -92,9 +92,6 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
    const int rows = -1 + nw.adjrows;
    const int cols = -1 + nw.adjcols;
 
-   // clear cuda non-sticky errors
-   cudaGetLastError();
-
    // start the timer
    res.sw.start();
 

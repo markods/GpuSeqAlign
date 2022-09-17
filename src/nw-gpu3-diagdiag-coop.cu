@@ -329,9 +329,6 @@ NwStat NwAlign_Gpu3_DiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
    const int adjrows = 1 + tileAy*ceil( float( nw.adjrows-1 )/tileAy );
    const int adjcols = 1 + tileAx*ceil( float( nw.adjcols-1 )/tileAx );
 
-   // clear cuda non-sticky errors
-   cudaGetLastError();
-
    // start the timer
    res.sw.start();
 

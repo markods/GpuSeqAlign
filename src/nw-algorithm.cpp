@@ -22,17 +22,19 @@ NwStat NwHash1_Plain( const int* const mat, const int rows, const int cols, unsi
 NwStat NwPrint1_Plain( std::ostream& os, const int* const mat, const int rows, const int cols );
 
 // all algorithms
-NwAlgorithmMap algorithmMap
+NwAlgorithmData algData
 {
-   { "Cpu1_Row_St",          { NwAlign_Cpu1_Row_St,          NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
-   { "Cpu2_Diag_St",         { NwAlign_Cpu2_Diag_St,         NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
-   { "Cpu3_DiagRow_St",      { NwAlign_Cpu3_DiagRow_St,      NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
-   { "Cpu4_DiagRow_Mt",      { NwAlign_Cpu4_DiagRow_Mt,      NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
-   { "Gpu1_Diag_Ml",         { NwAlign_Gpu1_Diag_Ml,         NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
-   { "Gpu2_DiagRow_Ml2K",    { NwAlign_Gpu2_DiagRow_Ml2K,    NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
-   { "Gpu3_DiagDiag_Coop",   { NwAlign_Gpu3_DiagDiag_Coop,   NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
-   { "Gpu4_DiagDiag_Coop2K", { NwAlign_Gpu4_DiagDiag_Coop2K, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
-// { "Gpu5_DiagDiagDiag_Ml", { NwAlign_Gpu5_DiagDiagDiag_Ml, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
+   /*algs:*/ {
+      { "Cpu1_Row_St",          { NwAlign_Cpu1_Row_St,          NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
+      { "Cpu2_Diag_St",         { NwAlign_Cpu2_Diag_St,         NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
+      { "Cpu3_DiagRow_St",      { NwAlign_Cpu3_DiagRow_St,      NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
+      { "Cpu4_DiagRow_Mt",      { NwAlign_Cpu4_DiagRow_Mt,      NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
+      { "Gpu1_Diag_Ml",         { NwAlign_Gpu1_Diag_Ml,         NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
+      { "Gpu2_DiagRow_Ml2K",    { NwAlign_Gpu2_DiagRow_Ml2K,    NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
+      { "Gpu3_DiagDiag_Coop",   { NwAlign_Gpu3_DiagDiag_Coop,   NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
+      { "Gpu4_DiagDiag_Coop2K", { NwAlign_Gpu4_DiagDiag_Coop2K, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
+   // { "Gpu5_DiagDiagDiag_Ml", { NwAlign_Gpu5_DiagDiagDiag_Ml, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
+   },
 };
 
 

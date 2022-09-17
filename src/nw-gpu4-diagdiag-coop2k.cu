@@ -266,9 +266,6 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
    int adjrows = 1 + tileBy*ceil( float( nw.adjrows-1 )/tileBy );
    int adjcols = 1 + tileBx*ceil( float( nw.adjcols-1 )/tileBx );
 
-   // clear cuda non-sticky errors
-   cudaGetLastError();
-
    // start the timer
    res.sw.start();
 

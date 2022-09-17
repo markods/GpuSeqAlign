@@ -66,8 +66,11 @@ private:
 };
 
 // algorithm map
-using NwAlgorithmMap = std::map< std::string, NwAlgorithm >;
-extern NwAlgorithmMap algorithmMap;
+struct NwAlgorithmData
+{
+   std::map< std::string, NwAlgorithm > algs;
+};
+extern NwAlgorithmData algData;
 
 
 

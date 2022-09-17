@@ -42,7 +42,7 @@ int main( int argc, char *argv[] )
    std::string paramPath = projPath + "resrc/" + argv[ 2 ];
    std::string seqPath   = projPath + "resrc/" + argv[ 3 ];
 
-// AlgorithmMap algorithmMap;
+// AlgorithmData algData;
    NwSubstData substData;
    NwParamData paramData;
    NwSeqData seqData;
@@ -144,14 +144,22 @@ int main( int argc, char *argv[] )
 
 
 
-   // for all algorithms
-   for( auto& algTuple: algorithmMap )
+   // for all algorithms which have parameters in the param map
+   for( auto& paramTuple: paramData.params )
    {
-      // get the current algorithm
-      const std::string& algName = algTuple.first;
-      NwAlgorithm& alg = algTuple.second;
-      // get the algorithm params
-      NwParams& pr = paramData.params[algName];
+      // get the current algorithm parameters
+      const std::string& algName = paramTuple.first;
+      NwParams algParams = paramTuple.second;
+
+      // if the current algorithm doesn't exist, skip it
+      if( algData.algs.find( algName ) == algData.algs.end() )
+      {
+         continue;
+      }
+
+      // get the current algorithm and initialize its parameters
+      NwAlgorithm alg = algData.algs[ algName ];
+      alg.init( algParams );
 
 
       // for all Y sequences
@@ -163,8 +171,8 @@ int main( int argc, char *argv[] )
          nw.adjrows = nw.seqY.size();
 
 
-         // for all X sequences
-         for( int iX = iY+1; iX < seqMap.size(); iX++ )
+         // for all X sequences (also compare every sequence with itself)
+         for( int iX = iY; iX < seqMap.size(); iX++ )
          {
             // get the X sequence
             nw.seqX = seqMap[ iX ];
@@ -178,17 +186,13 @@ int main( int argc, char *argv[] )
                std::swap( nw.seqX, nw.seqY );
             }
 
-            // initialize the algorithm parameters
-            alg.init( paramData.params[ algName ] );
-
 
             // for all parameter combinations
-            // TODO: restore
-         // for( ;   alg.alignPr().hasCurr();   alg.alignPr().next() )
+            for( ;   alg.alignPr().hasCurr();   alg.alignPr().next() )
             {
                // initialize the result
                NwResult res {};
-               
+
                // compare the sequences
                int errstep = 0;
                NwStat stat = NwStat::success;
@@ -205,6 +209,16 @@ int main( int argc, char *argv[] )
 
                if( !errstep ) { std::cout << std::setw(10) << std::right << res.score_hash                       << std::endl; }
                else           { std::cout << "<STEP_" << errstep << " FAILED WITH STAT_" << ( (int)stat ) << ">" << std::endl; }
+
+               // clear cuda non-sticky errors
+               cudaStatus = cudaGetLastError();
+
+               // get possible cuda sticky errors
+               cudaStatus = cudaGetLastError();
+               if( cudaStatus != cudaSuccess )
+               {
+                  std::cerr << "ERR - corrupted cuda context"; exit( -1 );
+               }
 
                // reset allocations
                nw.resetAllocs();
