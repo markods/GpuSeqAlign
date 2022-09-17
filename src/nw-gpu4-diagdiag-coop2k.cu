@@ -91,6 +91,7 @@ __global__ static void Nw_Gpu4_KernelA(
 __global__ static void Nw_Gpu4_KernelB(
          int* const score_gpu,
    const int indel,
+   const int WARPSZ,
    const int trows,
    const int tcols,
    const unsigned tileBx,
@@ -345,7 +346,7 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
       {
          // take the number of threads on the largest diagonal of the tile
          // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-         blockB.x = WARPSZ * ceil( max( tileBy, tileBx )*2./WARPSZ );
+         blockB.x = nw.WARPSZ * ceil( max( tileBy, tileBx )*2./nw.WARPSZ );
          // take the number of tiles on the largest score matrix diagonal as the only dimension
          gridB.x = min( trows, tcols );
 
@@ -357,12 +358,12 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
          // calculate the max number of parallel blocks per streaming multiprocessor
          if( cudaSuccess != cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxBlocksPerSm, Nw_Gpu4_KernelB, numThreads, shmemsz ) ) return NwStat::errorKernelFailure;
          // the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
-         gridB.x = min( gridB.x, MPROCS*maxBlocksPerSm );
+         gridB.x = min( gridB.x, nw.MPROCS*maxBlocksPerSm );
       }
 
 
       // group arguments to be passed to kernel B
-      void* kargs[] { &nw.score_gpu, &nw.indel, &trows, &tcols, &tileBx, &tileBy };
+      void* kargs[] { &nw.score_gpu, &nw.indel, &nw.WARPSZ, &trows, &tcols, &tileBx, &tileBy };
       
       // launch the kernel in the given stream (don't statically allocate shared memory)
       if( cudaSuccess != cudaLaunchCooperativeKernel( ( void* )Nw_Gpu4_KernelB, gridB, blockB, kargs, shmemsz, nullptr/*stream*/ ) ) return NwStat::errorKernelFailure;

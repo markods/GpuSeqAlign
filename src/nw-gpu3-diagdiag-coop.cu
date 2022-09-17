@@ -13,6 +13,7 @@ __global__ static void Nw_Gpu3_Kernel(
 // const int adjcols,   // can be calculated as 1 + tcols*tileAx
    const int substsz,
    const int indel,
+   const int WARPSZ,
    // tile size
    const int trows,
    const int tcols,
@@ -380,7 +381,7 @@ NwStat NwAlign_Gpu3_DiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
       {
          // take the number of threads on the largest diagonal of the tile
          // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-         blockA.x = WARPSZ * ceil( max( tileAy, tileAx )*2./WARPSZ );
+         blockA.x = nw.WARPSZ * ceil( max( tileAy, tileAx )*2./nw.WARPSZ );
          // take the number of tiles on the largest score matrix diagonal as the only dimension
          gridA.x = min( trows, tcols );
 
@@ -392,12 +393,12 @@ NwStat NwAlign_Gpu3_DiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
          // calculate the max number of parallel blocks per streaming multiprocessor
          if( cudaSuccess != cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxBlocksPerSm, Nw_Gpu3_Kernel, numThreads, shmemsz ) ) return NwStat::errorKernelFailure;
          // the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
-         gridA.x = min( gridA.x, MPROCS*maxBlocksPerSm );
+         gridA.x = min( gridA.x, nw.MPROCS*maxBlocksPerSm );
       }
 
 
       // group arguments to be passed to kernel
-      void* kargs[] { &nw.seqX_gpu, &nw.seqY_gpu, &nw.score_gpu, &nw.subst_gpu, /*&adjrows,*/ /*&adjcols,*/ &nw.substsz, &nw.indel, &trows, &tcols, &tileAx, &tileAy };
+      void* kargs[] { &nw.seqX_gpu, &nw.seqY_gpu, &nw.score_gpu, &nw.subst_gpu, /*&adjrows,*/ /*&adjcols,*/ &nw.substsz, &nw.indel, &nw.WARPSZ, &trows, &tcols, &tileAx, &tileAy };
       
       // launch the kernel in the given stream (don't statically allocate shared memory)
       if( cudaSuccess != cudaLaunchCooperativeKernel( ( void* )Nw_Gpu3_Kernel, gridA, blockA, kargs, shmemsz, nullptr/*stream*/ ) ) return NwStat::errorKernelFailure;

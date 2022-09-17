@@ -22,6 +22,7 @@
 // // const int adjcols,   // can be calculated as 1 + tcols*tileAx
 //    const int substsz,
 //    const int indel,
+//    const int WARPSZ,
 //    // tile size and miscellaneous
 //          int* const hrowTD_gpui,   // input header_row tile_diagonal, consisting of the header rows for all tiles on the current tile diagonal
 //          int* const hcolTD_gpui,   // input header_column tile_diagonal, consisting of the header columns for all tiles on the current tile diagonal
@@ -352,7 +353,7 @@
 
 //          // wait until the last warp finishes calculating its last chunk stripe
 //          // also update the next warp's status
-//          TODO
+//          TODO;
 //          for( int i = 0; i < warpIdx; i++ )
 //          {
 //             __syncthreads();
@@ -437,7 +438,7 @@
 
 //    // tile size for the kernel
 //    unsigned tileAx = 320;
-//    unsigned tileAy = 4*WARPSZ;   // must be a multiple of the warp size
+//    unsigned tileAy = 4*nw.WARPSZ;   // must be a multiple of the warp size
 //    int chunksz = 32;
 
 //    // substitution matrix, sequences which will be compared and the score matrix stored in gpu global memory
@@ -504,7 +505,7 @@
 //       {
 //          // take the number of threads on the largest diagonal of the tile
 //          // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-//          blockA.x = WARPSZ * ceil( max( tileAy, tileAx )*2./WARPSZ );
+//          blockA.x = nw.WARPSZ * ceil( max( tileAy, tileAx )*2./nw.WARPSZ );
 //          // take the number of tiles on the largest score matrix diagonal as the only dimension
 //          gridA.x = min( trows, tcols );
 
@@ -516,12 +517,12 @@
 //          // calculate the max number of parallel blocks per streaming multiprocessor
 //          cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxBlocksPerSm, Nw_Gpu5_Kernel, numThreads, shmemsz );
 //          // the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
-//          gridA.x = min( gridA.x, MPROCS*maxBlocksPerSm );
+//          gridA.x = min( gridA.x, nw.MPROCS*maxBlocksPerSm );
 //       }
 
 
 //       // group arguments to be passed to kernel
-//       void* kargs[] { &nw_gpu.seqX, &nw_gpu.seqY, &nw_gpu.score, &nw_gpu.subst, /*&nw_gpu.adjrows,*/ /*&nw_gpu.adjcols,*/ &nw_gpu.substsz, &nw_gpu.indel, &trows, &tcols, &tileAx, &tileAy, &chunksz };
+//       void* kargs[] { &nw_gpu.seqX, &nw_gpu.seqY, &nw_gpu.score, &nw_gpu.subst, /*&nw_gpu.adjrows,*/ /*&nw_gpu.adjcols,*/ &nw_gpu.substsz, &nw_gpu.indel, &nw.WARPSZ, &trows, &tcols, &tileAx, &tileAy, &chunksz };
       
 //       // launch the kernel in the given stream (don't statically allocate shared memory)
 //       // +   capture events around kernel launch as well

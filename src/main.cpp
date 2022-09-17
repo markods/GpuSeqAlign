@@ -53,6 +53,15 @@ int main( int argc, char *argv[] )
    if( NwStat::success != readFromJson( seqPath,   seqMap   ) ) { std::cerr << "ERR - could not open/read json from seqs file";   exit( -1 ); }
    if( NwStat::success != openOutFile ( logPath,   ofsLog   ) ) { std::cerr << "ERR - could not open output log file";            exit( -1 ); }
    
+   // get the device properties
+   cudaDeviceProp deviceProps;
+   if( cudaSuccess != cudaGetDeviceProperties( &deviceProps, 0/*deviceId*/ ) )  { std::cerr << "ERR - could not get device properties"; exit( -1 ); }
+
+   // number of streaming multiprocessors (sm-s) and threads in a warp
+   const int MPROCS = deviceProps.multiProcessorCount;   // 28 on GTX 1080Ti
+   const int WARPSZ = deviceProps.warpSize;              // 32 on GTX 1080Ti
+
+
    NwInput nw
    {
       ////// host specific memory
@@ -73,7 +82,15 @@ int main( int argc, char *argv[] )
       // adjcols;   <-- loop-inited
 
       // indel;   <-- once
+
+      ////// device parameters
+      // MPROCS;
+      // WARPSZ;
    };
+
+   // initialize the device parameters
+   nw.MPROCS = MPROCS;
+   nw.WARPSZ = WARPSZ;
 
    // initialize the substitution matrix on the cpu and gpu
    {

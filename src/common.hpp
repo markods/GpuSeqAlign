@@ -12,19 +12,12 @@
 #include <cuda_runtime.h>
 using namespace std::string_literals;
 
-// TODO: remove
-// number of streaming multiprocessors (sm-s) and cores per sm
-constexpr int MPROCS = 28;
-constexpr int CORES = 128;
-// number of threads in warp
-constexpr int WARPSZ = 32;
-
 
 // get the specified element from the given linearized matrix
 #define el( mat, cols, i, j ) ( mat[(cols)*(i) + (j)] )
 
 
-// FIX: test performance of min2, max2 and max3 without branching
+// TODO: test performance of min2, max2 and max3 without branching
 // +   https://docs.nvidia.com/cuda/parallel-thread-execution/index.html
 
 // calculate the minimum of two numbers
@@ -285,6 +278,10 @@ struct NwInput
    int adjcols;
 
    int indel;
+
+   // device parameters
+   int MPROCS;
+   int WARPSZ;
 
    // free all memory allocated by the Needleman-Wunsch algorithms
    void resetAllocs()
