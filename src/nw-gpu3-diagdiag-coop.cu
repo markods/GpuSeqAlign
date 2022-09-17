@@ -329,6 +329,9 @@ NwStat NwAlign_Gpu3_DiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
    const int adjrows = 1 + tileAy*ceil( float( nw.adjrows-1 )/tileAy );
    const int adjcols = 1 + tileAx*ceil( float( nw.adjcols-1 )/tileAx );
 
+   // clear cuda non-sticky errors
+   cudaGetLastError();
+
    // start the timer
    res.sw.start();
 
@@ -397,15 +400,36 @@ NwStat NwAlign_Gpu3_DiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
       }
 
 
+      // create variables for gpu arrays in order to be able to take their addresses
+      int* seqX_gpu = nw.seqX_gpu.data();
+      int* seqY_gpu = nw.seqY_gpu.data();
+      int* score_gpu = nw.score_gpu.data();
+      int* subst_gpu = nw.subst_gpu.data();
+
       // group arguments to be passed to kernel
-      void* kargs[] { &nw.seqX_gpu, &nw.seqY_gpu, &nw.score_gpu, &nw.subst_gpu, /*&adjrows,*/ /*&adjcols,*/ &nw.substsz, &nw.indel, &nw.WARPSZ, &trows, &tcols, &tileAx, &tileAy };
+      void* kargs[]
+      {
+         &seqX_gpu,
+         &seqY_gpu,
+         &score_gpu,
+         &subst_gpu,
+         /*&adjrows,*/
+         /*&adjcols,*/
+         &nw.substsz,
+         &nw.indel,
+         &nw.WARPSZ,
+         &trows,
+         &tcols,
+         &tileAx,
+         &tileAy
+      };
       
       // launch the kernel in the given stream (don't statically allocate shared memory)
       if( cudaSuccess != cudaLaunchCooperativeKernel( ( void* )Nw_Gpu3_Kernel, gridA, blockA, kargs, shmemsz, nullptr/*stream*/ ) ) return NwStat::errorKernelFailure;
    }
 
    // wait for the gpu to finish before going to the next step
-   if( cudaSuccess != cudaDeviceSynchronize() ) return NwStat::errorSynchronization;
+   if( cudaSuccess != cudaDeviceSynchronize() ) return NwStat::errorKernelFailure;
 
    // measure calculation time
    res.sw.lap( "calc" );

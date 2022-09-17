@@ -155,29 +155,39 @@ int main( int argc, char *argv[] )
                std::swap( nw.seqX, nw.seqY );
             }
 
-            // initialize the algorithm parameters and the result
+            // initialize the algorithm parameters
             alg.init( paramMap.params[ algName ] );
-            NwResult res {};
-            
-            // compare the sequences
-            int errstep = 0;
-            NwStat stat = NwStat::success;
-            if( !errstep && NwStat::success != ( stat = alg.align( nw, res ) ) ) { errstep = 1; }
-            if( !errstep && NwStat::success != ( stat = alg.hash ( nw, res ) ) ) { errstep = 2; }
-            if( !errstep && NwStat::success != ( stat = alg.trace( nw, res ) ) ) { errstep = 3; }
 
-            // TODO: print results to .json file
-            // print the algorithm name and info
-            FormatFlagsGuard fg { std::cout };
-            std::cout << std::setw( 2) << std::right << iX << " "
-                      << std::setw( 2) << std::right << iY << "   "
-                      << std::setw(15) << std::left  << algName << "   ";
+            // for all parameter combinations
+            // TODO: restore
+         // for( ;   alg.alignPr().hasCurr();   alg.alignPr().next() )
+            {
+               // initialize the result
+               NwResult res {};
+               
+               // compare the sequences
+               int errstep = 0;
+               NwStat stat = NwStat::success;
+               if( !errstep && NwStat::success != ( stat = alg.align( nw, res ) ) ) { errstep = 1; }
+               if( !errstep && NwStat::success != ( stat = alg.hash ( nw, res ) ) ) { errstep = 2; }
+               if( !errstep && NwStat::success != ( stat = alg.trace( nw, res ) ) ) { errstep = 3; }
 
-            if( !errstep ) { std::cout << std::setw(10) << std::right << res.score_hash                       << std::endl; }
-            else           { std::cout << "<STEP_" << errstep << " FAILED WITH STAT_" << ( (int)stat ) << ">" << std::endl; }
+               // TODO: print results to .json file
+               // print the algorithm name and info
+               FormatFlagsGuard fg { std::cout };
+               std::cout << std::setw( 2) << std::right << iX << " "
+                         << std::setw( 2) << std::right << iY << "   "
+                         << std::setw(15) << std::left  << algName << "   ";
 
-            // reset allocations
-            nw.resetAllocs();
+               if( !errstep ) { std::cout << std::setw(10) << std::right << res.score_hash                       << std::endl; }
+               else           { std::cout << "<STEP_" << errstep << " FAILED WITH STAT_" << ( (int)stat ) << ">" << std::endl; }
+
+               // reset allocations
+               nw.resetAllocs();
+            }
+
+            // reset the algorithm parameters
+            alg.alignPr().reset();
          }
       }
    }

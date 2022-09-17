@@ -467,10 +467,6 @@
 //    cudaMalloc( &nw_gpu.seqY,  nw_gpu.adjrows                * sizeof( int ) );
 //    cudaMalloc( &nw_gpu.score, nw_gpu.adjrows*nw_gpu.adjcols * sizeof( int ) );
 //    cudaMalloc( &nw_gpu.subst, nw_gpu.substsz*nw_gpu.substsz * sizeof( int ) );
-//    // create events for measuring kernel execution time
-//    cudaEvent_t start, stop;
-//    cudaEventCreate( &start );
-//    cudaEventCreate( &stop );
 
 //    // start the host timer and initialize the gpu timer
 //    res.sw.lap( "cpu-start" );
@@ -521,23 +517,35 @@
 //       }
 
 
+//       // create variables for gpu arrays in order to be able to take their addresses
+//       int* seqX_gpu = nw.seqX_gpu.data();
+//       int* seqY_gpu = nw.seqY_gpu.data();
+//       int* score_gpu = nw.score_gpu.data();
+//       int* subst_gpu = nw.subst_gpu.data();
+
 //       // group arguments to be passed to kernel
-//       void* kargs[] { &nw_gpu.seqX, &nw_gpu.seqY, &nw_gpu.score, &nw_gpu.subst, /*&nw_gpu.adjrows,*/ /*&nw_gpu.adjcols,*/ &nw_gpu.substsz, &nw_gpu.indel, &nw.WARPSZ, &trows, &tcols, &tileAx, &tileAy, &chunksz };
+//       void* kargs[]
+//       {
+//          seqX_gpu,
+//          seqY_gpu,
+//          score_gpu,
+//          subst_gpu,
+//          /*&nw.adjrows,*/
+//          /*&nw.adjcols,*/
+//          &nw.substsz,
+//          &nw.indel,
+//          &nw.WARPSZ,
+//          &trows,
+//          &tcols,
+//          &tileAx,
+//          &tileAy,
+//          &chunksz
+//       };
       
 //       // launch the kernel in the given stream (don't statically allocate shared memory)
 //       // +   capture events around kernel launch as well
 //       // +   update the stop event when the kernel finishes
-//       cudaEventRecord( start, nullptr/*stream*/ );
 //       cudaLaunchCooperativeKernel( ( void* )Nw_Gpu5_Kernel, gridA, blockA, kargs, shmemsz, nullptr/*stream*/ );
-//       cudaEventRecord( stop, nullptr/*stream*/ );
-//       cudaEventSynchronize( stop );
-      
-//       // kernel execution time
-//       float ktime {};
-//       // calculate the time between the given events
-//       cudaEventElapsedTime( &ktime, start, stop ); ktime /= 1000./*ms*/;
-//       // update the total kernel execution time
-//       res.Tgpu += ktime;
 //    }
 
 //    // wait for the gpu to finish before going to the next step
@@ -577,16 +585,6 @@
 //    // stop the cpu timer
 //    res.sw.lap( "cpu-end" );
 //    res.Tcpu = res.sw.dt( "cpu-end", "cpu-start" );
-
-   
-//    // free allocated space in the gpu global memory
-//    cudaFree( nw_gpu.seqX );
-//    cudaFree( nw_gpu.seqY );
-//    cudaFree( nw_gpu.score );
-//    cudaFree( nw_gpu.subst );
-//    // free events' memory
-//    cudaEventDestroy( start );
-//    cudaEventDestroy( stop );
 // }
 
 

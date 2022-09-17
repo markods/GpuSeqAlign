@@ -92,6 +92,9 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
    const int rows = -1 + nw.adjrows;
    const int cols = -1 + nw.adjcols;
 
+   // clear cuda non-sticky errors
+   cudaGetLastError();
+
    // start the timer
    res.sw.start();
 
@@ -156,8 +159,25 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
          }
 
 
+         // create variables for gpu arrays in order to be able to take their addresses
+         int* seqX_gpu = nw.seqX_gpu.data();
+         int* seqY_gpu = nw.seqY_gpu.data();
+         int* score_gpu = nw.score_gpu.data();
+         int* subst_gpu = nw.subst_gpu.data();
+         
          // group arguments to be passed to kernel
-         void* kargs[] { &nw.seqX_gpu, &nw.seqY_gpu, &nw.score_gpu, &nw.subst_gpu, &nw.adjrows, &nw.adjcols, &nw.substsz, &nw.indel, &d };
+         void* kargs[]
+         {
+            &seqX_gpu,
+            &seqY_gpu,
+            &score_gpu,
+            &subst_gpu,
+            &nw.adjrows,
+            &nw.adjcols,
+            &nw.substsz,
+            &nw.indel,
+            &d
+         };
          
          // launch the kernel in the given stream (don't statically allocate shared memory)
          if( cudaSuccess != cudaLaunchKernel( ( void* )Nw_Gpu1_Kernel, gridA, blockA, kargs, shmemsz, nullptr/*stream*/ ) ) return NwStat::errorKernelFailure;
@@ -165,7 +185,7 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // wait for the gpu to finish before going to the next step
-   if( cudaSuccess != cudaDeviceSynchronize() ) return NwStat::errorSynchronization;
+   if( cudaSuccess != cudaDeviceSynchronize() ) return NwStat::errorKernelFailure;
 
    // measure calculation time
    res.sw.lap( "calc" );

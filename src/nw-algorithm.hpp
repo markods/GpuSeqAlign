@@ -16,8 +16,9 @@ using NwPrintFn = NwStat (*)( std::ostream& os, const int* const mat, const int 
 
 
 // the Needleman-Wunsch algorithm implementations
-struct NwAlgorithm
+class NwAlgorithm
 {
+public:
    NwAlgorithm()
    {
       _alignFn = {};
@@ -48,11 +49,14 @@ struct NwAlgorithm
       _alignPr = alignPr;
    }
 
+   NwParams& alignPr() { return _alignPr; }
+
    NwStat align( NwInput& nw, NwResult& res ) { return _alignFn( _alignPr, nw, res ); }
    NwStat trace( const NwInput& nw, NwResult& res ) { return _traceFn( nw, res ); }
    NwStat hash( const NwInput& nw, NwResult& res ) { return _hashFn( nw.score.data(), nw.adjrows, nw.adjcols, res.score_hash ); }
    NwStat print( std::ostream& os, const NwInput& nw ) { return _printFn( os, nw.score.data(), nw.adjrows, nw.adjcols ); }
 
+private:
    NwAlignFn _alignFn;
    NwTraceFn _traceFn;
    NwHashFn _hashFn;

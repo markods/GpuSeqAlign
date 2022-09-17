@@ -50,11 +50,10 @@ enum class NwStat : int
    success               = 0,
    errorMemoryAllocation = 1,
    errorMemoryTransfer   = 2,
-   errorSynchronization  = 3,
-   errorKernelFailure    = 4,
-   errorIoStream         = 5,
-   errorInvalidFormat    = 6,
-   errorInvalidValue     = 7,
+   errorKernelFailure    = 3,
+   errorIoStream         = 4,
+   errorInvalidFormat    = 5,
+   errorInvalidValue     = 6,
 };
 
 
@@ -232,7 +231,7 @@ struct NwParams
    {
       for( auto iter = _params.rbegin();   iter != _params.rend();   iter++ )
       {
-         auto param = iter->second;
+         auto& param = iter->second;
          param.next();
          
          if( param.hasCurr() ) return;
@@ -244,7 +243,7 @@ struct NwParams
    {
       for( auto iter = _params.rbegin();   iter != _params.rend();   iter++ )
       {
-         auto param = iter->second;
+         auto& param = iter->second;
          param.reset();
       }
       _isEnd = false;
