@@ -43,20 +43,20 @@ int main( int argc, char *argv[] )
    std::string seqPath   = projPath + "resrc/" + argv[ 3 ];
 
 // AlgorithmMap algorithmMap;
-   NwSubstMap substMap;
-   NwParamMap paramMap;
-   NwSeqMap seqMap;
+   NwSubstData substData;
+   NwParamData paramData;
+   NwSeqData seqData;
    std::ofstream ofsLog;
 
-   if( NwStat::success != readFromJson( substPath, substMap ) )
+   if( NwStat::success != readFromJson( substPath, substData ) )
    {
       std::cerr << "ERR - could not open/read json from substs file"; exit( -1 );
    }
-   if( NwStat::success != readFromJson( paramPath, paramMap ) )
+   if( NwStat::success != readFromJson( paramPath, paramData ) )
    {
       std::cerr << "ERR - could not open/read json from params file"; exit( -1 );
    }
-   if( NwStat::success != readFromJson( seqPath,   seqMap   ) )
+   if( NwStat::success != readFromJson( seqPath,   seqData   ) )
    {
       std::cerr << "ERR - could not open/read json from seqs file"; exit( -1 );
    }
@@ -109,7 +109,7 @@ int main( int argc, char *argv[] )
 
    // initialize the substitution matrix on the cpu and gpu
    {
-      nw.subst = substMap.substs[ seqMap.substName ];
+      nw.subst = substData.substs[ seqData.substName ];
       nw.substsz = std::sqrt( nw.subst.size() );
 
       // reserve space in the gpu global memory
@@ -130,36 +130,44 @@ int main( int argc, char *argv[] )
    }
    
    // initialize the indel cost
-   nw.indel = seqMap.indel;
+   nw.indel = seqData.indel;
    // initialize the letter map
-   std::map<std::string, int> letterMap = substMap.letterMap;
+   std::map<std::string, int> letterMap = substData.letterMap;
+   
+   // initialize the sequence map
+   std::vector< std::vector<int> > seqMap {};
+   for( auto& charSeq : seqData.seqs )
+   {
+      auto seq = seqStrToVect( charSeq, letterMap, true/*addHeader*/ );
+      seqMap.push_back( seq );
+   }
 
 
 
    // for all algorithms
    for( auto& algTuple: algorithmMap )
    {
-
       // get the current algorithm
-      std::string algName = algTuple.first;
-      NwAlgorithm alg     = algTuple.second;
+      const std::string& algName = algTuple.first;
+      NwAlgorithm& alg = algTuple.second;
       // get the algorithm params
-      NwParams pr = paramMap.params[algName];
+      NwParams& pr = paramData.params[algName];
+
 
       // for all X sequences
-      for( int iX = 0; iX < seqMap.seqs.size(); iX++ )
+      for( int iX = 0; iX < seqMap.size(); iX++ )
       {
-
          // get the X sequence
-         nw.seqX = seqStrToVect( seqMap.seqs[ iX ], letterMap, true/*addHeader*/ );
+         nw.seqX = seqMap[ iX ];
          // NOTE: the padding (zeroth element) was already added to the sequence
          nw.adjcols = nw.seqX.size();
 
+
          // for all Y sequences
-         for( int iY = iX+1; iY < seqMap.seqs.size(); iY++ )
+         for( int iY = iX+1; iY < seqMap.size(); iY++ )
          {
             // get the Y sequence
-            nw.seqY = seqStrToVect( seqMap.seqs[ iY ], letterMap, true/*addHeader*/ );
+            nw.seqY = seqMap[ iY ];
             // NOTE: the padding (zeroth element) was already added to the sequence
             nw.adjrows = nw.seqY.size();
 
@@ -171,7 +179,8 @@ int main( int argc, char *argv[] )
             }
 
             // initialize the algorithm parameters
-            alg.init( paramMap.params[ algName ] );
+            alg.init( paramData.params[ algName ] );
+
 
             // for all parameter combinations
             // TODO: restore

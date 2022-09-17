@@ -44,7 +44,7 @@ public:
       _alignPr = {};
    }
 
-   void init( NwParams alignPr )
+   void init( NwParams& alignPr )
    {
       _alignPr = alignPr;
    }
@@ -72,18 +72,18 @@ extern NwAlgorithmMap algorithmMap;
 
 
 // input file formats
-struct NwSubstMap
+struct NwSubstData
 {
    std::map< std::string, int > letterMap;
    std::map< std::string, std::vector<int> > substs;
 };
 
-struct NwParamMap
+struct NwParamData
 {
    std::map< std::string, NwParams > params;
 };
 
-struct NwSeqMap
+struct NwSeqData
 {
    std::string substName;
    int indel;
@@ -92,22 +92,22 @@ struct NwSeqMap
 };
 
 // conversion to object from json
-void from_json( const json& j, NwSubstMap& substMap );
-void from_json( const json& j, NwParamMap& params );
+void from_json( const json& j, NwSubstData& substData );
+void from_json( const json& j, NwParamData& paramData );
 void from_json( const json& j, NwParams& params );
 void from_json( const json& j, NwParam& param );
-void from_json( const json& j, NwSeqMap& seqMap );
+void from_json( const json& j, NwSeqData& seqData );
 
 // conversion to json from object
-void to_json( json& j, const NwSubstMap& substMap );
-void to_json( json& j, const NwParamMap& params );
+void to_json( json& j, const NwSubstData& substData );
+void to_json( json& j, const NwParamData& paramData );
 void to_json( json& j, const NwParams& params );
 void to_json( json& j, const NwParam& param );
-void to_json( json& j, const NwSeqMap& seqMap );
+void to_json( json& j, const NwSeqData& seqData );
 
 // convert the sequence string to a vector using a character map
 // + NOTE: add the header (zeroth) element if requested
-std::vector<int> seqStrToVect( const std::string str, const std::map<std::string, int> map, const bool addHeader );
+std::vector<int> seqStrToVect( const std::string& str, const std::map<std::string, int>& map, const bool addHeader );
 
 
 

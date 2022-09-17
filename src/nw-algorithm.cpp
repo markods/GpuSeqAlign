@@ -37,14 +37,14 @@ NwAlgorithmMap algorithmMap
 
 
 // conversion to object from json
-void from_json( const json& j, NwSubstMap& substMap )
+void from_json( const json& j, NwSubstData& substData )
 {
-   j.at( "letterMap" ).get_to( substMap.letterMap );
-   j.at( "substs"    ).get_to( substMap.substs    );
+   j.at( "letterMap" ).get_to( substData.letterMap );
+   j.at( "substs"    ).get_to( substData.substs    );
 }
-void from_json( const json& j, NwParamMap& params )
+void from_json( const json& j, NwParamData& paramData )
 {
-   j.get_to( params.params );
+   j.get_to( paramData.params );
 }
 void from_json( const json& j, NwParams& params )
 {
@@ -54,28 +54,28 @@ void from_json( const json& j, NwParam& param )
 {
    j.get_to( param._values );
 }
-void from_json( const json& j, NwSeqMap& seqMap )
+void from_json( const json& j, NwSeqData& seqData )
 {
-   j.at("substName").get_to( seqMap.substName );
-   j.at("indel"    ).get_to( seqMap.indel     );
-   j.at("seqs"     ).get_to( seqMap.seqs      );
+   j.at("substName").get_to( seqData.substName );
+   j.at("indel"    ).get_to( seqData.indel     );
+   j.at("seqs"     ).get_to( seqData.seqs      );
 }
 
 
 // conversion to json from object
-void to_json( json& j, const NwSubstMap& substMap )
+void to_json( json& j, const NwSubstData& substData )
 {
    j = json
    {
-      { "letterMap", substMap.letterMap },
-      { "substs",    substMap.substs    }
+      { "letterMap", substData.letterMap },
+      { "substs",    substData.substs    }
    };
 }
-void to_json( json& j, const NwParamMap& params )
+void to_json( json& j, const NwParamData& paramData )
 {
    j = json
    {
-      { "params", params.params },
+      { "params", paramData.params },
    };
 }
 void to_json( json& j, const NwParams& params )
@@ -86,20 +86,20 @@ void to_json( json& j, const NwParam& param )
 {
    j = param._values;
 }
-void to_json( json& j, const NwSeqMap& seqMap )
+void to_json( json& j, const NwSeqData& seqData )
 {
    j = json
    {
-      { "substName", seqMap.substName },
-      { "indel",     seqMap.indel     },
-      { "seqs",      seqMap.seqs      }
+      { "substName", seqData.substName },
+      { "indel",     seqData.indel     },
+      { "seqs",      seqData.seqs      }
    };
 }
 
 
 // convert the sequence string to a vector using a character map
 // + NOTE: add the header (zeroth) element if requested
-std::vector<int> seqStrToVect( const std::string str, const std::map<std::string, int> map, const bool addHeader )
+std::vector<int> seqStrToVect( const std::string& str, const std::map<std::string, int>& map, const bool addHeader )
 {
    // preallocate the requred amount of elements
    std::vector<int> vect { };
