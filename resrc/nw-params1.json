@@ -34,9 +34,8 @@
       "tileBy": [ 4, 6, 8, 16, 32 ],
       // // number of threads per block for kernels A and B
       // unsigned threadsPerBlockA = 16*WARPSZ;
-      "threadsPerBlockA": [ 32, 64, 128, 192, 256, 384, 512 ],
       // unsigned threadsPerBlockB = 8*WARPSZ;
-      "threadsPerBlockB": [ 32, 64, 128, 192, 256, 384, 512 ]
+      "threadsPerBlock": [ 32, 64, 128, 192, 256, 384, 512 ]
    },
    "Gpu3_DiagDiag_Coop":
    {

@@ -123,8 +123,8 @@ NwStat NwAlign_Gpu2_DiagRow_Ml2K( NwParams& pr, NwInput& nw, NwResult& res )
    {
       tileBx = pr["tileBx"].curr();
       tileBy = pr["tileBy"].curr();
-      threadsPerBlockA = pr["threadsPerBlockA"].curr();
-      threadsPerBlockB = pr["threadsPerBlockB"].curr();
+      threadsPerBlockA = pr["threadsPerBlock"].curr();
+      threadsPerBlockB = pr["threadsPerBlock"].curr();
    }
    catch( const std::out_of_range& )
    {
