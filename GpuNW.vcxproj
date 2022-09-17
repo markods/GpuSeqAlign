@@ -16,6 +16,7 @@
     <ClInclude Include="src\nw-algorithm.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\common.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\nw-algorithm.cpp" />
     <ClCompile Include="src\nw-cpu1-row-st.cpp" />

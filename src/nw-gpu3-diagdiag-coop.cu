@@ -308,8 +308,6 @@ __global__ static void Nw_Gpu3_Kernel(
 // parallel gpu implementation of the Needleman-Wunsch algorithm
 NwStat NwAlign_Gpu3_DiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
 {
-   // cuda status, used for getting the return status of cuda functions
-   cudaError_t cudaStatus;
    // tile size for the kernel
    // +   tile A must have one dimension fixed to the number of threads in a warp
    unsigned tileAx;
@@ -341,10 +339,11 @@ NwStat NwAlign_Gpu3_DiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
    // reserve space in the ram and gpu global memory
    try
    {
-      nw.seqX_gpu .init(              nw.adjcols );
-      nw.seqY_gpu .init( nw.adjrows              );
-      nw.score_gpu.init( nw.adjrows * nw.adjcols );
-      nw.score    .init( nw.adjrows * nw.adjcols );
+      nw.seqX_gpu .init(         adjcols );
+      nw.seqY_gpu .init( adjrows         );
+      nw.score_gpu.init( adjrows*adjcols );
+
+      nw.score    .init( nw.adjrows*nw.adjcols );
    }
    catch( const std::exception& ex )
    {

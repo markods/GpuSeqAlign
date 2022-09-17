@@ -14,7 +14,7 @@ NwStat NwAlign_Cpu2_Diag_St( NwParams& pr, NwInput& nw, NwResult& res )
    // reserve space in the ram
    try
    {
-      nw.score.init( nw.adjrows * nw.adjcols );
+      nw.score.init( nw.adjrows*nw.adjcols );
    }
    catch( const std::exception& ex )
    {

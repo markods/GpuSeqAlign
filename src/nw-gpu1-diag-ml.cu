@@ -74,8 +74,6 @@ __global__ static void Nw_Gpu1_Kernel(
 // parallel gpu implementation of the Needleman-Wunsch algorithm
 NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
 {
-   // cuda status, used for getting the return status of cuda functions
-   cudaError_t cudaStatus;
    // number of threads per block
    // +   the tile is one-dimensional
    unsigned threadsPerBlock;
@@ -104,10 +102,10 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
    // reserve space in the ram and gpu global memory
    try
    {
-      nw.seqX_gpu .init(              nw.adjcols );
-      nw.seqY_gpu .init( nw.adjrows              );
-      nw.score_gpu.init( nw.adjrows * nw.adjcols );
-      nw.score    .init( nw.adjrows * nw.adjcols );
+      nw.seqX_gpu .init(            nw.adjcols );
+      nw.seqY_gpu .init( nw.adjrows            );
+      nw.score_gpu.init( nw.adjrows*nw.adjcols );
+      nw.score    .init( nw.adjrows*nw.adjcols );
    }
    catch( const std::exception& ex )
    {

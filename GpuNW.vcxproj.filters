@@ -43,6 +43,9 @@
     <ClCompile Include="src\nw-trace1-plain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\common.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\nw-gpu1-diag-ml.cu">

@@ -55,6 +55,8 @@ enum class NwStat : int
    errorInvalidFormat    = 5,
    errorInvalidValue     = 6,
 };
+// cuda status, used for getting the return status of cuda functions
+extern thread_local cudaError_t cudaStatus;
 
 
 
@@ -129,7 +131,6 @@ public:
       T* pAlloc = nullptr;
       if( size > 0 )
       {
-         cudaError_t cudaStatus;
          if( cudaSuccess != ( cudaStatus = cudaMalloc( &pAlloc, size*sizeof( T ) ) ) )
          {
             throw std::bad_alloc();

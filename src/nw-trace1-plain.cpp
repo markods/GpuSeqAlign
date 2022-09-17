@@ -16,7 +16,7 @@ NwStat NwTrace1_Plain( const NwInput& nw, NwResult& res )
    // reserve space in the ram
    try
    {
-      res.trace.reserve( nw.adjrows + nw.adjcols );
+      res.trace.reserve( nw.adjrows-1 + nw.adjcols );
    }
    catch( const std::exception& ex )
    {

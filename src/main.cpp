@@ -65,9 +65,6 @@ int main( int argc, char *argv[] )
       std::cerr << "ERR - could not open output log file"; exit( -1 );
    }
    
-   // cuda status, used for getting the return status of cuda functions
-   cudaError_t cudaStatus;
-   
    // get the device properties
    cudaDeviceProp deviceProps;
    if( cudaSuccess != ( cudaStatus = cudaGetDeviceProperties( &deviceProps, 0/*deviceId*/ ) ) )

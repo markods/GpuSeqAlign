@@ -111,8 +111,6 @@ __global__ static void Nw_Gpu2_KernelB(
 // parallel gpu implementation of the Needleman-Wunsch algorithm
 NwStat NwAlign_Gpu2_DiagRow_Ml2K( NwParams& pr, NwInput& nw, NwResult& res )
 {
-   // cuda status, used for getting the return status of cuda functions
-   cudaError_t cudaStatus;
    // tile size for the kernel B
    unsigned tileBx;
    unsigned tileBy;
@@ -148,10 +146,11 @@ NwStat NwAlign_Gpu2_DiagRow_Ml2K( NwParams& pr, NwInput& nw, NwResult& res )
    // reserve space in the ram and gpu global memory
    try
    {
-      nw.seqX_gpu .init(              nw.adjcols );
-      nw.seqY_gpu .init( nw.adjrows              );
-      nw.score_gpu.init( nw.adjrows * nw.adjcols );
-      nw.score    .init( nw.adjrows * nw.adjcols );
+      nw.seqX_gpu .init(         adjcols );
+      nw.seqY_gpu .init( adjrows         );
+      nw.score_gpu.init( adjrows*adjcols );
+
+      nw.score    .init( nw.adjrows*nw.adjcols );
    }
    catch( const std::exception& ex )
    {
