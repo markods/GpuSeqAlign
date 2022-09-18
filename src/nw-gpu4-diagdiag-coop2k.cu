@@ -265,6 +265,9 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
    // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile B size (in order to be evenly divisible)
    int adjrows = 1 + tileBy*ceil( float( nw.adjrows-1 )/tileBy );
    int adjcols = 1 + tileBx*ceil( float( nw.adjcols-1 )/tileBx );
+   // special case when very small and very large sequences are compared
+   if( adjrows == 1 ) { adjrows = 1 + tileBy; }
+   if( adjcols == 1 ) { adjcols = 1 + tileBx; }
 
    // start the timer
    res.sw.start();
@@ -377,8 +380,6 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
          // take the number of threads on the largest diagonal of the tile
          // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
          blockB.x = nw.warpsz * ceil( max( tileBy, tileBx )*2./nw.warpsz );
-         // take the number of tiles on the largest score matrix diagonal as the only dimension
-         gridB.x = min( trows, tcols );
 
          // the maximum number of parallel blocks on a streaming multiprocessor
          int maxBlocksPerSm = 0;
@@ -390,8 +391,9 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
          {
             return NwStat::errorKernelFailure;
          }
-         // the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
-         gridB.x = min( gridB.x, nw.sm_count*maxBlocksPerSm );
+         // take the number of tiles on the largest score matrix diagonal as the only dimension
+         // +   the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
+         gridB.x = min( min( trows, tcols ), nw.sm_count*maxBlocksPerSm );
       }
 
 

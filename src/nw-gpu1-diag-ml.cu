@@ -88,9 +88,16 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
       return NwStat::errorInvalidValue;
    }
  
+   // adjusted gpu score matrix dimensions
+   // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile A size (in order to be evenly divisible)
+   int adjrows = nw.adjrows;
+   int adjcols = nw.adjcols;
+   // special case when very small and very large sequences are compared
+   if( adjrows == 1 ) { adjrows = 2; }
+   if( adjcols == 1 ) { adjcols = 2; }
    // the dimensions of the matrix without its row and column header
-   const int rows = -1 + nw.adjrows;
-   const int cols = -1 + nw.adjcols;
+   int rows = -1 + adjrows;
+   int cols = -1 + adjcols;
 
    // start the timer
    res.sw.start();
@@ -99,9 +106,10 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
    // reserve space in the ram and gpu global memory
    try
    {
-      nw.seqX_gpu .init(            nw.adjcols );
-      nw.seqY_gpu .init( nw.adjrows            );
-      nw.score_gpu.init( nw.adjrows*nw.adjcols );
+      nw.seqX_gpu .init(         adjcols );
+      nw.seqY_gpu .init( adjrows         );
+      nw.score_gpu.init( adjrows*adjcols );
+
       nw.score    .init( nw.adjrows*nw.adjcols );
    }
    catch( const std::exception& ex )
@@ -160,7 +168,6 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
             // take the number of blocks on the current score matrix diagonal as the only dimension
             // +   launch at least one block on the x axis
             gridA.x = ceil( float( dsize ) / threadsPerBlock );
-            if( gridA.x < 1 ) { gridA.x = 1; }
          }
 
 
@@ -177,8 +184,8 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
             &seqY_gpu,
             &score_gpu,
             &subst_gpu,
-            &nw.adjrows,
-            &nw.adjcols,
+            &adjrows,
+            &adjcols,
             &nw.substsz,
             &nw.indel,
             &d
@@ -203,7 +210,7 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
 
 
    // save the calculated score matrix
-   if( cudaSuccess != ( cudaStatus = memTransfer( nw.score, nw.score_gpu, nw.adjrows*nw.adjcols ) ) )
+   if( cudaSuccess != ( cudaStatus = memTransfer( nw.score, nw.score_gpu, nw.adjrows, nw.adjcols, adjcols ) ) )
    {
       return NwStat::errorMemoryTransfer;
    }

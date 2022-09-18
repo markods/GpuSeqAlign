@@ -326,8 +326,11 @@ NwStat NwAlign_Gpu3_DiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
 
    // adjusted gpu score matrix dimensions
    // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile A size (in order to be evenly divisible)
-   const int adjrows = 1 + tileAy*ceil( float( nw.adjrows-1 )/tileAy );
-   const int adjcols = 1 + tileAx*ceil( float( nw.adjcols-1 )/tileAx );
+   int adjrows = 1 + tileAy*ceil( float( nw.adjrows-1 )/tileAy );
+   int adjcols = 1 + tileAx*ceil( float( nw.adjcols-1 )/tileAx );
+   // special case when very small and very large sequences are compared
+   if( adjrows == 1 ) { adjrows = 1 + tileAy; }
+   if( adjcols == 1 ) { adjcols = 1 + tileAx; }
 
    // start the timer
    res.sw.start();
@@ -389,8 +392,6 @@ NwStat NwAlign_Gpu3_DiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
          // take the number of threads on the largest diagonal of the tile
          // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
          blockA.x = nw.warpsz * ceil( max( tileAy, tileAx )*2./nw.warpsz );
-         // take the number of tiles on the largest score matrix diagonal as the only dimension
-         gridA.x = min( trows, tcols );
 
          // the maximum number of parallel blocks on a streaming multiprocessor
          int maxBlocksPerSm = 0;
@@ -402,8 +403,9 @@ NwStat NwAlign_Gpu3_DiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
          {
             return NwStat::errorKernelFailure;
          }
-         // the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
-         gridA.x = min( gridA.x, nw.sm_count*maxBlocksPerSm );
+         // take the number of tiles on the largest score matrix diagonal as the only dimension
+         // +   the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
+         gridA.x = min( min( trows, tcols ), nw.sm_count*maxBlocksPerSm );
       }
 
 

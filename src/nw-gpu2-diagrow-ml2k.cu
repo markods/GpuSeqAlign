@@ -135,6 +135,9 @@ NwStat NwAlign_Gpu2_DiagRow_Ml2K( NwParams& pr, NwInput& nw, NwResult& res )
    // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile A size (in order to be evenly divisible)
    int adjrows = 1 + tileBy*ceil( float( nw.adjrows-1 )/tileBy );
    int adjcols = 1 + tileBx*ceil( float( nw.adjcols-1 )/tileBx );
+   // special case when very small and very large sequences are compared
+   if( adjrows == 1 ) { adjrows = 1 + tileBy; }
+   if( adjcols == 1 ) { adjcols = 1 + tileBx; }
 
    // start the timer
    res.sw.start();
@@ -194,7 +197,7 @@ NwStat NwAlign_Gpu2_DiagRow_Ml2K( NwParams& pr, NwInput& nw, NwResult& res )
          // take the number of threads per block as the only dimension
          blockA.x = threadsPerBlockA;
          // take the number of blocks on the score matrix diagonal as the only dimension
-         gridA.x = ceil( float( max2( adjrows, adjcols ) ) / threadsPerBlockA )*threadsPerBlockA;
+         gridA.x = ceil( float( max2( adjrows, adjcols ) ) / threadsPerBlockA );
       }
 
 
@@ -262,7 +265,6 @@ NwStat NwAlign_Gpu2_DiagRow_Ml2K( NwParams& pr, NwInput& nw, NwResult& res )
             // take the number of blocks on the current score matrix diagonal as the only dimension
             // +   launch at least one block on the x axis
             gridB.x = ceil( float( dsize ) / threadsPerBlockB );
-            if( gridB.x < 1 ) { gridB.x = 1; }
          }
 
 
