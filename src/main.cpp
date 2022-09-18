@@ -157,7 +157,9 @@ int main( int argc, char *argv[] )
    }
 
    // write the csv file's header
-   resHeaderToCsv( ofsRes );
+   resHeaderToCsv( ofsRes, resData );
+   // if the csv header should be written to stderr
+   bool writeCsvHeaderToStderr = true;
 
 
 
@@ -166,7 +168,7 @@ int main( int argc, char *argv[] )
    {
       // get the current algorithm parameters
       const std::string& algName = paramTuple.first;
-      NwParams algParams = paramTuple.second;
+      NwParams& algParams = paramTuple.second;
 
       // if the current algorithm doesn't exist, skip it
       if( algData.algMap.find( algName ) == algData.algMap.end() )
@@ -175,7 +177,7 @@ int main( int argc, char *argv[] )
       }
 
       // get the current algorithm and initialize its parameters
-      NwAlgorithm alg = algData.algMap[ algName ];
+      NwAlgorithm& alg = algData.algMap[ algName ];
       alg.init( algParams );
 
 
@@ -208,7 +210,7 @@ int main( int argc, char *argv[] )
             // initialize the result in the result list
             resData.resList.push_back( NwResult {
                algName,   // algName;
-               algParams, // algParams;
+               algParams.snapshot(), // algParams;
 
                nw.seqX.size(), // seqX_len;
                nw.seqY.size(), // seqY_len;
@@ -241,8 +243,23 @@ int main( int argc, char *argv[] )
                // // TODO: verify that the hashes match
                // res.errstep = 4;
             }
+
+            // if there is an error in any step
+            if( res.errstep )
+            {
+               // add the csv header to stderr
+               if( writeCsvHeaderToStderr )
+               {
+                  // write the csv file's header
+                  resHeaderToCsv( std::cerr, resData );
+                  writeCsvHeaderToStderr = false;
+               }
+
+               // print the result to stderr
+               to_csv( std::cerr, res ); std::cerr << std::endl;
+            }
             
-            // print result as a csv line to the csv output file
+            // print the result as a csv line to the csv output file
             to_csv( ofsRes, res ); ofsRes << '\n';
 
             // clear cuda non-sticky errors

@@ -104,22 +104,15 @@ void to_json( json& j, const NwSeqData& seqData )
 
 
 // conversion to csv from object
-void to_csv( std::ostream& os, const std::vector<NwResult>& resList )
-{
-   // write the csv header
-   resHeaderToCsv( os );
-
-   // write the csv rows
-   for( auto& res : resList )
-   {
-      to_csv( os, res );
-      os << '\n';
-   }
-}
-void resHeaderToCsv( std::ostream& os )
+void resHeaderToCsv( std::ostream& os, const NwResData& resData )
 {
    FormatFlagsGuard fg { os };
    os.fill(' ');
+
+   os << "# " << std::setw(1) << std::left << "substFname: \""  << resData.substFname << "\"" << '\n';
+   os << "# " << std::setw(1) << std::left << "paramFname: \""  << resData.paramFname << "\"" << '\n';
+   os << "# " << std::setw(1) << std::left << "seqFname: \""    << resData.seqFname   << "\"" << '\n';
+   os << "# ______________________________________________________________________________"   << '\n';
 
    os << std::setw(20) << std::left  << "algName" << ", ";
    os << std::setw( 2) << std::right << "iY" << ", ";
@@ -131,13 +124,13 @@ void resHeaderToCsv( std::ostream& os )
 
    os << std::setw(42) << std::left  << "algParams" << ",   ";
 
-   os << std::setw( 1) << std::right << "stat"    << ", ";
-   os << std::setw( 1) << std::right << "errstep" << ",   ";
+   os << std::setw( 1) << std::right << "errstep" << ", ";
+   os << std::setw( 1) << std::right << "stat"    << ",   ";
 
    os << std::setw(10) << std::right << "score_hash" << ", ";
    os << std::setw(10) << std::right << "trace_hash" << ",   ";
 
-   os << std::setw( 1) << std::left  << "alloc   ,   cpy-dev,    init-hdr,   calc-1,   calc-2,   calc-3,     cpy-host,   total   , calc-sum" << '\n';
+   os << std::setw( 1) << std::left  << "       alloc,        cpy-dev,       init-hdr,         calc-1,       calc-2,       calc-3,       cpy-host,          total,     calc-sum" << '\n';
 }
 void to_csv( std::ostream& os, const NwResult& res )
 {
@@ -153,10 +146,10 @@ void to_csv( std::ostream& os, const NwResult& res )
       os << std::setw( 5) << std::right << res.seqY_len << ", ";
       os << std::setw( 5) << std::right << res.seqX_len << ",   ";
 
-      os << std::setw(42) << std::left; to_csv( os, res.algParams ); os << ",   ";
+      os << std::setw(42) << std::left; paramsToCsv( os, res.algParams ); os << ",   ";
 
-      os << std::setw( 1) << std::right << int( res.stat ) << ", ";
-      os << std::setw( 1) << std::right << res.errstep     << ",            ";
+      os << std::setw( 1) << std::right << res.errstep     << ", ";
+      os << std::setw( 1) << std::right << int( res.stat ) << ",            ";
 
       os.fill('0');
       os << std::setw(10) << std::right << res.score_hash << ", ";
@@ -165,23 +158,22 @@ void to_csv( std::ostream& os, const NwResult& res )
    fg.restore();
    to_csv( os, res.sw_align );
 }
-void to_csv( std::ostream& os, const NwParams& params )
+void paramsToCsv( std::ostream& os, const std::map<std::string, int>& paramMap )
 {
    std::stringstream strs;
    {
-      const std::map<std::string, NwParam>& paramList = params._params;
       strs.fill(' ');
       
       strs << "\"";
       bool firstIter = true;
-      for( auto iter = paramList.begin();   iter != paramList.end();   iter++ )
+      for( auto iter = paramMap.begin();   iter != paramMap.end();   iter++ )
       {
          if( !firstIter ) { strs << " "; }
          else             { firstIter = false; }
          
          auto& paramName = iter->first;
          auto& paramValue = iter->second;
-         strs << paramName << ":" << std::setw( 2) << std::right << paramValue.curr();
+         strs << paramName << ":" << std::setw( 2) << std::right << paramValue;
       }
       strs << "\"";
    }
@@ -211,7 +203,7 @@ void lapTimeToCsv( std::ostream& os, float lapTime )
 {
    FormatFlagsGuard fg { os };
 
-   os << std::fixed << std::setw(8) << std::setprecision(3) << std::setfill('0') << lapTime;
+   os << std::fixed << std::setw(12) << std::setprecision(3) << std::setfill(' ') << lapTime;
 }
 
 

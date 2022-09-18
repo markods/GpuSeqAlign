@@ -175,7 +175,7 @@ public:
    void lap( std::string lap_name )
    {
       auto curr = Clock::now();
-      auto diff = std::chrono::duration_cast<Millis>( curr - _start ).count() / 1000.f;
+      float diff = float( std::chrono::duration_cast<Micros>( curr - _start ).count() ) / 1000;
       _start = curr;
 
       _laps.insert_or_assign( lap_name, diff );
@@ -210,7 +210,7 @@ public:
 private:
    using Clock = std::chrono::steady_clock;
    using TimePoint = std::chrono::time_point<Clock>;
-   using Millis = std::chrono::milliseconds;
+   using Micros = std::chrono::nanoseconds;
 
    TimePoint _start;
    std::map< std::string, float > _laps;
@@ -277,6 +277,20 @@ struct NwParams
       _isEnd = false;
    }
 
+   std::map< std::string, int > snapshot() const
+   {
+      std::map< std::string, int > res;
+      for( const auto& paramTuple: _params )
+      {
+         const std::string& paramName = paramTuple.first;
+         int paramValue = paramTuple.second.curr();
+
+         res[ paramName ] = paramValue;
+      }
+
+      return res;
+   }
+
    std::map< std::string, NwParam > _params;
    bool _isEnd;
 };
@@ -325,7 +339,7 @@ struct NwInput
 struct NwResult
 {
    std::string algName;
-   NwParams algParams;
+   std::map< std::string, int > algParams;
 
    size_t seqX_len;
    size_t seqY_len;
