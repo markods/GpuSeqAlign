@@ -26,7 +26,8 @@ NwStat NwAlign_Cpu4_DiagRow_Mt( NwParams& pr, NwInput& nw, NwResult& res )
    const int colblocks = ceil( float( cols ) / blocksz );
 
    // start the timer
-   res.sw.start();
+   Stopwatch& sw = res.sw_align;
+   sw.start();
 
 
    // reserve space in the ram
@@ -40,7 +41,7 @@ NwStat NwAlign_Cpu4_DiagRow_Mt( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // measure allocation time
-   res.sw.lap( "alloc" );
+   sw.lap( "alloc" );
 
 
 
@@ -55,7 +56,7 @@ NwStat NwAlign_Cpu4_DiagRow_Mt( NwParams& pr, NwInput& nw, NwResult& res )
       #pragma omp single
       {
          // measure header initialization time
-         res.sw.lap( "init-hdr" );
+         sw.lap( "init-hdr" );
       }
       
 
@@ -89,7 +90,7 @@ NwStat NwAlign_Cpu4_DiagRow_Mt( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // measure calculation time
-   res.sw.lap( "calc" );
+   sw.lap( "calc" );
 
    return NwStat::success;
 }

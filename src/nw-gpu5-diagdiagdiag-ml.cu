@@ -469,7 +469,7 @@
 //    cudaMalloc( &nw_gpu.subst, nw_gpu.substsz*nw_gpu.substsz * sizeof( int ) );
 
 //    // start the host timer and initialize the gpu timer
-//    res.sw.lap( "cpu-start" );
+//    sw.lap( "cpu-start" );
 //    res.Tgpu = 0;
 
 //    // copy data from host to device
@@ -583,8 +583,8 @@
 //    );      
 
 //    // stop the cpu timer
-//    res.sw.lap( "cpu-end" );
-//    res.Tcpu = res.sw.dt( "cpu-end", "cpu-start" );
+//    sw.lap( "cpu-end" );
+//    res.Tcpu = sw.dt( "cpu-end", "cpu-start" );
 // }
 
 

@@ -96,6 +96,24 @@ struct NwSeqData
    std::vector<std::string> seqList;
 };
 
+struct NwResData
+{
+   // directories
+   std::string projPath;
+   std::string resrcPath;
+   std::string logPath;
+
+   // filenames
+   std::string isoTime;
+   std::string substFname;
+   std::string paramFname;
+   std::string seqFname;
+   std::string resFname;
+
+   // result list
+   std::vector<NwResult> resList;
+};
+
 // conversion to object from json
 void from_json( const json& j, NwSubstData& substData );
 void from_json( const json& j, NwParamData& paramData );

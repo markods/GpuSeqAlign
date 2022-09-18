@@ -36,28 +36,39 @@ int main( int argc, char *argv[] )
       exit( -1 );
    }
 
-   std::string projPath  = "../../";
-   std::string logPath   = projPath + "log/" + IsoTime() + ".log";
-   std::string substPath = projPath + "resrc/" + argv[ 1 ];
-   std::string paramPath = projPath + "resrc/" + argv[ 2 ];
-   std::string seqPath   = projPath + "resrc/" + argv[ 3 ];
-
-// AlgorithmData algData;
+   extern NwAlgorithmData algData;
    NwSubstData substData;
    NwParamData paramData;
    NwSeqData seqData;
+   NwResData resData;
 
-   if( NwStat::success != readFromJson( substPath, substData ) )
+   resData.projPath  = "../../";
+   resData.resrcPath = resData.projPath + "resrc/";
+   resData.logPath   = resData.projPath + "log/";
+
+   resData.isoTime    = IsoTime();
+   resData.substFname = argv[ 1 ];
+   resData.paramFname = argv[ 2 ];
+   resData.seqFname   = argv[ 3 ];
+
+   // read data from input .json files
    {
-      std::cerr << "ERR - could not open/read json from substs file"; exit( -1 );
-   }
-   if( NwStat::success != readFromJson( paramPath, paramData ) )
-   {
-      std::cerr << "ERR - could not open/read json from params file"; exit( -1 );
-   }
-   if( NwStat::success != readFromJson( seqPath,   seqData   ) )
-   {
-      std::cerr << "ERR - could not open/read json from seqs file"; exit( -1 );
+      std::string substPath = resData.resrcPath + resData.substFname;
+      std::string paramPath = resData.resrcPath + resData.paramFname;
+      std::string seqPath   = resData.resrcPath + resData.seqFname;
+
+      if( NwStat::success != readFromJson( substPath, substData ) )
+      {
+         std::cerr << "ERR - could not open/read json from substs file"; exit( -1 );
+      }
+      if( NwStat::success != readFromJson( paramPath, paramData ) )
+      {
+         std::cerr << "ERR - could not open/read json from params file"; exit( -1 );
+      }
+      if( NwStat::success != readFromJson( seqPath, seqData ) )
+      {
+         std::cerr << "ERR - could not open/read json from seqs file"; exit( -1 );
+      }
    }
    
    // get the device properties
@@ -186,15 +197,35 @@ int main( int argc, char *argv[] )
             for( ;   alg.alignPr().hasCurr();   alg.alignPr().next() )
             for( int iR = 0; iR < seqData.repeat; iR++ )
             {
-               // initialize the result
-               NwResult res {};
+               // initialize the result in the result list
+               resData.resList.push_back( NwResult {
+                  algName,   // algName;
+                  algParams, // algParams;
+
+                  nw.seqX.size(), // seqX_len;
+                  nw.seqY.size(), // seqY_len;
+
+                  iX, // iX;
+                  iY, // iY;
+                  iR, // iR;
+
+                  {}, // sw_align;
+                  {}, // sw_hash;
+                  {}, // sw_trace;
+
+                  {}, // score_hash;
+                  {}, // trace_hash;
+
+                  {}, // stat;
+                  {}, // errstep;   // 0 for success
+               });
+               // get the result from the list
+               NwResult& res = resData.resList.back();
 
                // compare the sequences
-               int errstep = 0;
-               NwStat stat = NwStat::success;
-               if( !errstep && NwStat::success != ( stat = alg.align( nw, res ) ) ) { errstep = 1; }
-               if( !errstep && NwStat::success != ( stat = alg.hash ( nw, res ) ) ) { errstep = 2; }
-               if( !errstep && NwStat::success != ( stat = alg.trace( nw, res ) ) ) { errstep = 3; }
+               if( !res.errstep && NwStat::success != ( res.stat = alg.align( nw, res ) ) ) { res.errstep = 1; }
+               if( !res.errstep && NwStat::success != ( res.stat = alg.hash ( nw, res ) ) ) { res.errstep = 2; }
+               if( !res.errstep && NwStat::success != ( res.stat = alg.trace( nw, res ) ) ) { res.errstep = 3; }
 
                // TODO: print results to .csv file
                // print the algorithm name and info
@@ -203,8 +234,8 @@ int main( int argc, char *argv[] )
                          << std::setw( 2) << std::right << iX << "   "
                          << std::setw(20) << std::left  << algName << "   ";
 
-               if( !errstep ) { std::cout << std::setw(10) << std::right << res.score_hash                       << std::endl; }
-               else           { std::cout << "<STEP_" << errstep << " FAILED WITH STAT_" << ( (int)stat ) << ">" << std::endl; }
+               if( !res.errstep ) { std::cout << std::setw(10) << std::right << res.score_hash                               << std::endl; }
+               else               { std::cout << "<STEP_" << res.errstep << " FAILED WITH STAT_" << ( (int)res.stat ) << ">" << std::endl; }
 
                // clear cuda non-sticky errors
                cudaStatus = cudaGetLastError();
@@ -226,10 +257,15 @@ int main( int argc, char *argv[] )
       }
    }
 
-   std::ofstream ofsLog;
-   if( NwStat::success != openOutFile ( logPath,   ofsLog   ) )
+   // write the results to the output file
    {
-      std::cerr << "ERR - could not open output log file"; exit( -1 );
+      std::string resPath = resData.logPath + resData.isoTime + ".log";
+      std::ofstream ofsRes;
+
+      if( NwStat::success != openOutFile( resPath, ofsRes ) )
+      {
+         std::cerr << "ERR - could not open output log file"; exit( -1 );
+      }
    }
 
    exit( 0 );

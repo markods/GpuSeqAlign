@@ -26,7 +26,8 @@ NwStat NwAlign_Cpu3_DiagRow_St( NwParams& pr, NwInput& nw, NwResult& res )
    const int colblocks = ceil( float( cols ) / blocksz );
 
    // start the timer
-   res.sw.start();
+   Stopwatch& sw = res.sw_align;
+   sw.start();
 
 
    // reserve space in the ram
@@ -40,7 +41,7 @@ NwStat NwAlign_Cpu3_DiagRow_St( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // measure allocation time
-   res.sw.lap( "alloc" );
+   sw.lap( "alloc" );
 
 
    // initialize the first row and column of the score matrix
@@ -48,7 +49,7 @@ NwStat NwAlign_Cpu3_DiagRow_St( NwParams& pr, NwInput& nw, NwResult& res )
    for( int j = 0; j < nw.adjcols; j++ ) el(nw.score,nw.adjcols, 0,j) = j*nw.indel;
 
    // measure header initialization time
-   res.sw.lap( "init-hdr" );
+   sw.lap( "init-hdr" );
 
 
 
@@ -79,7 +80,7 @@ NwStat NwAlign_Cpu3_DiagRow_St( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // measure calculation time
-   res.sw.lap( "calc" );
+   sw.lap( "calc" );
 
    return NwStat::success;
 }

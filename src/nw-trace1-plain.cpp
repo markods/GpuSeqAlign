@@ -12,7 +12,8 @@ NwStat NwTrace1_Plain( const NwInput& nw, NwResult& res )
    std::vector<int> trace;
 
    // start the timer
-   res.sw.start();
+   Stopwatch& sw = res.sw_trace;
+   sw.start();
 
 
    // reserve space in the ram
@@ -26,7 +27,7 @@ NwStat NwTrace1_Plain( const NwInput& nw, NwResult& res )
    }
 
    // measure trace time
-   res.sw.lap( "alloc-trace" );
+   sw.lap( "alloc-trace" );
 
 
    // for all elements on one of the optimal paths
@@ -58,7 +59,7 @@ NwStat NwTrace1_Plain( const NwInput& nw, NwResult& res )
    std::reverse( trace.begin(), trace.end() );
 
    // measure trace time
-   res.sw.lap( "trace" );
+   sw.lap( "trace" );
 
 
    // calculate the hash value
@@ -71,7 +72,7 @@ NwStat NwTrace1_Plain( const NwInput& nw, NwResult& res )
    res.trace_hash = hash;
 
    // measure trace time
-   res.sw.lap( "hash-trace" );
+   sw.lap( "hash-trace" );
 
    return NwStat::success;
 }

@@ -303,9 +303,25 @@ struct NwInput
 // results which the Needleman-Wunsch algorithm variant returns
 struct NwResult
 {
-   Stopwatch sw;
+   std::string algName;
+   NwParams algParams;
+
+   size_t seqX_len;
+   size_t seqY_len;
+
+   int iX;
+   int iY;
+   int iR;
+
+   Stopwatch sw_align;
+   Stopwatch sw_hash;
+   Stopwatch sw_trace;
+
    unsigned score_hash;
    unsigned trace_hash;
+
+   NwStat stat;
+   int errstep;   // 0 for success
 };
 
 // update the score given the current score matrix and position

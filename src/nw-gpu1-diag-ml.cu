@@ -100,7 +100,8 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
    int cols = -1 + adjcols;
 
    // start the timer
-   res.sw.start();
+   Stopwatch& sw = res.sw_align;
+   sw.start();
 
 
    // reserve space in the ram and gpu global memory
@@ -118,7 +119,7 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // measure allocation time
-   res.sw.lap( "alloc" );
+   sw.lap( "alloc" );
 
    
    // copy data from host to device
@@ -141,7 +142,7 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // measure memory transfer time
-   res.sw.lap( "mem-to-device" );
+   sw.lap( "mem-to-device" );
 
 
 
@@ -214,7 +215,7 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // measure calculation time
-   res.sw.lap( "calc" );
+   sw.lap( "calc" );
 
 
    // save the calculated score matrix
@@ -224,7 +225,7 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // measure memory transfer time
-   res.sw.lap( "mem-to-host" );
+   sw.lap( "mem-to-host" );
 
    return NwStat::success;
 }
