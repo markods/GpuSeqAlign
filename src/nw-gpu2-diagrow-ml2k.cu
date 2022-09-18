@@ -260,7 +260,9 @@ NwStat NwAlign_Gpu2_DiagRow_Ml2K( NwParams& pr, NwInput& nw, NwResult& res )
             // take the number of threads per block as the only dimension
             blockB.x = threadsPerBlockB;
             // take the number of blocks on the current score matrix diagonal as the only dimension
-            gridB.x = ceil( float( dsize ) / threadsPerBlockB )*threadsPerBlockB;
+            // +   launch at least one block on the x axis
+            gridB.x = ceil( float( dsize ) / threadsPerBlockB );
+            if( gridB.x < 1 ) { gridB.x = 1; }
          }
 
 

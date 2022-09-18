@@ -158,7 +158,9 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
             // take the number of threads per block as the only dimension
             blockA.x = threadsPerBlock;
             // take the number of blocks on the current score matrix diagonal as the only dimension
-            gridA.x = ceil( float( dsize ) / threadsPerBlock )*threadsPerBlock;
+            // +   launch at least one block on the x axis
+            gridA.x = ceil( float( dsize ) / threadsPerBlock );
+            if( gridA.x < 1 ) { gridA.x = 1; }
          }
 
 

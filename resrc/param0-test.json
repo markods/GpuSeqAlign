@@ -1,5 +1,7 @@
 // algorithm parameters
 {
+   "Cpu1_Row_St":
+   { },
    "Gpu1_Diag_Ml":
    {
       // // number of threads per block
