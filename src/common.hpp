@@ -321,6 +321,34 @@ inline void UpdateScore( NwInput& nw, int i, int j ) noexcept
 
 
 
+// initialize memory on the device starting from the given element
+template< typename T >
+cudaError_t memSet(
+   T* const arr,
+   int idx,
+   size_t count,
+   int value
+)
+{
+   cudaError_t status = cudaMemset(
+      /*devPtr*/ &arr[ idx ],           // Pointer to device memory
+      /*value*/  value,                 // Value to set for each byte of specified memory
+      /*count*/  count * sizeof( T )    // Size in bytes to set
+   );
+
+   return status;
+}
+template< typename T >
+cudaError_t memSet(
+   DeviceArray<T>& arr,
+   int idx,
+   int value
+)
+{
+   return memSet( arr.data(), idx, arr.size()-idx, value );
+}
+
+
 // transfer data between the host and the device
 template< typename T >
 cudaError_t memTransfer(
@@ -357,6 +385,7 @@ cudaError_t memTransfer(
 {
    return memTransfer( dst.data(), src.data(), elemcnt, cudaMemcpyDeviceToHost );
 }
+
 
 // transfer a pitched matrix to a contiguous matrix, between the host and the device
 // + NOTE: dst and src cannot overlap

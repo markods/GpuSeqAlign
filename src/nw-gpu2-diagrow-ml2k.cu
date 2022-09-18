@@ -162,12 +162,20 @@ NwStat NwAlign_Gpu2_DiagRow_Ml2K( NwParams& pr, NwInput& nw, NwResult& res )
 
    
    // copy data from host to device
-   // +   gpu padding remains uninitialized, but this is not an issue since padding is only used to simplify kernel code (optimization)
    if( cudaSuccess != ( cudaStatus = memTransfer( nw.seqX_gpu, nw.seqX, nw.adjcols ) ) )
    {
       return NwStat::errorMemoryTransfer;
    }
    if( cudaSuccess != ( cudaStatus = memTransfer( nw.seqY_gpu, nw.seqY, nw.adjrows ) ) )
+   {
+      return NwStat::errorMemoryTransfer;
+   }
+   // also initialize padding, since it is used to access elements in the substitution matrix
+   if( cudaSuccess != ( cudaStatus = memSet( nw.seqX_gpu, nw.adjcols, 0/*value*/ ) ) )
+   {
+      return NwStat::errorMemoryTransfer;
+   }
+   if( cudaSuccess != ( cudaStatus = memSet( nw.seqY_gpu, nw.adjrows, 0/*value*/ ) ) )
    {
       return NwStat::errorMemoryTransfer;
    }
