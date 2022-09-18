@@ -210,7 +210,7 @@ int main( int argc, char *argv[] )
             // initialize the result in the result list
             resData.resList.push_back( NwResult {
                algName,   // algName;
-               algParams.snapshot(), // algParams;
+               alg.alignPr().snapshot(), // algParams;
 
                nw.seqX.size(), // seqX_len;
                nw.seqY.size(), // seqY_len;
