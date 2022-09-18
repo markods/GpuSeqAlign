@@ -110,7 +110,7 @@ NwStat NwPrint1_Plain( std::ostream& os, const int* const mat, const int rows, c
    for( int i = 0; i < rows; i++ )
    {
       for( int j = 0; j < cols; j++ ) { os << el(mat,cols, i,j) << ' '; }
-      os << "\n";
+      os << '\n';
    }
 
    return NwStat::success;

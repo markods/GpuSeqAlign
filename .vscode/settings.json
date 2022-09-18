@@ -97,7 +97,10 @@
         "variant": "cpp",
         "__node_handle": "cpp",
         "memory_resource": "cpp",
-        "__locale": "cpp"
+        "__locale": "cpp",
+        "version": "cpp",
+        "condition_variable": "cpp",
+        "unordered_set": "cpp"
     },
     "peacock.color": "#832561",
     "workbench.colorCustomizations": {

@@ -1,5 +1,6 @@
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 #include <ctime>
 #include <vector>
 #include "nw-algorithm.hpp"
@@ -99,6 +100,120 @@ void to_json( json& j, const NwSeqData& seqData )
       { "seqList",   seqData.seqList   }
    };
 }
+
+
+
+// conversion to csv from object
+void to_csv( std::ostream& os, const std::vector<NwResult>& resList )
+{
+   // write the csv header
+   resHeaderToCsv( os );
+
+   // write the csv rows
+   for( auto& res : resList )
+   {
+      to_csv( os, res );
+      os << '\n';
+   }
+}
+void resHeaderToCsv( std::ostream& os )
+{
+   FormatFlagsGuard fg { os };
+   os.fill(' ');
+
+   os << std::setw(20) << std::left  << "algName" << ", ";
+   os << std::setw( 2) << std::right << "iY" << ", ";
+   os << std::setw( 2) << std::right << "iX" << ", ";
+   os << std::setw( 2) << std::right << "iR" << ",   ";
+
+   os << std::setw( 5) << std::right << "lenY" << ", ";
+   os << std::setw( 5) << std::right << "lenX" << ",   ";
+
+   os << std::setw(42) << std::left  << "algParams" << ",   ";
+
+   os << std::setw( 1) << std::right << "stat"    << ", ";
+   os << std::setw( 1) << std::right << "errstep" << ",   ";
+
+   os << std::setw(10) << std::right << "score_hash" << ", ";
+   os << std::setw(10) << std::right << "trace_hash" << ",   ";
+
+   os << std::setw( 1) << std::left  << "alloc   ,   cpy-dev,    init-hdr,   calc-1,   calc-2,   calc-3,     cpy-host,   total   , calc-sum" << '\n';
+}
+void to_csv( std::ostream& os, const NwResult& res )
+{
+   FormatFlagsGuard fg { os };
+   {
+      os.fill(' ');
+
+      os << std::setw(20) << std::left  << res.algName << ", ";
+      os << std::setw( 2) << std::right << res.iY << ", ";
+      os << std::setw( 2) << std::right << res.iX << ", ";
+      os << std::setw( 2) << std::right << res.iR << ",   ";
+
+      os << std::setw( 5) << std::right << res.seqY_len << ", ";
+      os << std::setw( 5) << std::right << res.seqX_len << ",   ";
+
+      os << std::setw(42) << std::left; to_csv( os, res.algParams ); os << ",   ";
+
+      os << std::setw( 1) << std::right << int( res.stat ) << ", ";
+      os << std::setw( 1) << std::right << res.errstep     << ",            ";
+
+      os.fill('0');
+      os << std::setw(10) << std::right << res.score_hash << ", ";
+      os << std::setw(10) << std::right << res.trace_hash << ",   ";
+   }
+   fg.restore();
+   to_csv( os, res.sw_align );
+}
+void to_csv( std::ostream& os, const NwParams& params )
+{
+   std::stringstream strs;
+   {
+      const std::map<std::string, NwParam>& paramList = params._params;
+      strs.fill(' ');
+      
+      strs << "\"";
+      bool firstIter = true;
+      for( auto iter = paramList.begin();   iter != paramList.end();   iter++ )
+      {
+         if( !firstIter ) { strs << " "; }
+         else             { firstIter = false; }
+         
+         auto& paramName = iter->first;
+         auto& paramValue = iter->second;
+         strs << paramName << ":" << std::setw( 2) << std::right << paramValue.curr();
+      }
+      strs << "\"";
+   }
+
+   os << strs.str();
+}
+void to_csv( std::ostream& os, const Stopwatch& sw )
+{
+   lapTimeToCsv( os, sw.get_or_default( "alloc"       ) ); os << ",   ";
+   lapTimeToCsv( os, sw.get_or_default( "cpy-dev"  ) ); os << ",   ";
+   lapTimeToCsv( os, sw.get_or_default( "init-hdr"    ) ); os << ",   ";
+   lapTimeToCsv( os, sw.get_or_default( "calc-1"      ) ); os << ", ";
+   lapTimeToCsv( os, sw.get_or_default( "calc-2"      ) ); os << ", ";
+   lapTimeToCsv( os, sw.get_or_default( "calc-3"      ) ); os << ",   ";
+   lapTimeToCsv( os, sw.get_or_default( "cpy-host" ) ); os << ",   ";
+
+   float total = sw.total();
+   float calc_total =
+      sw.get_or_default( "calc-1" ) +
+      sw.get_or_default( "calc-2" ) +
+      sw.get_or_default( "calc-3" );
+
+   lapTimeToCsv( os, total      ); os << ", ";
+   lapTimeToCsv( os, calc_total );
+}
+void lapTimeToCsv( std::ostream& os, float lapTime )
+{
+   FormatFlagsGuard fg { os };
+
+   os << std::fixed << std::setw(8) << std::setprecision(3) << std::setfill('0') << lapTime;
+}
+
 
 
 // convert the sequence string to a vector using a character map

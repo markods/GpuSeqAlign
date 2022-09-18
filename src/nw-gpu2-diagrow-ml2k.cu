@@ -182,7 +182,7 @@ NwStat NwAlign_Gpu2_DiagRow_Ml2K( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // measure memory transfer time
-   sw.lap( "memcpy-to-device" );
+   sw.lap( "cpy-dev" );
 
 
 
@@ -326,7 +326,7 @@ NwStat NwAlign_Gpu2_DiagRow_Ml2K( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // measure memory transfer time
-   sw.lap( "memcpy-to-host" );
+   sw.lap( "cpy-host" );
 
    return NwStat::success;
 }

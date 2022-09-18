@@ -312,7 +312,7 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // measure memory transfer time
-   sw.lap( "memcpy-to-device" );
+   sw.lap( "cpy-dev" );
 
 
 
@@ -445,7 +445,7 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // measure memory transfer time
-   sw.lap( "memcpy-to-host" );
+   sw.lap( "cpy-host" );
 
    return NwStat::success;
 }

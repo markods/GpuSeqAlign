@@ -186,6 +186,27 @@ public:
       _laps.clear();
    }
 
+   float total() const
+   {
+      float sum = 0;
+      for( auto& lap : _laps ) { sum += lap.second; }
+      return sum;
+   }
+
+   float get_or_default( const std::string& lap_name ) const
+   {
+      try
+      {
+         return _laps.at( lap_name );
+      }
+      catch( const std::exception& ex )
+      {
+         return 0;
+      }
+   }
+   const std::map< std::string, float >& laps() const { return _laps; }
+
+
 private:
    using Clock = std::chrono::steady_clock;
    using TimePoint = std::chrono::time_point<Clock>;
@@ -204,16 +225,16 @@ public:
    NwParam( std::vector<int> values )
    {
       _values = values;
-      _curr = 0;
+      _currIdx = 0;
    }
 
-   int curr() { return _values[ _curr ]; }
-   bool hasCurr() { return _curr < _values.size(); }
-   void next() { _curr++; }
-   void reset() { _curr = 0; }
+   int curr() const { return _values[ _currIdx ]; }
+   bool hasCurr() const { return _currIdx < _values.size(); }
+   void next() { _currIdx++; }
+   void reset() { _currIdx = 0; }
 
    std::vector<int> _values;
-   int _curr;
+   int _currIdx;
 };
 
 // parameters for the Needleman-Wunsch algorithm variant
@@ -233,7 +254,7 @@ struct NwParams
 
    NwParam& operator[] ( const std::string name ) { return _params.at( name ); }
 
-   bool hasCurr() { return !_isEnd; }
+   bool hasCurr() const { return !_isEnd; }
    void next()   // updates starting from the last parameter and so on
    {
       for( auto iter = _params.rbegin();   iter != _params.rend();   iter++ )
@@ -455,6 +476,11 @@ public:
    }
 
    ~FormatFlagsGuard()
+   {
+      restore();
+   }
+
+   void restore()
    {
       // restore the format flags, fill character and width
       _stream.flags( _fflags );

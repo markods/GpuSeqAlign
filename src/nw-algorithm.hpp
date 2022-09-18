@@ -101,7 +101,7 @@ struct NwResData
    // directories
    std::string projPath;
    std::string resrcPath;
-   std::string logPath;
+   std::string resPath;
 
    // filenames
    std::string isoTime;
@@ -127,6 +127,14 @@ void to_json( json& j, const NwParamData& paramData );
 void to_json( json& j, const NwParams& params );
 void to_json( json& j, const NwParam& param );
 void to_json( json& j, const NwSeqData& seqData );
+
+// conversion to csv from object
+void to_csv( std::ostream& os, const std::vector<NwResult>& resList );
+void resHeaderToCsv( std::ostream& os );
+void to_csv( std::ostream& os, const NwResult& res );
+void to_csv( std::ostream& os, const NwParams& params );
+void to_csv( std::ostream& os, const Stopwatch& sw );
+void lapTimeToCsv( std::ostream& os, float lapTime );
 
 // convert the sequence string to a vector using a character map
 // + NOTE: add the header (zeroth) element if requested
@@ -172,30 +180,6 @@ NwStat readFromJson( const std::string& path, T& var )
    catch( const std::exception& ex )
    {
       NwStat::errorInvalidFormat;
-   }
-
-   return NwStat::success;
-}
-
-// write a variable to a csv file
-template< typename T >
-NwStat writeToCsv( const std::string& path, T& var )
-{
-   std::ofstream ofs;
-
-   try
-   {
-      ofs.open( path, std::ios_base::out );
-      if( !ofs )
-      {
-         return NwStat::errorIoStream;
-      }
-
-      ofs << var;
-   }
-   catch( const std::exception& ex )
-   {
-      return NwStat::errorIoStream;
    }
 
    return NwStat::success;
