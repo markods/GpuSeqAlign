@@ -142,7 +142,7 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // measure memory transfer time
-   sw.lap( "mem-to-device" );
+   sw.lap( "memcpy-to-device" );
 
 
 
@@ -215,7 +215,7 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // measure calculation time
-   sw.lap( "calc" );
+   sw.lap( "calc-1" );
 
 
    // save the calculated score matrix
@@ -225,7 +225,7 @@ NwStat NwAlign_Gpu1_Diag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
    }
 
    // measure memory transfer time
-   sw.lap( "mem-to-host" );
+   sw.lap( "memcpy-to-host" );
 
    return NwStat::success;
 }

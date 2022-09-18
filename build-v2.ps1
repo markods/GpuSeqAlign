@@ -576,7 +576,7 @@ class Pipeline
         );
         $MiscItems = @(
             # remove the logs in the log directory
-            [PSCustomObject]@{ Path ="./log"; Filter="*.log"; }
+            [PSCustomObject]@{ Path ="./log"; Filter=""; }
         );
 
         $ItemsToRemove = @();

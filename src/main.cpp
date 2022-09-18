@@ -257,16 +257,15 @@ int main( int argc, char *argv[] )
       }
    }
 
-   // write the results to the output file
-   {
-      std::string resPath = resData.logPath + resData.isoTime + ".log";
-      std::ofstream ofsRes;
+   // // write the results to the output file
+   // {
+   //    std::string resPath = resData.logPath + resData.resFname;
 
-      if( NwStat::success != openOutFile( resPath, ofsRes ) )
-      {
-         std::cerr << "ERR - could not open output log file"; exit( -1 );
-      }
-   }
+   //    if( NwStat::success != writeToCsv( resPath, resData ) )
+   //    {
+   //       std::cerr << "ERR - could not open/write csv to results file"; exit( -1 );
+   //    }
+   // }
 
    exit( 0 );
 }

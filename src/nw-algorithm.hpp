@@ -142,7 +142,7 @@ NwStat openOutFile( const std::string& path, std::ofstream& ofs );
 
 // read a json file into a variable
 template< typename T >
-NwStat readFromJson( const std::string& path, T& res )
+NwStat readFromJson( const std::string& path, T& var )
 {
    std::ifstream ifs;
 
@@ -162,7 +162,7 @@ NwStat readFromJson( const std::string& path, T& res )
    try
    {
       // NOTE: the parser doesn't allow for trailing commas
-      res = json::parse(
+      var = json::parse(
          ifs,
          /*callback*/ nullptr,
          /*allow_exceptions*/ true,
@@ -172,6 +172,30 @@ NwStat readFromJson( const std::string& path, T& res )
    catch( const std::exception& ex )
    {
       NwStat::errorInvalidFormat;
+   }
+
+   return NwStat::success;
+}
+
+// write a variable to a csv file
+template< typename T >
+NwStat writeToCsv( const std::string& path, T& var )
+{
+   std::ofstream ofs;
+
+   try
+   {
+      ofs.open( path, std::ios_base::out );
+      if( !ofs )
+      {
+         return NwStat::errorIoStream;
+      }
+
+      ofs << var;
+   }
+   catch( const std::exception& ex )
+   {
+      return NwStat::errorIoStream;
    }
 
    return NwStat::success;
