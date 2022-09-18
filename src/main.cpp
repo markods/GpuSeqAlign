@@ -46,7 +46,6 @@ int main( int argc, char *argv[] )
    NwSubstData substData;
    NwParamData paramData;
    NwSeqData seqData;
-   std::ofstream ofsLog;
 
    if( NwStat::success != readFromJson( substPath, substData ) )
    {
@@ -59,10 +58,6 @@ int main( int argc, char *argv[] )
    if( NwStat::success != readFromJson( seqPath,   seqData   ) )
    {
       std::cerr << "ERR - could not open/read json from seqs file"; exit( -1 );
-   }
-   if( NwStat::success != openOutFile ( logPath,   ofsLog   ) )
-   {
-      std::cerr << "ERR - could not open output log file"; exit( -1 );
    }
    
    // get the device properties
@@ -187,8 +182,9 @@ int main( int argc, char *argv[] )
             }
 
 
-            // for all parameter combinations
+            // for all parameter combinations + for all requested repeats
             for( ;   alg.alignPr().hasCurr();   alg.alignPr().next() )
+            for( int iR = 0; iR < seqData.repeat; iR++ )
             {
                // initialize the result
                NwResult res {};
@@ -200,7 +196,7 @@ int main( int argc, char *argv[] )
                if( !errstep && NwStat::success != ( stat = alg.hash ( nw, res ) ) ) { errstep = 2; }
                if( !errstep && NwStat::success != ( stat = alg.trace( nw, res ) ) ) { errstep = 3; }
 
-               // TODO: print results to .json file
+               // TODO: print results to .csv file
                // print the algorithm name and info
                FormatFlagsGuard fg { std::cout };
                std::cout << std::setw( 2) << std::right << iY << " "
@@ -228,6 +224,12 @@ int main( int argc, char *argv[] )
             alg.alignPr().reset();
          }
       }
+   }
+
+   std::ofstream ofsLog;
+   if( NwStat::success != openOutFile ( logPath,   ofsLog   ) )
+   {
+      std::cerr << "ERR - could not open output log file"; exit( -1 );
    }
 
    exit( 0 );

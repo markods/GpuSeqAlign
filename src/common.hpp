@@ -304,7 +304,6 @@ struct NwInput
 struct NwResult
 {
    Stopwatch sw;
-   std::vector<int> trace;
    unsigned score_hash;
    unsigned trace_hash;
 };

@@ -8,6 +8,8 @@ NwStat NwTrace1_Plain( const NwInput& nw, NwResult& res )
    // http://www.cse.yorku.ca/~oz/hash.html
    // the starting value is a magic constant
    unsigned hash = 5381;
+   // vector containing the trace
+   std::vector<int> trace;
 
    // start the timer
    res.sw.start();
@@ -16,7 +18,7 @@ NwStat NwTrace1_Plain( const NwInput& nw, NwResult& res )
    // reserve space in the ram
    try
    {
-      res.trace.reserve( nw.adjrows-1 + nw.adjcols );
+      trace.reserve( nw.adjrows-1 + nw.adjcols );
    }
    catch( const std::exception& ex )
    {
@@ -31,9 +33,9 @@ NwStat NwTrace1_Plain( const NwInput& nw, NwResult& res )
    bool loop = true;
    for( int i = nw.adjrows-1, j = nw.adjcols-1;  loop;  )
    {
-      // add the current element to the trace and hash
+      // add the current element to the trace
       int curr = el(nw.score,nw.adjcols, i,j);
-      res.trace.push_back( curr );
+      trace.push_back( curr );
 
       int max = std::numeric_limits<int>::min();   // maximum value of the up, left and diagonal neighbouring elements
       int dir = '-';                               // the current movement direction is unknown
@@ -53,14 +55,14 @@ NwStat NwTrace1_Plain( const NwInput& nw, NwResult& res )
    }
 
    // reverse the trace, so it starts from the top-left corner of the matrix
-   std::reverse( res.trace.begin(), res.trace.end() );
+   std::reverse( trace.begin(), trace.end() );
 
    // measure trace time
    res.sw.lap( "trace" );
 
 
    // calculate the hash value
-   for( auto& curr : res.trace )
+   for( auto& curr : trace )
    {
       hash = ( ( hash<<5 ) + hash ) ^ curr;
    }

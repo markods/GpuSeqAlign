@@ -55,9 +55,9 @@ using namespace System.Text.Json;
 
 # NOTE: leave powershell array constructor ( @() ) if there is only one argument (otherwise it won't be a powershell array due to unpacking)
 [string[][]] $script:DefaultArgs =
-    ( "=clean", "=build", "=run", "subst1-blosum.json", "param2-best.json",  "seq3-gen-10k.json" ),
-    (                     "=run", "subst1-blosum.json", "param1-best.json", "seq1-gen-0.1k.json" ),
-    (                     "=run", "subst1-blosum.json", "param2-all.json",  "seq1-gen-0.1k.json" );
+    ( "=clean", "=build", "=run", "subst1-blosum.json", "param2-best.json", "seq3-gen-10k.json" ),
+    (                     "=run", "subst1-blosum.json", "param0-test.json", "seq0-test.json"    ),
+    (                     "=run", "subst1-blosum.json", "param2-all.json",  "seq1-gen-0.1k.json");
 
 [string] $script:HelpMessage = @"
 build   [[-]-help]   [=clean ...] [=build ...]   [=run fsubsts fparams fseqs ...\n]
