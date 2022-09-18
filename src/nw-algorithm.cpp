@@ -24,7 +24,7 @@ NwStat NwPrint1_Plain( std::ostream& os, const int* const mat, const int rows, c
 // all algorithms
 NwAlgorithmData algData
 {
-   /*algs:*/ {
+   /*algMap:*/ {
       { "Cpu1_Row_St",          { NwAlign_Cpu1_Row_St,          NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
       { "Cpu2_Diag_St",         { NwAlign_Cpu2_Diag_St,         NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
       { "Cpu3_DiagRow_St",      { NwAlign_Cpu3_DiagRow_St,      NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain } },
@@ -42,11 +42,11 @@ NwAlgorithmData algData
 void from_json( const json& j, NwSubstData& substData )
 {
    j.at( "letterMap" ).get_to( substData.letterMap );
-   j.at( "substs"    ).get_to( substData.substs    );
+   j.at( "substMap"  ).get_to( substData.substMap  );
 }
 void from_json( const json& j, NwParamData& paramData )
 {
-   j.get_to( paramData.params );
+   j.get_to( paramData.paramMap );
 }
 void from_json( const json& j, NwParams& params )
 {
@@ -60,7 +60,8 @@ void from_json( const json& j, NwSeqData& seqData )
 {
    j.at("substName").get_to( seqData.substName );
    j.at("indel"    ).get_to( seqData.indel     );
-   j.at("seqs"     ).get_to( seqData.seqs      );
+   j.at("repeat"   ).get_to( seqData.repeat    );
+   j.at("seqList"  ).get_to( seqData.seqList   );
 }
 
 
@@ -70,14 +71,14 @@ void to_json( json& j, const NwSubstData& substData )
    j = json
    {
       { "letterMap", substData.letterMap },
-      { "substs",    substData.substs    }
+      { "substMap",  substData.substMap  }
    };
 }
 void to_json( json& j, const NwParamData& paramData )
 {
    j = json
    {
-      { "params", paramData.params },
+      { "paramMap", paramData.paramMap },
    };
 }
 void to_json( json& j, const NwParams& params )
@@ -94,7 +95,8 @@ void to_json( json& j, const NwSeqData& seqData )
    {
       { "substName", seqData.substName },
       { "indel",     seqData.indel     },
-      { "seqs",      seqData.seqs      }
+      { "repeat",    seqData.repeat    },
+      { "seqList",   seqData.seqList   }
    };
 }
 

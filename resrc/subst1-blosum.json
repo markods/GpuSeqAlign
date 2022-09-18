@@ -28,7 +28,7 @@
       "X": 23,
       "*": 24
    },
-   "substs":
+   "substMap":
    {
       "blosum45": [
          // Entries for the BLOSUM45 matrix at a scale of ln(2)/3.0.

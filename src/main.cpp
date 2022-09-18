@@ -109,7 +109,7 @@ int main( int argc, char *argv[] )
 
    // initialize the substitution matrix on the cpu and gpu
    {
-      nw.subst = substData.substs[ seqData.substName ];
+      nw.subst = substData.substMap[ seqData.substName ];
       nw.substsz = std::sqrt( nw.subst.size() );
 
       // reserve space in the gpu global memory
@@ -135,47 +135,47 @@ int main( int argc, char *argv[] )
    std::map<std::string, int> letterMap = substData.letterMap;
    
    // initialize the sequence map
-   std::vector< std::vector<int> > seqMap {};
-   for( auto& charSeq : seqData.seqs )
+   std::vector< std::vector<int> > seqList {};
+   for( auto& charSeq : seqData.seqList )
    {
       auto seq = seqStrToVect( charSeq, letterMap, true/*addHeader*/ );
-      seqMap.push_back( seq );
+      seqList.push_back( seq );
    }
 
 
 
    // for all algorithms which have parameters in the param map
-   for( auto& paramTuple: paramData.params )
+   for( auto& paramTuple: paramData.paramMap )
    {
       // get the current algorithm parameters
       const std::string& algName = paramTuple.first;
       NwParams algParams = paramTuple.second;
 
       // if the current algorithm doesn't exist, skip it
-      if( algData.algs.find( algName ) == algData.algs.end() )
+      if( algData.algMap.find( algName ) == algData.algMap.end() )
       {
          continue;
       }
 
       // get the current algorithm and initialize its parameters
-      NwAlgorithm alg = algData.algs[ algName ];
+      NwAlgorithm alg = algData.algMap[ algName ];
       alg.init( algParams );
 
 
       // for all Y sequences
-      for( int iY = 0; iY < seqMap.size(); iY++ )
+      for( int iY = 0; iY < seqList.size(); iY++ )
       {
          // get the Y sequence
-         nw.seqY = seqMap[ iY ];
+         nw.seqY = seqList[ iY ];
          // NOTE: the padding (zeroth element) was already added to the sequence
          nw.adjrows = nw.seqY.size();
 
 
          // for all X sequences (also compare every sequence with itself)
-         for( int iX = iY; iX < seqMap.size(); iX++ )
+         for( int iX = iY; iX < seqList.size(); iX++ )
          {
             // get the X sequence
-            nw.seqX = seqMap[ iX ];
+            nw.seqX = seqList[ iX ];
             // NOTE: the padding (zeroth element) was already added to the sequence
             nw.adjcols = nw.seqX.size();
 

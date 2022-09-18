@@ -68,7 +68,7 @@ private:
 // algorithm map
 struct NwAlgorithmData
 {
-   std::map< std::string, NwAlgorithm > algs;
+   std::map< std::string, NwAlgorithm > algMap;
 };
 extern NwAlgorithmData algData;
 
@@ -78,20 +78,22 @@ extern NwAlgorithmData algData;
 struct NwSubstData
 {
    std::map< std::string, int > letterMap;
-   std::map< std::string, std::vector<int> > substs;
+   std::map< std::string, std::vector<int> > substMap;
 };
 
 struct NwParamData
 {
-   std::map< std::string, NwParams > params;
+   std::map< std::string, NwParams > paramMap;
 };
 
 struct NwSeqData
 {
    std::string substName;
    int indel;
+   // repeat each comparison this many times
+   int repeat;
    // each sequence will be an int vector and have a header (zeroth) element
-   std::vector<std::string> seqs;
+   std::vector<std::string> seqList;
 };
 
 // conversion to object from json

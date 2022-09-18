@@ -1,8 +1,9 @@
-// short length sequences -- ~0.1K base pairs
+// very short length sequences -- ~0.01K base pairs
 {
    "substName": "blosum62",
    "indel": -100,
-   "seqs": [
+   "repeat": 1,
+   "seqList": [
       /*   1*/ "M",
       /*   2*/ "MY",
       /*   4*/ "MSLG",
