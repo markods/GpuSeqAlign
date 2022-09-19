@@ -10,7 +10,7 @@
       // unsigned tileAy = 32;
       "tileAy": [ 16, 20, 32, 36, 40, 42, 46, 64, 128 ],
       // unsigned tileBx = 60;
-      "tileBx": [ 62 ],
+      "tileBx": [ 66 ],
       // unsigned tileBy = warpsz;
       "tileBy": [ 32 ]
    }
