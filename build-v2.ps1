@@ -60,12 +60,12 @@ using namespace System.Text.Json;
     (                     "=run", "subst1-blosum.json", "param0-test.json", "seq0-test.json"    ),
 
     (                     "=run", "subst1-blosum.json", "param2-all.json",  "seq1-gen-0.1k.json"),
-    (                     "=run", "subst1-blosum.json", "param2-all.json",  "seq1-gen-1k.json"  ),
-    (                     "=run", "subst1-blosum.json", "param2-all.json",  "seq1-gen-10k.json" ),
+    (                     "=run", "subst1-blosum.json", "param2-all.json",  "seq2-gen-1k.json"  ),
+    (                     "=run", "subst1-blosum.json", "param2-all.json",  "seq3-gen-10k.json" ),
 
     (                     "=run", "subst1-blosum.json", "param1-best.json", "seq1-gen-0.1k.json"),
-    (                     "=run", "subst1-blosum.json", "param1-best.json", "seq1-gen-1k.json"  ),
-    (                     "=run", "subst1-blosum.json", "param1-best.json", "seq1-gen-10k.json" );
+    (                     "=run", "subst1-blosum.json", "param1-best.json", "seq2-gen-1k.json"  ),
+    (                     "=run", "subst1-blosum.json", "param1-best.json", "seq3-gen-10k.json" );
 
 [string] $script:HelpMessage = @"
 build   [[-]-help]   [=clean ...] [=build ...]   [=run fsubsts fparams fseqs ...\n]
