@@ -54,6 +54,7 @@ enum class NwStat : int
    errorIoStream         = 4,
    errorInvalidFormat    = 5,
    errorInvalidValue     = 6,
+   errorInvalidResult    = 7,
 };
 // cuda status, used for getting the return status of cuda functions
 extern thread_local cudaError_t cudaStatus;
@@ -323,6 +324,7 @@ struct NwInput
    // device parameters
    int sm_count;
    int warpsz;
+   int maxThreadsPerBlock;
 
    // free all memory allocated by the Needleman-Wunsch algorithms
    void resetAllocs()
@@ -355,8 +357,9 @@ struct NwResult
    unsigned score_hash;
    unsigned trace_hash;
 
-   NwStat stat;
    int errstep;   // 0 for success
+   NwStat stat;   // 0 for success
+   cudaError_t cudaerr;   // 0 for success
 };
 
 // update the score given the current score matrix and position

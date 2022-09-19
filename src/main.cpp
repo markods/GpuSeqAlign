@@ -59,7 +59,7 @@ int main( int argc, char *argv[] )
       std::string substPath = resData.resrcPath + resData.substFname;
       std::string paramPath = resData.resrcPath + resData.paramFname;
       std::string seqPath   = resData.resrcPath + resData.seqFname;
-      std::string resPath = resData.resPath + resData.resFname;
+      std::string resPath   = resData.resPath   + resData.resFname;
 
       if( NwStat::success != readFromJson( substPath, substData ) )
       {
@@ -89,6 +89,7 @@ int main( int argc, char *argv[] )
    // number of streaming multiprocessors (sm-s) and threads in a warp
    const int sm_count = deviceProps.multiProcessorCount;   // 28 on GTX 1080Ti
    const int warpsz   = deviceProps.warpSize;              // 32 on GTX 1080Ti
+   const int maxThreadsPerBlock = deviceProps.maxThreadsPerBlock;   // 1024 on GTX 1080Ti
 
 
    NwInput nw
@@ -115,11 +116,13 @@ int main( int argc, char *argv[] )
       ////// device parameters
       // sm_count;
       // warpsz;
+      // maxThreadsPerBlock;
    };
 
    // initialize the device parameters
    nw.sm_count = sm_count;
    nw.warpsz = warpsz;
+   nw.maxThreadsPerBlock = maxThreadsPerBlock;
 
    // initialize the substitution matrix on the cpu and gpu
    {
@@ -156,21 +159,19 @@ int main( int argc, char *argv[] )
       seqList.push_back( seq );
    }
 
+   // initialize the gold result map (as calculated by the first algorithm)
+   NwCompareData compareData {};
+
    // write the csv file's header
    resHeaderToCsv( ofsRes, resData );
-   // if the csv header should be written to stderr
-   bool writeCsvHeaderToStderr = true;
 
 
 
    // for all algorithms which have parameters in the param map
    for( auto& paramTuple: paramData.paramMap )
    {
-      // get the current algorithm parameters
-      const std::string& algName = paramTuple.first;
-      NwParams& algParams = paramTuple.second;
-
       // if the current algorithm doesn't exist, skip it
+      const std::string& algName = paramTuple.first;
       if( algData.algMap.find( algName ) == algData.algMap.end() )
       {
          continue;
@@ -178,7 +179,7 @@ int main( int argc, char *argv[] )
 
       // get the current algorithm and initialize its parameters
       NwAlgorithm& alg = algData.algMap[ algName ];
-      alg.init( algParams );
+      alg.init( paramTuple.second/*algParams*/ );
 
 
       // for all Y sequences + for all X sequences (also compare every sequence with itself)
@@ -217,7 +218,7 @@ int main( int argc, char *argv[] )
 
                iX, // iX;
                iY, // iY;
-               iR, // iR;
+               iR, // iR;   // TODO: reps
 
                {}, // sw_align;
                {}, // sw_hash;
@@ -226,39 +227,19 @@ int main( int argc, char *argv[] )
                {}, // score_hash;
                {}, // trace_hash;
 
-               {}, // stat;
                {}, // errstep;   // 0 for success
+               {}, // stat;      // 0 for success
+               {}, // cudaerr;   // 0 for success
             });
             // get the result from the list
             NwResult& res = resData.resList.back();
 
             // compare the sequences, hash the score matrices and trace the score matrices
-            if( !res.errstep && NwStat::success != ( res.stat = alg.align( nw, res ) ) ) { res.errstep = 1; }
-            if( !res.errstep && NwStat::success != ( res.stat = alg.hash ( nw, res ) ) ) { res.errstep = 2; }
-            if( !res.errstep && NwStat::success != ( res.stat = alg.trace( nw, res ) ) ) { res.errstep = 3; }
+            if( !res.errstep && NwStat::success != ( res.stat = alg.align( nw, res ) ) ) { res.errstep = 1; res.cudaerr = cudaStatus; }
+            if( !res.errstep && NwStat::success != ( res.stat = alg.hash ( nw, res ) ) ) { res.errstep = 2; res.cudaerr = cudaStatus; }
+            if( !res.errstep && NwStat::success != ( res.stat = alg.trace( nw, res ) ) ) { res.errstep = 3; res.cudaerr = cudaStatus; }
+            if( !res.errstep && NwStat::success != ( res.stat = setOrVerifyResult( res, compareData ) ) ) { res.errstep = 4; compareData.calcErrors++; }
 
-            // verify that the hashes match the first ever calculated hash
-            if( !res.errstep )
-            {
-               // // TODO: verify that the hashes match
-               // res.errstep = 4;
-            }
-
-            // if there is an error in any step
-            if( res.errstep )
-            {
-               // add the csv header to stderr
-               if( writeCsvHeaderToStderr )
-               {
-                  // write the csv file's header
-                  resHeaderToCsv( std::cerr, resData );
-                  writeCsvHeaderToStderr = false;
-               }
-
-               // print the result to stderr
-               to_csv( std::cerr, res ); std::cerr << std::endl;
-            }
-            
             // print the result as a csv line to the csv output file
             to_csv( ofsRes, res ); ofsRes << '\n';
 
@@ -279,6 +260,12 @@ int main( int argc, char *argv[] )
          // reset the algorithm parameters
          alg.alignPr().reset();
       }
+   }
+
+   // print the number of calculation errors
+   if( compareData.calcErrors > 0 )
+   {
+      std::cerr << "ERR - " << compareData.calcErrors << " calculation error(s)"; exit( -1 );
    }
 
    exit( 0 );

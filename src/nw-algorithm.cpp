@@ -124,8 +124,9 @@ void resHeaderToCsv( std::ostream& os, const NwResData& resData )
 
    os << std::setw(42) << std::left  << "algParams" << ",   ";
 
-   os << std::setw( 1) << std::right << "errstep" << ", ";
-   os << std::setw( 1) << std::right << "stat"    << ",   ";
+   os << std::setw( 1) << std::right << "step" << ",";
+   os << std::setw( 1) << std::right << "stat" << ",";
+   os << std::setw( 3) << std::right << "cuda" << ",   ";
 
    os << std::setw(10) << std::right << "score_hash" << ", ";
    os << std::setw(10) << std::right << "trace_hash" << ",   ";
@@ -148,8 +149,9 @@ void to_csv( std::ostream& os, const NwResult& res )
 
       os << std::setw(42) << std::left; paramsToCsv( os, res.algParams ); os << ",   ";
 
-      os << std::setw( 1) << std::right << res.errstep     << ", ";
-      os << std::setw( 1) << std::right << int( res.stat ) << ",            ";
+      os << std::setw( 1) << std::right << res.errstep        << ",";
+      os << std::setw( 1) << std::right << int( res.stat )    << ",";
+      os << std::setw( 3) << std::right << int( res.cudaerr ) << ",          ";
 
       os.fill('0');
       os << std::setw(10) << std::right << res.score_hash << ", ";
@@ -182,12 +184,12 @@ void paramsToCsv( std::ostream& os, const std::map<std::string, int>& paramMap )
 }
 void to_csv( std::ostream& os, const Stopwatch& sw )
 {
-   lapTimeToCsv( os, sw.get_or_default( "alloc"       ) ); os << ",   ";
+   lapTimeToCsv( os, sw.get_or_default( "alloc"    ) ); os << ",   ";
    lapTimeToCsv( os, sw.get_or_default( "cpy-dev"  ) ); os << ",   ";
-   lapTimeToCsv( os, sw.get_or_default( "init-hdr"    ) ); os << ",   ";
-   lapTimeToCsv( os, sw.get_or_default( "calc-1"      ) ); os << ", ";
-   lapTimeToCsv( os, sw.get_or_default( "calc-2"      ) ); os << ", ";
-   lapTimeToCsv( os, sw.get_or_default( "calc-3"      ) ); os << ",   ";
+   lapTimeToCsv( os, sw.get_or_default( "init-hdr" ) ); os << ",   ";
+   lapTimeToCsv( os, sw.get_or_default( "calc-1"   ) ); os << ", ";
+   lapTimeToCsv( os, sw.get_or_default( "calc-2"   ) ); os << ", ";
+   lapTimeToCsv( os, sw.get_or_default( "calc-3"   ) ); os << ",   ";
    lapTimeToCsv( os, sw.get_or_default( "cpy-host" ) ); os << ",   ";
 
    float total = sw.total();
@@ -229,6 +231,68 @@ std::vector<int> seqStrToVect( const std::string& str, const std::map<std::strin
 
    return vect;
 }
+
+
+// structs used to verify that the algorithms' results are correct
+bool operator<( const NwCompareKey& l, const NwCompareKey& r )
+{
+   bool res =
+      ( l.iY <  r.iY                ) ||
+      ( l.iY == r.iY && l.iX < r.iX );
+   return res;
+}
+
+bool operator==( const NwCompareRes& l, const NwCompareRes& r )
+{
+   bool res =
+      l.score_hash == r.score_hash &&
+      l.trace_hash == r.trace_hash;
+   return res;
+}
+bool operator!=( const NwCompareRes& l, const NwCompareRes& r )
+{
+   bool res =
+      l.score_hash != r.score_hash ||
+      l.trace_hash != r.trace_hash;
+   return res;
+}
+
+// check that the result hashes match the hashes calculated by the first algorithm (the gold standard)
+NwStat setOrVerifyResult( const NwResult& res, NwCompareData& compareData )
+{
+   std::map<NwCompareKey, NwCompareRes>& compareMap = compareData.compareMap;
+   NwCompareKey key
+   {
+      res.iY,   // iY;
+      res.iX    // iX;
+   };
+   NwCompareRes calcVal
+   {
+      res.score_hash,   // score_hash;
+      res.trace_hash    // trace_hash;
+   };
+
+   // if this is the first time the two sequences have been aligned
+   auto compareRes = compareMap.find( key );
+   if( compareRes == compareMap.end() )
+   {
+      // add the calculated (gold) values to the map
+      compareMap[ key ] = calcVal;
+      return NwStat::success;
+   }
+
+   // if the calculated value is not the same as the expected value
+   NwCompareRes& expVal = compareMap[ key ];
+   if( calcVal != expVal )
+   {
+      // the current algorithm probably made a mistake during calculation
+      return NwStat::errorInvalidResult;
+   }
+
+   // the current and gold algoritm agree on the results
+   return NwStat::success;
+}
+
 
 
 // get the current time as an ISO string

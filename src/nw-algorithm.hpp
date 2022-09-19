@@ -141,6 +141,33 @@ std::vector<int> seqStrToVect( const std::string& str, const std::map<std::strin
 
 
 
+// structs used to verify that the algorithms' results are correct
+struct NwCompareKey
+{
+   int iY;
+   int iX;
+
+   friend bool operator<( const NwCompareKey& l, const NwCompareKey& r );
+};
+struct NwCompareRes
+{
+   unsigned score_hash;
+   unsigned trace_hash;
+
+   friend bool operator==( const NwCompareRes& l, const NwCompareRes& r );
+   friend bool operator!=( const NwCompareRes& l, const NwCompareRes& r );
+};
+struct NwCompareData
+{
+   std::map<NwCompareKey, NwCompareRes> compareMap;
+   int calcErrors;
+};
+
+// check that the result hashes match the hashes calculated by the first algorithm (the gold standard)
+NwStat setOrVerifyResult( const NwResult& res, NwCompareData& compareData );
+
+
+
 // get the current time as an ISO string
 std::string IsoTime();
 
