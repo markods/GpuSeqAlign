@@ -1,0 +1,17 @@
+// algorithm parameters
+{
+   "Gpu4_DiagDiag_Coop2K":
+   {
+      // // tile sizes for kernels A and B
+      // // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
+      // // +   tile B must have one dimension fixed to the number of threads in a warp
+      // unsigned tileAx = 1*warpsz;
+      "tileAx": [ 32, 64, 96, 128, 160, 192, 256, 384, 512 ],
+      // unsigned tileAy = 32;
+      "tileAy": [ 16, 20, 32, 36, 40, 42, 46, 64, 128 ],
+      // unsigned tileBx = 60;
+      "tileBx": [ 62 ],
+      // unsigned tileBy = warpsz;
+      "tileBy": [ 32 ]
+   }
+}

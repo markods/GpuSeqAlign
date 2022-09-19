@@ -55,12 +55,13 @@ using namespace System.Text.Json;
 
 # NOTE: leave powershell array constructor ( @() ) if there is only one argument (otherwise it won't be a powershell array due to unpacking)
 [string[][]] $script:DefaultArgs =
-    ( "=run", "subst1-blosum.json", "param0-test.json", "seq0-test.json"      ),
-    ( "=run", "subst1-blosum.json", "param1-all.json",  "seq1-allparams.json" ),
+    ( "=run", "subst-blosum1.json", "param-test1.json", "seq-test1.json" ),
+    ( "=run", "subst-blosum1.json", "param-all1.json",  "seq-one1.json"  ),
+    ( "=run", "subst-blosum1.json", "param-all2.json",  "seq-one1.json"  ),
 
-    ( "=run", "subst1-blosum.json", "param2-best.json", "seq2-gen-0.1k.json"  ),
-    ( "=run", "subst1-blosum.json", "param2-best.json", "seq3-gen-1k.json"    ),
-    ( "=run", "subst1-blosum.json", "param2-best.json", "seq4-gen-10k.json"   );
+    ( "=run", "subst-blosum1.json", "param-best1.json", "seq-gen1-100.json"    ),
+    ( "=run", "subst-blosum1.json", "param-best1.json", "seq-gen2-1000.json"   ),
+    ( "=run", "subst-blosum1.json", "param-best1.json", "seq-gen3-10_000.json" );
 
 [string] $script:HelpMessage = @"
 build   [[-]-help]   [=clean ...] [=build ...]   [=run fsubsts fparams fseqs ...\n]
@@ -71,10 +72,11 @@ Switches:
     -help            show the help menu
     -0               use the default parameters 0:   build-v2 $( $script:DefaultArgs[ 0 ] -Join ' ')
     -1               use the default parameters 1:   build-v2 $( $script:DefaultArgs[ 1 ] -Join ' ')
-    
     -2               use the default parameters 2:   build-v2 $( $script:DefaultArgs[ 2 ] -Join ' ')
+    
     -3               use the default parameters 3:   build-v2 $( $script:DefaultArgs[ 3 ] -Join ' ')
     -4               use the default parameters 4:   build-v2 $( $script:DefaultArgs[ 4 ] -Join ' ')
+    -5               use the default parameters 5:   build-v2 $( $script:DefaultArgs[ 5 ] -Join ' ')
 
 Switches:
     --help           shows the help menu
