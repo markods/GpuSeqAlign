@@ -169,6 +169,46 @@ private:
 class Stopwatch
 {
 public:
+   // combine many stopwatches into one
+   static Stopwatch combineStopwatches( std::vector<Stopwatch>& swList )
+   {
+      // if the stopwatch list is empty, return a default initialized stopwatch
+      if( swList.empty() )
+      {
+         return Stopwatch { };
+      }
+
+      // copy on purpose here -- don't modify the given stopwatch list
+      Stopwatch res { };
+      // the number of times the lap was found in the stopwatches
+      std::map< std::string, int > lapCount { };
+
+      // for all stopwatches + for all laps in a stopwatch, get the average lap time
+      // +   for the average, don't count non-existent values in the denominator
+      for( auto& sw : swList )
+      for( auto& lapTuple : sw._laps )
+      {
+         const std::string& lapName = lapTuple.first;
+         float lapTime = lapTuple.second;
+
+         // insert or set default value! -- no initialization necessary before addition
+         res._laps[ lapName ] += lapTime;
+         lapCount[ lapName ]++;
+      }
+
+      // for all laps in the result; divide them by the number of their occurences
+      for( auto& lapTuple : res._laps )
+      {
+         const std::string& lapName = lapTuple.first;
+
+         // divide the total lap time by the number of lap occurences
+         res._laps[ lapName ] /= lapCount[ lapName ];
+      }
+      
+      return res;
+   }
+
+public:
    void start()
    {
       _start = Clock::now();
@@ -348,7 +388,7 @@ struct NwResult
 
    int iX;
    int iY;
-   int iR;
+   int reps;
 
    Stopwatch sw_align;
    Stopwatch sw_hash;

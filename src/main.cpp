@@ -204,57 +204,71 @@ int main( int argc, char *argv[] )
          }
 
 
-         // for all parameter combinations + for all requested repeats
+         // for all parameter combinations
          for( ;   alg.alignPr().hasCurr();   alg.alignPr().next() )
-         for( int iR = 0; iR < seqData.repeat; iR++ )
          {
-            // initialize the result in the result list
-            resData.resList.push_back( NwResult {
-               algName,   // algName;
-               alg.alignPr().snapshot(), // algParams;
+            // results from multiple repetitions
+            std::vector<NwResult> resList {};
 
-               nw.seqX.size(), // seqX_len;
-               nw.seqY.size(), // seqY_len;
-
-               iX, // iX;
-               iY, // iY;
-               iR, // iR;   // TODO: reps
-
-               {}, // sw_align;
-               {}, // sw_hash;
-               {}, // sw_trace;
-
-               {}, // score_hash;
-               {}, // trace_hash;
-
-               {}, // errstep;   // 0 for success
-               {}, // stat;      // 0 for success
-               {}, // cudaerr;   // 0 for success
-            });
-            // get the result from the list
-            NwResult& res = resData.resList.back();
-
-            // compare the sequences, hash the score matrices and trace the score matrices
-            if( !res.errstep && NwStat::success != ( res.stat = alg.align( nw, res ) ) ) { res.errstep = 1; res.cudaerr = cudaStatus; }
-            if( !res.errstep && NwStat::success != ( res.stat = alg.hash ( nw, res ) ) ) { res.errstep = 2; res.cudaerr = cudaStatus; }
-            if( !res.errstep && NwStat::success != ( res.stat = alg.trace( nw, res ) ) ) { res.errstep = 3; res.cudaerr = cudaStatus; }
-            if( !res.errstep && NwStat::success != ( res.stat = setOrVerifyResult( res, compareData ) ) ) { res.errstep = 4; compareData.calcErrors++; }
-
-            // print the result as a csv line to the csv output file
-            to_csv( ofsRes, res ); ofsRes << '\n';
-
-            // clear cuda non-sticky errors
-            cudaStatus = cudaGetLastError();
-
-            // get possible cuda sticky errors
-            cudaStatus = cudaGetLastError();
-            if( cudaStatus != cudaSuccess )
+            // for all requested repeats
+            for( int iR = 0; iR < seqData.repeat; iR++ )
             {
-               std::cerr << "ERR - corrupted cuda context"; exit( -1 );
+               // initialize the result in the result list
+               resList.push_back( NwResult {
+                  algName,   // algName;
+                  alg.alignPr().snapshot(), // algParams;
+
+                  nw.seqX.size(), // seqX_len;
+                  nw.seqY.size(), // seqY_len;
+
+                  iX, // iX;
+                  iY, // iY;
+                  seqData.repeat, // reps;
+
+                  {}, // sw_align;
+                  {}, // sw_hash;
+                  {}, // sw_trace;
+
+                  {}, // score_hash;
+                  {}, // trace_hash;
+
+                  {}, // errstep;   // 0 for success
+                  {}, // stat;      // 0 for success
+                  {}, // cudaerr;   // 0 for success
+               });
+               // get the result from the list
+               NwResult& res = resList.back();
+
+               // compare the sequences, hash and trace the score matrices, and verify the soundness of the results
+               if( !res.errstep && NwStat::success != ( res.stat = alg.align( nw, res ) ) ) { res.errstep = 1; res.cudaerr = cudaStatus; }
+               if( !res.errstep && NwStat::success != ( res.stat = alg.hash ( nw, res ) ) ) { res.errstep = 2; res.cudaerr = cudaStatus; }
+               if( !res.errstep && NwStat::success != ( res.stat = alg.trace( nw, res ) ) ) { res.errstep = 3; res.cudaerr = cudaStatus; }
+               if( !res.errstep && NwStat::success != ( res.stat = setOrVerifyResult( res, compareData ) ) ) { res.errstep = 4; compareData.calcErrors++; }
+               
+               // clear cuda non-sticky errors and get possible cuda sticky errors
+               // note: repeat twice, since sticky errors cannot be cleared
+               cudaStatus = cudaGetLastError();
+               cudaStatus = cudaGetLastError();
+               if( cudaStatus != cudaSuccess )
+               {
+                  std::cerr << "ERR - corrupted cuda context"; exit( -1 );
+               }
+
+               // reset allocations
+               nw.resetAllocs();
+
+               // if there is an error in any of the steps, stop the repetition
+               if( res.errstep != 0 ) break;
             }
 
-            // reset allocations
-            nw.resetAllocs();
+            // add the result to the results list
+            resData.resList.push_back( combineResults( resList ) );
+            NwResult& res = resData.resList.back();
+            // reset the multiple repetition list
+            resList.clear();
+            
+            // print the result as a csv line to the csv output file
+            to_csv( ofsRes, res ); ofsRes << '\n';
          }
 
          // reset the algorithm parameters

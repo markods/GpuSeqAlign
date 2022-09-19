@@ -117,7 +117,7 @@ void resHeaderToCsv( std::ostream& os, const NwResData& resData )
    os << std::setw(20) << std::left  << "algName" << ", ";
    os << std::setw( 2) << std::right << "iY" << ", ";
    os << std::setw( 2) << std::right << "iX" << ", ";
-   os << std::setw( 2) << std::right << "iR" << ",   ";
+   os << std::setw( 4) << std::right << "reps" << ",   ";
 
    os << std::setw( 5) << std::right << "lenY" << ", ";
    os << std::setw( 5) << std::right << "lenX" << ",   ";
@@ -140,9 +140,9 @@ void to_csv( std::ostream& os, const NwResult& res )
       os.fill(' ');
 
       os << std::setw(20) << std::left  << res.algName << ", ";
-      os << std::setw( 2) << std::right << res.iY << ", ";
-      os << std::setw( 2) << std::right << res.iX << ", ";
-      os << std::setw( 2) << std::right << res.iR << ",   ";
+      os << std::setw( 2) << std::right << res.iY   << ", ";
+      os << std::setw( 2) << std::right << res.iX   << ", ";
+      os << std::setw( 4) << std::right << res.reps << ",   ";
 
       os << std::setw( 5) << std::right << res.seqY_len << ", ";
       os << std::setw( 5) << std::right << res.seqX_len << ",   ";
@@ -291,6 +291,36 @@ NwStat setOrVerifyResult( const NwResult& res, NwCompareData& compareData )
 
    // the current and gold algoritm agree on the results
    return NwStat::success;
+}
+
+// combine results from many repetitions into one
+NwResult combineResults( std::vector<NwResult>& resList )
+{
+   // if the result list is empty, return a default initialized result
+   if( resList.empty() )
+   {
+      return NwResult { };
+   }
+
+   // get the stopwatches from multiple repeats as lists
+   std::vector<Stopwatch> swAlignList {};
+   std::vector<Stopwatch> swHashList  {};
+   std::vector<Stopwatch> swTraceList {};
+   for( auto& curr : resList )
+   {
+      swAlignList.push_back( curr.sw_align );
+      swHashList .push_back( curr.sw_hash  );
+      swTraceList.push_back( curr.sw_trace );
+   }
+
+   // copy on purpose here -- don't modify the given result list
+   NwResult res = resList[ 0 ];
+   // combine the stopwatches from many repeats into one
+   res.sw_align = Stopwatch::combineStopwatches( swAlignList );
+   res.sw_hash  = Stopwatch::combineStopwatches( swHashList  );
+   res.sw_trace = Stopwatch::combineStopwatches( swTraceList );
+
+   return res;
 }
 
 

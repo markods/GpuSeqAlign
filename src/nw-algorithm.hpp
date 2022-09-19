@@ -165,6 +165,8 @@ struct NwCompareData
 
 // check that the result hashes match the hashes calculated by the first algorithm (the gold standard)
 NwStat setOrVerifyResult( const NwResult& res, NwCompareData& compareData );
+// combine results from many repetitions into one
+NwResult combineResults( std::vector<NwResult>& resList );
 
 
 
