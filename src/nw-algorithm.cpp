@@ -114,7 +114,7 @@ void resHeaderToCsv( std::ostream& os, const NwResData& resData )
    os << "# " << std::setw(1) << std::left << "seqFname: \""    << resData.seqFname   << "\"" << '\n';
    os << "# ______________________________________________________________________________"   << '\n';
 
-   os << std::setw(20) << std::left  << "algName" << ", ";
+   os << std::setw(22) << std::left  << "algName" << ", ";
    os << std::setw( 2) << std::right << "iY" << ", ";
    os << std::setw( 2) << std::right << "iX" << ", ";
    os << std::setw( 4) << std::right << "reps" << ",   ";
@@ -139,7 +139,7 @@ void to_csv( std::ostream& os, const NwResult& res )
    {
       os.fill(' ');
 
-      os << std::setw(20) << std::left  << res.algName << ", ";
+      os << std::setw(22) << std::left  << ("\"" + res.algName + "\"") << ", ";
       os << std::setw( 2) << std::right << res.iY   << ", ";
       os << std::setw( 2) << std::right << res.iX   << ", ";
       os << std::setw( 4) << std::right << res.reps << ",   ";
@@ -314,7 +314,8 @@ NwResult combineResults( std::vector<NwResult>& resList )
    }
 
    // copy on purpose here -- don't modify the given result list
-   NwResult res = resList[ 0 ];
+   // +   take the last result since it might have an error (if it errored it is definitely the last result)
+   NwResult res = resList[ resList.size()-1 ];
    // combine the stopwatches from many repeats into one
    res.sw_align = Stopwatch::combineStopwatches( swAlignList );
    res.sw_hash  = Stopwatch::combineStopwatches( swHashList  );
@@ -356,6 +357,13 @@ NwStat openOutFile( const std::string& path, std::ofstream& ofs )
    
    return NwStat::success;
 }
+
+// write the selected character to the give stream
+void writeProgressChar( std::ostream& os, char c )
+{
+   os << c; os.flush();
+}
+
 
 
 

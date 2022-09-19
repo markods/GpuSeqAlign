@@ -1,11 +1,22 @@
 // algorithm parameters
 {
+   "Cpu1_Row_St":
+   { },
+   "Cpu2_Diag_St":
+   { },
+   "Cpu3_DiagRow_St":
+   {
+      // // size of square block (that will be a unit of work)
+      // // +   8*(16 ints) on standard architectures, or 8 cache lines
+      // int blocksz = 8 * 64/*B*//sizeof( int );
+      "blocksz":  [ 512 ]
+   },
    "Cpu4_DiagRow_Mt":
    {
       // // size of square block (that will be a unit of work)
       // // +   8*(16 ints) on standard architectures, or 8 cache lines
       // int blocksz = 8 * 64/*B*//sizeof( int );
-      "blocksz": [ 512 ]
+      "blocksz": [ 256, 512 ]
    },
    "Gpu1_Diag_Ml":
    {

@@ -213,6 +213,9 @@ NwStat readFromJson( const std::string& path, T& var )
    return NwStat::success;
 }
 
+// write the selected character to the give stream
+void writeProgressChar( std::ostream& os, char c );
+
 
 
 

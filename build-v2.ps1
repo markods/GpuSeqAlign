@@ -55,17 +55,12 @@ using namespace System.Text.Json;
 
 # NOTE: leave powershell array constructor ( @() ) if there is only one argument (otherwise it won't be a powershell array due to unpacking)
 [string[][]] $script:DefaultArgs =
-    ( "=clean", "=build", "=run", "subst1-blosum.json", "param1-best.json", "seq3-gen-10k.json" ),
+    ( "=run", "subst1-blosum.json", "param0-test.json", "seq0-test.json"      ),
+    ( "=run", "subst1-blosum.json", "param1-all.json",  "seq1-allparams.json" ),
 
-    (                     "=run", "subst1-blosum.json", "param0-test.json", "seq0-test.json"    ),
-
-    (                     "=run", "subst1-blosum.json", "param2-all.json",  "seq1-gen-0.1k.json"),
-    (                     "=run", "subst1-blosum.json", "param2-all.json",  "seq2-gen-1k.json"  ),
-    (                     "=run", "subst1-blosum.json", "param2-all.json",  "seq3-gen-10k.json" ),
-
-    (                     "=run", "subst1-blosum.json", "param1-best.json", "seq1-gen-0.1k.json"),
-    (                     "=run", "subst1-blosum.json", "param1-best.json", "seq2-gen-1k.json"  ),
-    (                     "=run", "subst1-blosum.json", "param1-best.json", "seq3-gen-10k.json" );
+    ( "=run", "subst1-blosum.json", "param2-best.json", "seq2-gen-0.1k.json"  ),
+    ( "=run", "subst1-blosum.json", "param2-best.json", "seq3-gen-1k.json"    ),
+    ( "=run", "subst1-blosum.json", "param2-best.json", "seq4-gen-10k.json"   );
 
 [string] $script:HelpMessage = @"
 build   [[-]-help]   [=clean ...] [=build ...]   [=run fsubsts fparams fseqs ...\n]
@@ -75,9 +70,8 @@ Default:             build   --help
 Switches:
     -help            show the help menu
     -0               use the default parameters 0:   build-v2 $( $script:DefaultArgs[ 0 ] -Join ' ')
-    
     -1               use the default parameters 1:   build-v2 $( $script:DefaultArgs[ 1 ] -Join ' ')
-
+    
     -2               use the default parameters 2:   build-v2 $( $script:DefaultArgs[ 2 ] -Join ' ')
     -3               use the default parameters 3:   build-v2 $( $script:DefaultArgs[ 3 ] -Join ' ')
     -4               use the default parameters 4:   build-v2 $( $script:DefaultArgs[ 4 ] -Join ' ')

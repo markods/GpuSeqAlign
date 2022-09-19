@@ -164,6 +164,7 @@ int main( int argc, char *argv[] )
 
    // write the csv file's header
    resHeaderToCsv( ofsRes, resData );
+   ofsRes.flush();
 
 
 
@@ -245,6 +246,10 @@ int main( int argc, char *argv[] )
                if( !res.errstep && NwStat::success != ( res.stat = alg.trace( nw, res ) ) ) { res.errstep = 3; res.cudaerr = cudaStatus; }
                if( !res.errstep && NwStat::success != ( res.stat = setOrVerifyResult( res, compareData ) ) ) { res.errstep = 4; compareData.calcErrors++; }
                
+               // if the result is successful, print a dot, otherwise an x
+               if( res.stat == NwStat::success ) { writeProgressChar( std::cout, '.' ); }
+               else                              { writeProgressChar( std::cout, 'x' ); }
+
                // clear cuda non-sticky errors and get possible cuda sticky errors
                // note: repeat twice, since sticky errors cannot be cleared
                cudaStatus = cudaGetLastError();
@@ -258,7 +263,10 @@ int main( int argc, char *argv[] )
                nw.resetAllocs();
 
                // if there is an error in any of the steps, stop the repetition
-               if( res.errstep != 0 ) break;
+               if( res.errstep != 0 )
+               {
+                  break;
+               }
             }
 
             // add the result to the results list
@@ -269,11 +277,18 @@ int main( int argc, char *argv[] )
             
             // print the result as a csv line to the csv output file
             to_csv( ofsRes, res ); ofsRes << '\n';
+            ofsRes.flush();
          }
 
          // reset the algorithm parameters
          alg.alignPr().reset();
+
+         // seqX-seqY comparison separator
+         writeProgressChar( std::cout, '|' );
       }
+
+      // algorithm separator
+      writeProgressChar( std::cout, '\n' );
    }
 
    // print the number of calculation errors
