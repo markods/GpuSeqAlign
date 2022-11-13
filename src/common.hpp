@@ -342,17 +342,28 @@ struct NwInput
    // IMPORTANT: dont't use .size() on vectors to get the number of elements, since it is not accurate
    // +   instead, use the alignment parameters below
 
-   // host specific memory
+   ////// host specific memory
    std::vector<int> subst;
    std::vector<int> seqX;
    std::vector<int> seqY;
    HostArray<int> score;
+   // sparse representation of score matrix
+   HostArray<int> hrowM;
+   HostArray<int> hcolM;
    
-   // device specific memory
+   ////// device specific memory
    DeviceArray<int> subst_gpu;
    DeviceArray<int> seqX_gpu;
    DeviceArray<int> seqY_gpu;
    DeviceArray<int> score_gpu;
+   // sparse representation of score matrix
+   DeviceArray<int> hrow_gpu;
+   DeviceArray<int> hcol_gpu;
+   DeviceArray<int> hrowTDi_gpu;
+   DeviceArray<int> hcolTDi_gpu;
+   DeviceArray<int> hrowTDo_gpu;
+   DeviceArray<int> hcolTDo_gpu;
+
 
    // alignment parameters
    int substsz;
@@ -369,11 +380,29 @@ struct NwInput
    // free all memory allocated by the Needleman-Wunsch algorithms
    void resetAllocs()
    {
-      score.clear();
+      // NOTE: first free device memory, since there is less of it for other algorithms
 
+      ////// device specific memory
+      subst_gpu.clear();
       seqX_gpu.clear();
       seqY_gpu.clear();
       score_gpu.clear();
+      // sparse representation of score matrix
+      hrow_gpu.clear();
+      hcol_gpu.clear();
+      hrowTDi_gpu.clear();
+      hcolTDi_gpu.clear();
+      hrowTDo_gpu.clear();
+      hcolTDo_gpu.clear();
+
+      ////// host specific memory
+      subst.clear();
+      seqX.clear();
+      seqY.clear();
+      score.clear();
+      // sparse representation of score matrix
+      hrowM.clear();
+      hcolM.clear();
    }
 };
 

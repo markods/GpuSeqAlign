@@ -55,8 +55,15 @@
       "tileBx": [ 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 76, 78, 80 ],
       // unsigned tileBy = warpsz;
       "tileBy": [ 32 ]
+   },
+   "Gpu5_DiagDiagDiag_Ml":
+   {
+      // // tile size for the kernel
+      // unsigned tileAx = 320;
+      "tileAx": [ 256, 320, 384, 448, 512, 640 ],
+      // unsigned tileAy = 4*warpsz;   // must be a multiple of the warp size
+      "tileAy": [ 32, 64, 96, 128, 160, 192 ],
+      // int chunksz = 32;
+      "chunksz": [ 24, 32, 40, 48, 56, 64 ]
    }
-// Gpu5_DiagDiagDiag_Ml:
-// {
-// }
 }

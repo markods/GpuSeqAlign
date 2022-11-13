@@ -1,591 +1,789 @@
-// #include "common.hpp"
-
-// // presync   active   postsync   stop
-// // 0      -> 1     -> 2       -> 3
-// enum {
-//    presync = 0,
-//    active = 1,
-//    postsync = 2,
-//    stop = 3,
-// };
+#include "common.hpp"
 
 
-// // cuda kernel for the parallel implementation
-// __global__ static void Nw_Gpu5_Kernel(
-//    // nw input
-//    const int* const seqX_gpu,
-//    const int* const seqY_gpu,
-//    const int* const hrow_gpu,      // header row for the score matrix
-//    const int* const hcol_gpu,      // header column for the score matrix
-//    const int* const subst_gpu,
-// // const int adjrows,   // can be calculated as 1 + trows*tileAy
-// // const int adjcols,   // can be calculated as 1 + tcols*tileAx
-//    const int substsz,
-//    const int indel,
-//    const int warpsz,
-//    // tile size and miscellaneous
-//          int* const hrowTD_gpui,   // input header_row tile_diagonal, consisting of the header rows for all tiles on the current tile diagonal
-//          int* const hcolTD_gpui,   // input header_column tile_diagonal, consisting of the header columns for all tiles on the current tile diagonal
-//          int* const hrowTD_gpuo,   // output header_row tile_diagonal, consisting of the header rows for all tiles on the current tile diagonal
-//          int* const hcolTD_gpuo,   // output header_column tile_diagonal, consisting of the header columns for all tiles on the current tile diagonal
-//    const int trows,
-//    const int tcols,
-//    const unsigned tileAx,
-//    const unsigned tileAy,
-//    const int chunksz,   // the number of elements the last thread in a warp must calculate before the next block sync
-//    const int s   // the current minor tile diagonal in the score matrix (exclude the header row and column)
-// )
+// get the number of potential chunks on the tile 
+// +   take into account that the chunk is diagonally shaped
+__device__ static int num_of_chunks_in_tile( int tile_wid, int chunk_wid, int chunk_hei )
+{
+   return ( tile_wid + (chunk_hei-1) + /*homemade ceil function*/chunk_wid-1 )/chunk_wid;
+}
+
+// cuda kernel for the parallel implementation
+__global__ static void Nw_Gpu5_Kernel(
+   // nw input
+   const int* const seqX_gpu,
+   const int* const seqY_gpu,
+   const int* const hrow_gpu,      // header row for the score matrix
+   const int* const hcol_gpu,      // header column for the score matrix
+   const int* const subst_gpu,
+// const int adjrows,   // can be calculated as 1 + trows*tileAy
+// const int adjcols,   // can be calculated as 1 + tcols*tileAx
+   const int substsz,
+   const int indel,
+   const int warpsz,
+   // tile size and miscellaneous
+         int* const hrowTDi_gpu,   // input header_row tile_diagonal, consisting of the header rows for all tiles on the current tile diagonal
+         int* const hcolTDi_gpu,   // input header_col tile_diagonal, consisting of the header columns for all tiles on the current tile diagonal
+         int* const hrowTDo_gpu,   // output header_row tile_diagonal, consisting of the header rows for all tiles on the current tile diagonal
+         int* const hcolTDo_gpu,   // output header_col tile_diagonal, consisting of the header columns for all tiles on the current tile diagonal
+   const int trows,
+   const int tcols,
+   const unsigned tileAx,
+   const unsigned tileAy,
+   const int chunksz,   // the number of elements the last thread in a warp must calculate before the next block sync
+   const int s   // the current minor tile diagonal in the score matrix (exclude the header row and column)
+                 // +   note: s >= 0 are normal tile diagonals, s = -1 when we want to initialize the header_row and header_col for the zeroth tile diagonal
+)
+{
+   extern __shared__ int shmem[/* substsz*substsz + tileAx + tileAy + (1+tileAx) + (1+tileAy) */];
+   // the substitution matrix and relevant parts of the two sequences
+   // TODO: align allocations to 0-th shared memory bank?
+   int* const subst/*[substsz*substsz]*/      = shmem + ( 0 );
+   int* const seqX/*[tileAx]*/                = subst + ( substsz*substsz );
+   int* const seqY/*[tileAy]*/                = seqX  + ( tileAx );
+   // the header row and column for the tile; they will become the header row for the below tile, and the header column for the right tile
+   int* const hrow/*[1+tileAx]*/              = seqY  + ( tileAy );
+   int* const hcol/*[1+tileAy]*/              = hrow  + ( 1+tileAx );
+
+   // initialize the substitution shared memory copy
+   if( s >= 0 )
+   {
+      // map the threads from the thread block onto the substitution matrix elements
+      int i = threadIdx.x;
+      // while the current thread maps onto an element in the matrix
+      while( i < substsz*substsz )
+      {
+         // copy the current element from the global substitution matrix
+         el(subst,substsz, 0,i) = el(subst_gpu,substsz, 0,i);
+         // map this thread to the next element with stride equal to the number of threads in this block
+         i += blockDim.x;
+      }
+   }
+
+   // initialize the tile's window into the global X and Y sequences
+   if( s >= 0 )
+   {
+      //  / / / . .       . . . / /       . . . . .|/ /
+      //  / / . . .   +   . . / / .   +   . . . . /|/
+      //  / . . . .       . / / . .       . . . / /|
+
+      // (s,t) -- tile coordinates on the score matrix diagonal
+      int tbeg = max( 0, s - (tcols-1) );
+   // int tend = min( s, trows-1 );
+      // position of the current thread's tile on the score matrix diagonal
+      int t = tbeg + blockIdx.x;
+
+      // unnecessary question, since the number of launched blocks will always be the same as the number of tiles on the diagonal
+   // if( t <= tend )
+
+      //       x x x x x
+      //       | | | | |
+      //     h h h h h h     // note the x and y seqences on this schematic
+      // y --h c . . . .     // +   they don't! need to be extended by 1 to the left and by 1 to the top
+      // y --h . . . . .
+      // y --h . . . . .
+      // position of the top left not-yet-calculated! element <c> of the current tile in the score matrix
+      // +   only the not-yet-calculated elements will be calculated, and they need the corresponding global sequence X and Y elements
+      int ibeg = 1 + (   t )*tileAy;
+      int jbeg = 1 + ( s-t )*tileAx;
+
+      // map the threads from the thread block onto the global X sequence's elements (which will be used in this tile)
+      int j = threadIdx.x;
+      // while the current thread maps onto an element in the tile's X sequence
+      while( j < tileAx )
+      {
+         // initialize that element in the X seqence's shared window
+         seqX[ j ] = seqX_gpu[ jbeg + j ];
+
+         // map this thread to the next element with stride equal to the number of threads in this block
+         j += blockDim.x;
+      }
+
+      // map the threads from the thread block onto the global Y sequence's elements (which will be used in this tile)
+      int i = threadIdx.x;
+      // while the current thread maps onto an element in the tile's Y sequence
+      while( i < tileAy )
+      {
+         // initialize that element in the Y seqence's shared window
+         seqY[ i ] = seqY_gpu[ ibeg + i ];
+
+         // map this thread to the next element with stride equal to the number of threads in this block
+         i += blockDim.x;
+      }
+   }
+
+   //   MOVE DOWN             d=0                              d=1                              d=2                              d=3                         d=4, end
+   //   ~   ~ ~ a   . . .   . . .        .   . . ~   ~ ~ b   . . .        .   . . .   . . ~   ~ ~ c        .   . . .   . . .   . . .        .   . . .   . . .   . . .
+   //                                                                                                                                                                
+   //   .   1 1 1   . . .   . . .        .   . . .   1 1 1   . . .        .   . . .   . . .   1 1 1        .   . . .   . . .   . . .        .   . . .   . . .   . . .
+   //   .   1 1 1   . . .   . . .        _   _ _ a   1 1 1   . . .        .   . . _   _ _ b   1 1 1        .   . . .   . . _   _ _ _        .   . . .   . . .   . . .
+   //                                                                                                                                                                
+   //   .   . . .   . . .   . . .        .   2 2 2   . . .   . . .        .   . . .   2 2 2   . . .        .   . . .   . . .   1 1 1        .   . . .   . . .   . . .
+   //   .   . . .   . . .   . . .        .   2 2 2   . . .   . . .        _   _ _ a   2 2 2   . . .        .   . . _   _ _ _   1 1 1        .   . . .   . . _   _ _ _
+   //                                                                                                                                                                
+   //                   ||  a ...                     ||  b  a ...                  ||  c  b  a ...                     ||  c  b ...                        ||  c ...   // add before start, remove from end
+   //                       0                             0  1                          0  1  2                             1  2                                2    
+   //                               ->                               ->                               ->                               ->                            
+   //   MOVE RIGHT                                                                                                                                                   
+   //   ~   . . .   . . .   . . .        .   . . |   . . .   . . .        .   . . .   . . |   . . .        .   . . .   . . .   . . |        .   . . .   . . .   . . .
+   //                                                                                                                                                                
+   //   ~   1 1 1   . . .   . . .        .   . . |   1 1 1   . . .        .   . . .   . . |   1 1 1        .   . . .   . . .   . . |        .   . . .   . . .   . . .
+   //   a   1 1 1   . . .   . . .        ~   . . a   1 1 1   . . .        .   . . |   . . a   1 1 1        .   . . .   . . |   . . a        .   . . .   . . .   . . |
+   //                                                                                                                                                                
+   //   .   . . .   . . .   . . .        ~   2 2 2   . . .   . . .        .   . . |   2 2 2   . . .        .   . . .   . . |   1 1 1        .   . . .   . . .   . . |
+   //   .   . . .   . . .   . . .        b   2 2 2   . . .   . . .        .   . . b   2 2 2   . . .        .   . . .   . . b   1 1 1        .   . . .   . . .   . . b
+   //                                                                                                                                                                
+   //                   ||  a ...                     ||  a  b ...                     ||  a  b ...                     ||  a  b ...                        ||  b ...   // add after end, remove from start
+   //                       0                             1  0                             2  1                             3  2                                3    
+
+   // read the current tile's header_row and header_col from the input <header_row, header_col> tile_diagonal
+   // +   use the previous tile_diagonal's results unmodified!
+   if( s >= 0 )
+   {
+      // s=0   1     2       3      4
+      // ┌─────╔═════┌─────  ╔═════┌─────    5
+      // │     ║  A  │       ║  A  │       ║ <-- x
+      //  ╔════╝┌────┘  ╔════╝┌────┘  ╔════╝
+      //  ║  B  │       ║  B  │       ║  A  │ 6
+      //   ┌────┘  ╔════╝┌────┘  ╔════╝┌────┘
+      //   │       ║  C  │       ║  B  │     │
+      //      ═════╝─────┘  ═════╝─────┘─────┘
+      //                    ^-- y
+      // 
+      // reading the current diagonal (double-lined)
+
+      // the index of the tile's header_row and header_col in the current tile_diagonal
+      // +   skip reading the <zeroth header_col element> (marked with x) in the <lower right triangle>, since it is not a part of the zeroth tile (tile A)
+      // +   skip reading the <last header_row element> in the <middle parallelogram and bottom right triange> automatically,
+      //     since there is no thread block to try to read it (no thread block C on that diagonal)
+      int t_hr = blockIdx.x;
+      int t_hc = blockIdx.x + (s >= tcols);
+      // the starting location of the header_row in the header_row tile_diagonal
+      // the starting location of the header_col in the header_col tile_diagonal
+      int jbeg = (1+tileAx)*t_hr + 0;
+      int ibeg = (1+tileAy)*t_hc + 0;
+
+
+      // map the threads from the thread block onto the header_row in the header_row tile_diagonal
+      int j = threadIdx.x;
+
+      // while the current thread maps onto an element in the corresponding header_row
+      while( j < 1+tileAx )
+      {
+         // copy the current element from the corresponding input header_row
+         hrow[ j ] = hrowTDi_gpu[ jbeg + j ];
+         // map this thread to the next element with stride equal to the number of threads in this block
+         j += blockDim.x;
+      }
+
+      // map the threads from the thread block onto the header_col in the header_col tile_diagonal
+      int i = threadIdx.x;
+
+      // while the current thread maps onto an element in the corresponding header_col
+      while( i < 1+tileAy )
+      {
+         // copy the current element from the corresponding input header_col
+         hcol[ i ] = hcolTDi_gpu[ ibeg + i ];
+         // map this thread to the next element with stride equal to the number of threads in this block
+         i += blockDim.x;
+      }
+   }
+
+   if( s >= 0 )
+   {
+      // all threads in this block should finish initializing their substitution shared memory, corresponding parts of the global X and Y sequences, and the tile's header_row and header_col
+      __syncthreads();
+   }
+
+   // map a tile on the current diagonal of tiles to this thread block
+   if( s >= 0 )
+   {
+      // INITIAL IDEA, BUT NOT COMPLETELY CORRECT
+      //       chunksz           chunksz           chunksz           chunksz    
+      //     x                     x x x x x       x x x x x x       x x x x x x
+      //  y                                                                     
+      //       . . . . . .    y  . . / / 1 .       . . . . . .       . . . . . .     warpsz
+      //       . . . . . .    y  . / / 1 . .       . . . . . .       . . . . . .
+      //       . . . . . .    y  / / 1 . . .       . . . . . .       . . . . . .
+      //       . . . . . .    y  / 1 . . . .       . . . . . .       . . . . . .
+      //                              ^----                                     
+      //             x x x       x   <----- issue                               
+      //       . . . . . /    y  / 2 . . . .       . . . . . .       . . . . . .     warpsz
+      //  y    . . . . / /    y  2 . . . . .       . . . . . .       . . . . . .
+      //  y    . . . / / 2       . . . . . .       . . . . . .       . . . . . .
+      //  y    . . . / 2 .       . . . . . .       . . . . . .       . . . . . .
+      //                                                                        
+      //       x x x x                                                          
+      //  y   3. . . . . .       . . . . . .       . . . . . .       . . . . . .     warpsz
+      //  y   3. . . . . .       . . . . . .       . . . . . .       . . . . . .
+      //  y   3. . . . . .       . . . . . .       . . . . . .       . . . . . .
+      //  y   3. . . . . .       . . . . . .       . . . . . .       . . . . . .
+
+      // REFINED IDEA, CORRECT
+      //      ____________________________________________        ____________________________________________        _______________________________________________
+      //     / . . . / . . / . . . . . . . . . . . . . . .       / . . . . . . / . . . / . . / . . . . . . . .       /. . . . . . . . / . . . . . . / . . . / . . / .
+      //   / |1A . / .1B / . . . . . . . . . . . . . . . .     / | . . . . . / .2A . / .2B / . . . . . . . . .     / |. . . . . . . / . . . . . . / .3A . / .3B / . .   ... after all warps except the last one are initialized,
+      // / _ | _ / _ _ / . . . . . . . . . . . . . . . . .   / _ | _ / _ _ / _ _ _ / _ _ / . . . . . . . . . .   / _ |_ _ _ / _ _ / _ _ _ / _ _ / _ _ _ / _ _ / . . .       only do chunk C (c elements per thread, instead of c+w in two chunks, A and B)
+      //     | . . . . . . . . . . . . . . . . . . . . . .       / . . . / . . / . . . . . . . . . . . . . . .       /. . . . . . . . / . . . / . . / . . . . . . . .
+      //     | . c+w -w. . . . . . . . . . . . . . . . . .     / |2A . / .2B / . . . c . . . . . . . . . . . .     / |. . . . . . . / .3A . / .3B / . . . c . . . . .       c - chunksz
+      //     | . . . . . . . . . . . . . . . . . . . . . .   / _ | _ / _ _ / . . . . . . . . . . . . . . . . .   / _ |_ _ _ / _ _ / _ _ _ / _ _ / . . . . . . . . . .       w - warpsz
+      //     | . . . . . . . . . . . . . . . . . . . . . .       | . . . . . . . . . . . . . . . . . . . . . .       /. . . . . / . . / . . . . . . . . . . . . . . .
+      //     | . . . . . . . . . . . . . . . . . . . . . .       | . c+w -w. . . . . . . . . . . . . . . . . .     / |. .3A . / .3B / . . . c . . . . . . . . . . . .       note: chunk A has to be done before chunk B, since e.g. 3B would require 3A from above to be finished
+      //     | . . . . . . . . . . . . . . . . . . . . . .       | . . . . . . . . . . . . . . . . . . . . . .   / _ |_ _ _ / _ _ / . . . . . . . . . . . . . . . . .       note: a diagonal consists of either chunks A+B or only chunk C later on, therefore the width of the diagonal is not fixed
+      //     | . . . . . . . . . . . . . . . . . . . . . .       | . . . . . . . . . . . . . . . . . . . . . .       |. . . . . . . . . . . . . . . . . . . . . . . .
+      //     | . . . . . . . . . . . . . . . . . . . . . .       | . . . . . . . . . . . . . . . . . . . . . .       |. . . c+w -w. . . . . . . . . . . . . . . . . .       important: c >= w for the algorithm to work (chunk A before chunk B),
+      //     | . . . . . . . . . . . . . . . . . . . . . .       | . . . . . . . . . . . . . . . . . . . . . .       |. . . . . . . . . . . . . . . . . . . . . . . .                  if c < w swap their values
+
+      // the thread's warp and index inside the warp, as well as the number of warps in the tile
+      const int warpIdx       = threadIdx.x / warpsz;
+      const int warpThreadIdx = threadIdx.x % warpsz;
+      const int warpcnt       = tileAy / warpsz;
+
+      // size of chunk per chunk type
+      // +   A has to be bigger than B, to avoid a race condition after A and before B
+      // +   C is equal to the requested chunk size
+      const int chunkAsz = max( chunksz, warpcnt );
+      const int chunkBsz = min( chunksz, warpcnt );
+      const int chunkABsz = chunksz + warpcnt;
+      const int chunkCsz = chunksz;
+
+      // idea: think of the matrix as only composed of chunk C
+      // +   calculate the number of chunk diagonals for that matrix
+      // +   now widen some chunks C in the upper left triangle, and then add "artificial" sync tiles (___) after the matrix, to keep the number of chunk diagonals constant
+      // 
+      // case 1.                       AB                                   C                                   S2
+      //                              |aaabb    aaabb    aaabb              ccc      ccc      |ccc              ___      ___      ___      ___     ___
+      //                             a|aabb    aaabb    aaabb              ccc      ccc      c|cc              ___      ___      ___      ___     ___
+      //                           /         /        /                 /        /        /                 /        /        /        /        /
+      //                      __ _    |aaabb    aaabb              ccc      ccc      ccc               cc|c     ___      ___      ___      ___
+      //         S0          __ _    a|aabb    aaabb              ccc      ccc      ccc               ccc|     ___      ___      ___      ___
+      //                  /        /         /                 /        /        /                 /        /        /        /        /
+      //             __ _     __ _    |aaabb              ccc      ccc      ccc               ccc      ccc      c|cc     ___      ___
+      //            __ _     __ _    a|aabb              ccc      ccc      ccc               ccc      ccc      cc|c     ___      ___
+      //         /        /        /                  /        /        /                /        /        /        /        /
+      //    __ _     __ _     __ _              |ccc      ccc      ccc              ccc      ccc      ccc      ccc      |ccc    = 11 diagonals = (warpcnt-1) + ceil( float( tileAx + (warpsz-1) )/chunkCsz )
+      //   __ _     __ _     __ _              c|cc      ccc      ccc              ccc      ccc      ccc      ccc      c|cc                                                          [1]
+      //                                    ==[1]                                                                     [1]
+      // 
+      // case 2.                       AB                                    S2
+      //                              |aaabb    aaabb    |aaabb              ___      ___      ___      ___
+      //                             a|aabb    aaabb    a|aabb              ___      ___      ___      ___
+      //                           /         /        /            C     /        /        /        /
+      //                      __ _    |aaabb    aaabb              |ccc      ___      ___      ___
+      //         S0          __ _    a|aabb    aaabb              c|cc      ___      ___      ___
+      //                  /        /         /                 /        /        /        /
+      //             __ _     __ _    |aaabb              ccc      cc|c      ___      ___
+      //            __ _     __ _    a|aabb              ccc      ccc|     ___      ___
+      //         /        /        /                  /        /        /        /
+      //    __ _     __ _     __ _              |ccc      ccc      ccc      ccc            = 7 diagonals = (warpcnt-1) + ceil( float( tileAx + (warpsz-1) )/chunkCsz )
+      //   __ _     __ _     __ _              c|cc      ccc      ccc      ccc
+      // 
+      // 
+      // case 3.                       AB        S1                          S2
+      //                              |aaab|b    __ _     __ _               ___      ___
+      //                             a|aabb|    __ _     __ _               ___      ___
+      //                           /         /        /                  /        /
+      //                      __ _    |aaab|b    __ _              ___       ___
+      //         S0          __ _    a|aabb|    __ _              ___       ___
+      //                  /        /         /                 /        /
+      //             __ _     __ _    |aaab|b              ccc     ___
+      //            __ _     __ _    a|aabb|              ccc     ___
+      //         /        /        /                  /        /
+      //    __ _     __ _     __ _              |ccc      ccc         = 5 diagonals = (warpcnt-1) + ceil( float( tileAx + (warpsz-1) )/chunkCsz )
+      //   __ _     __ _     __ _              c|cc      ccc          NOTE: the "artificial" part of the upper left triangle (__ _ in S1) has to sync twice! (to prevent a deadlock)
+      // 
+
+      // the total number of chunk diagonals
+      const int chunks = (warpcnt-1) + num_of_chunks_in_tile( tileAx, chunkCsz, warpsz );
+      // remaining number of chunks per chunk type, for this! warp
+      // +   note: sync twice in the S0 and S1 chunk, since we'll sync twice in the AB chunk
+      int chunksS0 = 2*warpIdx;                                // number of artificial chunks before the AB chunks
+      int chunksAB = min(
+         (warpcnt-1 - warpIdx),                                // expected number of AB chunks
+         num_of_chunks_in_tile( tileAx, chunkABsz, warpsz )    // maximum possible number of AB chunks on the tile horizontal
+      );
+      int chunksS1 = 2*( (warpcnt-1 - warpIdx) - chunksAB );   // expected number of artificial S1 chunks between AB and C chunks
+      int chunksC = max(
+         num_of_chunks_in_tile( tileAx - chunksAB*chunkABsz, chunkCsz, warpsz ),   // expected number of C chunks
+         0                                                                         // minimum number of C chunks
+      );
+      int chunksS2 = chunks - ( chunksS0 + chunksAB + chunksS1 + chunksC );   // number of artificial chunks after C chunks
+
+      bool inChunkAB = false;   // if we are in the superchunk AB (between chunks A and B)
+
+
+      //               |h  h  h  h  h  h  h  h  h |hx hx|h  h  h  h  h  h  h |  .  .  .  .  .
+      //             . |h  .  .  .  .  .  .  .  x |x  o |.  .  .  .  .  .  . |  .  .  .  .
+      //          .  . |h  .  .  .  .  .  . |ul u| o  .  .  .  .  .  .  .  . |  .  .  .
+      //       .  .  . |h  .  .  .  .  .  x |l  c| .  .  .  .  .  .  .  .  . |  .  .
+      //    .  .  .  . |h  .  .  .  .  x  x  o  .  .  .  .  .  .  .  .  .  . |  .
+      // .  .  .  .  . |h  .  .  .  .  x  o  .  .  .  .  .  .  .  .  .  .  . |
+      
+      // the elements needed in order to slide the calculation window to the right each iteration
+      // +   save the left element before any calculation (to simplify the algorithm; the thread now only needs to worry how it's going to get its 'up' element)
+      int up     = 0;   // <thread 0 in the warp>: read from hrow on each iteration
+      int upleft = hcol[ 1+ (threadIdx.x - 1) ];
+      int left   = hcol[ 1+ (threadIdx.x    ) ];
+      int curr   = 0;   // stores the value of the newly calculated element
+
+      // slide the tile once in the reverse direction (to the left), since the below algorithm first <slides the tile to the right> and then! <calculates the current element>
+      up = upleft; upleft = 0;
+      curr = left; left = 0;
+
+      // the current thread's position in the tile (also the position of the 'curr' element of the calculation window)
+      // +    on the x axis, offset the thread by its "artificial" elements in the zeroth chunk
+      const int i = threadIdx.x;
+      int j = -warpThreadIdx;
+      // the current chunk's end position in the tile
+      int jcend = j;
+
+
+      ////// calculation //////
+      while( true )
+      {
+         if( chunksS0 > 0 )
+         {
+            chunksS0--;
+            // synchronize twice for each AB chunk on this chunk diagonal
+            // +   wait until the header_row for the warp is ready
+         }
+         else if( chunksAB > 0 && !inChunkAB )
+         {
+            // calculate the current chunk A
+            jcend += chunkAsz;
+
+            inChunkAB = true;
+         }
+         else if( chunksAB > 0 && inChunkAB )
+         {
+            // calculate the current chunk B
+            jcend += chunkBsz;
+
+            inChunkAB = false;
+            chunksAB--;
+         }
+         else if( chunksS1 > 0 )
+         {
+            chunksS1--;
+            // synchronize twice for each AB chunk on this chunk diagonal
+         }
+         else if( chunksC > 0 )
+         {
+            // calculate the current chunk 
+            jcend += chunkCsz;
+
+            chunksC--;
+         }
+         else if( chunksS2 > 0 )
+         {
+            chunksS2--;
+            // synchronize once for each C chunk on this chunk diagonal
+         }
+         // finish the calculation
+         else
+         {
+            break;
+         }
+
+
+
+         // while the warp is in the current chunk (if at all)
+         while( j < jcend )
+         {
+            //               |h  h  h  h  h  h  h  h  h |hx hx|h  h  h  h  h  h  h |  .  .  .  .  .
+            //             . |h  .  .  .  .  .  .  .  x |x  o |.  .  .  .  .  .  . |  .  .  .  .
+            //          .  . |h  .  .  .  .  .  . |ul u| o  .  .  .  .  .  .  .  . |  .  .  .
+            //       .  .  . |h  .  .  .  .  .  x |l  c| .  .  .  .  .  .  .  .  . |  .  .
+            //    .  .  .  . |h  .  .  .  .  x  x  o  .  .  .  .  .  .  .  .  .  . |  .
+            // .  .  .  .  . |h  .  .  .  .  x  o  .  .  .  .  .  .  .  .  .  .  . |
+
+            // slide the calculation window to the right
+            // +   also synchronize the warp minor diagonal as many times as necessary (even "artificially")
+            // +   the 'upleft', 'left' and 'up' elements will be initialized at the thread's start of the AB chunk
+            {
+               // if the current element is not "artificial", slide the tile to the right
+               // +   this prevents losing the left header element before the first calculation
+               if( j >= 0 && j < tileAx )
+               {
+                  upleft = up;
+                  left   = curr;
+               }
+
+               // copy from a lane with lower id relative to the caller; also sync the threads in the warp
+               // +   IMPORTANT: always! sync with the warp, even for "artificial" elements
+               // +   NOTE: 'curr' is unused after this step (meaning, its value is ready to be calculated below)
+               up     = __shfl_up_sync( 0xffff/*mask*/, curr/*var*/, 1/*delta,*/ /*width=warpSize*/ );
+
+               // initialize the <zeroth thread in a warp>'s 'up' element with the next 'up' element from the header_row
+               // +   for "artificial" elements, initialize to 0 so that possible errors are deterministic
+               if( warpThreadIdx == 0 )
+               {
+                  up  = ( j >= 0 && j < tileAx )  ?  hrow[ 1+ (j) ]  :  0;
+               }
+            }
+
+            // calculate the current element's value and save the results to the header_row and header_col
+            // +   only if the current element is not "artificial"
+            if( j >= 0 && j < tileAx )
+            {
+               // calculate the current element's value
+               curr = upleft + el(subst,substsz, seqY[i],seqX[j]);  // MOVE DOWN-RIGHT
+               curr = max( curr, up   + indel );   // MOVE DOWN
+               curr = max( curr, left + indel );   // MOVE RIGHT
+
+               // if this is the last thread in the warp,
+               // always save its current element to the header_row
+               if( warpThreadIdx == warpsz-1 )
+               {
+                  hrow[ 1+ (j) ] = curr;
+               }
+
+               // if this is the last element in the thread's row,
+               // save that element to the header_col
+               if( j == tileAx-1 )
+               {
+                  hcol[ 1+ (i) ] = curr;
+
+                  // last thread in block: save the zeroth elements in the header_row and header_col
+                  // +   these elements were not updated during the calculation, because none of the threads map to them (they are in the upper left header corner)
+                  if( threadIdx.x == blockDim.x-1 )
+                  {
+                     hrow[ 0 ] = hcol[ 1+ (tileAy-1) ];
+                     hcol[ 0 ] = hrow[ 1+ (tileAx-1) ];
+                  }
+               }
+            }
+
+            // move to the next element in the thread's row
+            j++;
+         }
+
+
+         // synchronize with the thread block
+         __syncthreads();
+      }
+   }
+
+   // no block synchronization necessary here, since it's also done after the last chunk in the calculation
+// if( s >= 0 )
 // {
-//    extern __shared__ int shmem[/* substsz*substsz + tileAx + tileAy + (1+tileAx) + (1+tileAy) */];
-//    // the substitution matrix and relevant parts of the two sequences
-//    // TODO: align allocations to 0-th shared memory bank?
-//    int* const subst/*[substsz*substsz]*/      = shmem + ( 0 );
-//    int* const seqX/*[tileAx]*/                = subst + ( substsz*substsz );
-//    int* const seqY/*[tileAy]*/                = seqX  + ( tileAx );
-//    // the header row and column for the tile; they will become the header row for the below tile, and the header column for the right tile
-//    int* const hrow/*[1+tileAx]*/              = seqY  + ( tileAy );
-//    int* const hcol/*[1+tileAy]*/              = hrow  + ( 1+tileAx );
-//    // the warps' state, used to synchronize warps during chunk calculation
-//    // sync_before   calc_n_sync   sync_after   stop
-//    // 0          -> 1          -> 2         -> 3
-//    int* const warpstate/*[warpcnt]*/          = hcol  + ( 1+tileAy );
-
-//    // initialize the substitution shared memory copy
-//    {
-//       // map the threads from the thread block onto the substitution matrix elements
-//       int i = threadIdx.x;
-//       // while the current thread maps onto an element in the matrix
-//       while( i < substsz*substsz )
-//       {
-//          // copy the current element from the global substitution matrix
-//          el(subst,substsz, 0,i) = el(subst_gpu,substsz, 0,i);
-//          // map this thread to the next element with stride equal to the number of threads in this block
-//          i += blockDim.x;
-//       }
-//    }
-
-//    // initialize the tile's window into the global X and Y sequences
-//    {
-//       //  / / / . .       . . . / /       . . . . .|/ /
-//       //  / / . . .   +   . . / / .   +   . . . . /|/
-//       //  / . . . .       . / / . .       . . . / /|
-
-//       // (s,t) -- tile coordinates on the score matrix diagonal
-//       int tbeg = max( 0, s - (tcols-1) );
-//    // int tend = min( s, trows-1 );
-//       // position of the current thread's tile on the score matrix diagonal
-//       int t = tbeg + blockIdx.x;
-
-//       // unnecessary question, since the number of launched blocks will always be the same as the number of tiles on the diagonal
-//    // if( t <= tend )
-
-//       //       x x x x x
-//       //       | | | | |
-//       //     h h h h h h     // note the x and y seqences on this schematic
-//       // y --h c . . . .     // +   they don't! need to be extended by 1 to the left and by 1 to the top
-//       // y --h . . . . .
-//       // y --h . . . . .
-//       // position of the top left not-yet-calculated! element <c> of the current tile in the score matrix
-//       // +   only the not-yet-calculated elements will be calculated, and they need the corresponding global sequence X and Y elements
-//       int ibeg = 1 + (   t )*tileAy;
-//       int jbeg = 1 + ( s-t )*tileAx;
-
-//       // map the threads from the thread block onto the global X sequence's elements (which will be used in this tile)
-//       int j = threadIdx.x;
-//       // while the current thread maps onto an element in the tile's X sequence
-//       while( j < tileAx )
-//       {
-//          // initialize that element in the X seqence's shared window
-//          seqX[ j ] = seqX_gpu[ jbeg + j ];
-
-//          // map this thread to the next element with stride equal to the number of threads in this block
-//          j += blockDim.x;
-//       }
-
-//       // map the threads from the thread block onto the global Y sequence's elements (which will be used in this tile)
-//       int i = threadIdx.x;
-//       // while the current thread maps onto an element in the tile's Y sequence
-//       while( i < tileAy )
-//       {
-//          // initialize that element in the Y seqence's shared window
-//          seqY[ i ] = seqY_gpu[ ibeg + i ];
-
-//          // map this thread to the next element with stride equal to the number of threads in this block
-//          i += blockDim.x;
-//       }
-//    }
-
-//    //   MOVE DOWN             d=0                              d=1                              d=2                              d=3                              end
-//    //   ~   ~ ~ ~   . . .   . . .        .   . . ~   ~ ~ ~   . . .        .   . . .   . . ~   ~ ~ ~        .   . . .   . . .   . . .        .   . . .   . . .   . . .
-//    //                                                                                                                                                                
-//    //   .   1 1 1   . . .   . . .        .   . . .   1 1 1   . . .        .   . . .   . . .   1 1 1        .   . . .   . . .   . . .        .   . . .   . . .   . . .
-//    //   .   1 1 1   . . .   . . .        _   _ _ _   1 1 1   . . .        .   . . _   _ _ _   1 1 1        .   . . .   . . _   _ _ _        .   . . .   . . .   . . .
-//    //                                                                                                                                                                
-//    //   .   . . .   . . .   . . .        .   2 2 2   . . .   . . .        .   . . .   2 2 2   . . .        .   . . .   . . .   1 1 1        .   . . .   . . .   . . .
-//    //   .   . . .   . . .   . . .        .   2 2 2   . . .   . . .        _   _ _ _   2 2 2   . . .        .   . . _   _ _ _   1 1 1        .   . . .   . . _   _ _ _
-//    //                                                                                                                                                                
-//    //                   || ~a ...                     || ~b -a ...                  || ~c -b -a ...                     || -c -b ...                        || -c ...   // prepend before start, and then remove from end
-//    //                       0                             0  1                          0  1  2                             0  1                                0    
-//    //                               ->                               ->                               ->                               ->                            
-//    //   MOVE RIGHT                                                                                                                                                   
-//    //   ~   . . .   . . .   . . .        .   . . |   . . .   . . .        .   . . .   . . |   . . .        .   . . .   . . .   . . |        .   . . .   . . .   . . .
-//    //                                                                                                                                                                
-//    //   ~   1 1 1   . . .   . . .        .   . . |   1 1 1   . . .        .   . . .   . . |   1 1 1        .   . . .   . . .   . . |        .   . . .   . . .   . . .
-//    //   ~   1 1 1   . . .   . . .        ~   . . |   1 1 1   . . .        .   . . |   . . |   1 1 1        .   . . .   . . |   . . |        .   . . .   . . .   . . |
-//    //                                                                                                                                                                
-//    //   .   . . .   . . .   . . .        ~   2 2 2   . . .   . . .        .   . . |   2 2 2   . . .        .   . . .   . . |   1 1 1        .   . . .   . . .   . . |
-//    //   .   . . .   . . .   . . .        ~   2 2 2   . . .   . . .        .   . . |   2 2 2   . . .        .   . . .   . . |   1 1 1        .   . . .   . . .   . . |
-//    //                                                                                                                                                                
-//    //                   || ~a ...                     || -a ~b ...                     || -a -b ...                     || -a -b ...                        || -b ...   // append to the end, and then remove from start
-//    //                       0                             0  1                             0  1                             0  1                                0    
-
-//    // load the current tile's header_row and header_column from the input header_row + header_column tile_diagonals
-//    {
-//       TODO;
-
-//       // (s,t) -- tile coordinates on the score matrix diagonal
-//       int tbeg = max( 0, s - (tcols-1) );
-//       int tend = min( s, trows-1 );
-
-//       // the starting location of the header_row in the header_row tile_diagonal
-//       int jbeg = (1+tileAx)*( blockIdx.x );
-//       // the starting location of the header_column in the header_column tile_diagonal
-//       // +   skip the zeroth tile in the header_column tile_diagonal's tiles if the current diagonal is in the lower-right tile_triangle (when the current diagonal loses the previous diagonal's first tile)
-//       int ibeg = (1+tileAy)*( blockIdx.x + (s >= trows) );
-
-//       // map the threads from the thread block onto the header_row in the header_row tile_diagonal
-//       int j = threadIdx.x;
-
-//       // while the current thread maps onto an element in the corresponding header_row
-//       while( j < 1+tileAx )
-//       {
-//          // copy the current element from the corresponding input header_row
-//          hrow[ j ] = hrowTD_gpui[ jbeg + j ];
-//          // map this thread to the next element with stride equal to the number of threads in this block
-//          j += blockDim.x;
-//       }
-
-//       // map the threads from the thread block onto the header_column in the header_column tile_diagonal
-//       int i = threadIdx.x;
-
-//       // while the current thread maps onto an element in the corresponding header_column
-//       while( i < 1+tileAy )
-//       {
-//          // copy the current element from the corresponding input header_column
-//          hcol[ i ] = hcolTD_gpui[ ibeg + i ];
-//          // map this thread to the next element with stride equal to the number of threads in this block
-//          i += blockDim.x;
-//       }
-//    }
-
-//    // initialize the warps' state
-//    {
-//       // the thread's warp and index inside the warp
-//       const int warpIdx       = threadIdx.x / warpsz;
-//       const int warpThreadIdx = threadIdx.x % warpsz;
-
-//       // if this is the first thread in the warp
-//       if( warpThreadIdx == 0 )
-//       {
-//          // presync   active   postsync   stop
-//          // 0      -> 1     -> 2       -> 3
-
-//          // initialize the warp state
-//          // +   only the first warp is active, the other warps pre-sync
-//          warpstate[ warpIdx ] = ( warpIdx == 0 ) ? active : presync;
-//       }
-//    }
-
-//    // all threads in this block should finish initializing their substitution shared memory, corresponding parts of the global X and Y sequences, the tile's header_row and header_column and the warp's state
 //    __syncthreads();
+// }
 
-//    // map a tile on the current diagonal of tiles to this thread block
-//    {
-//       // INITIAL IDEA, BUT NOT COMPLETELY CORRECT
-//       //       chunksz           chunksz           chunksz           chunksz    
-//       //     x                     x x x x x       x x x x x x       x x x x x x
-//       //  y                                                                     
-//       //       . . . . . .    y  . . / / 1 .       . . . . . .       . . . . . .     warpsz
-//       //       . . . . . .    y  . / / 1 . .       . . . . . .       . . . . . .
-//       //       . . . . . .    y  / / 1 . . .       . . . . . .       . . . . . .
-//       //       . . . . . .    y  / 1 . . . .       . . . . . .       . . . . . .
-//       //                              ^----                                     
-//       //             x x x       x   <----- issue                               
-//       //       . . . . . /    y  / 2 . . . .       . . . . . .       . . . . . .     warpsz
-//       //  y    . . . . / /    y  2 . . . . .       . . . . . .       . . . . . .
-//       //  y    . . . / / 2       . . . . . .       . . . . . .       . . . . . .
-//       //  y    . . . / 2 .       . . . . . .       . . . . . .       . . . . . .
-//       //                                                                        
-//       //       x x x x                                                          
-//       //  y   3. . . . . .       . . . . . .       . . . . . .       . . . . . .     warpsz
-//       //  y   3. . . . . .       . . . . . .       . . . . . .       . . . . . .
-//       //  y   3. . . . . .       . . . . . .       . . . . . .       . . . . . .
-//       //  y   3. . . . . .       . . . . . .       . . . . . .       . . . . . .
+   // store the results to the next tile diagonal
+   if( s >= 0 || s == -1 )
+   {
+      // s=-1   0    1       2      3    .-- x
+      // ┌─────┌─────┌─────  ┌─────┌─────    
+      // │     │  A  ║  .    │  A  ║  .    │ 4
+      //  ┌────┘╔════╝  ┌────┘╔════╝  ┌────┘
+      //  │  B  ║  .    │  B  ║  .    │  A  ║ 5
+      //   ═════╝  ┌────┘╔════╝  ┌────┘╔════╝
+      // > │  .    │  C  ║  .    │  B  ║  .  │ 6
+      // |    ─────┘═════╝  ─────┘═════╝─────┘
+      // | y
+      // 
+      // writing the next diagonal (now double-lined)
+      // +   the double-lined header_rows ═══ have moved down  .  by one tile,
+      //     the double-lined header_cols ║   have moved right -> by one tile
 
-//       // REFINED IDEA, CORRECT
-//       //  ________________________________________________   ________________________________________________   ________________________________________________
-//       //  |. . . . . / . . / . . . . . . . . . . . . . . .   |. . . . . . . . / . . . / . . / . . . . . . . .   |. . . . . . . . / . . . . . . / . . . / . . / .
-//       //  |. .1A . / .1B / . . . . . . . . . . . . . . . .   |. . . . . . . / .2A . / .2B / . . . . . . . . .   |. . . . . . . / . . . . . . / .3A . / .3B / . .   ... after all warps except the last one are initialized,
-//       //  |_ _ _ / _ _ / . . . . . . . . . . . . . . . . .   |_ _ _ / _ _ / _ _ _ / _ _ / . . . . . . . . . .   |_ _ _ / _ _ / _ _ _ / _ _ / _ _ _ / _ _ / . . .       only do phase A (c elements per thread, instead of c+w in two phases, A and B)
-//       //  |. . . . . . . . . . . . . . . . . . . . . . . .   |. . . . . / . . / . . . . . . . . . . . . . . .   |. . . . . . . . / . . . / . . / . . . . . . . .
-//       //  |. . . c+w . . . . . . . . . . . . . . . . . . .   |. .2A . / .2B / . . . c . . . . . . . . . . . .   |. . . . . . . / .3A . / .3B / . . . c . . . . .       c - chunksz
-//       //  |. . . . . . . . . . . . . . . . . . . . . . . .   |_ _ _ / _ _ / . . . . . . . . . . . . . . . . .   |_ _ _ / _ _ / _ _ _ / _ _ / . . . . . . . . . .       w - warpsz
-//       //  |. . . . . . . . . . . . . . . . . . . . . . . .   |. . . . . . . . . . . . . . . . . . . . . . . .   |. . . . . / . . / . . . . . . . . . . . . . . .
-//       //  |. . . . . . . . . . . . . . . . . . . . . . . .   |. . . c+w . . . . . . . . . . . . . . . . . . .   |. .3A . / .3B / . . . c . . . . . . . . . . . .       note: phase A has to be done before phase B, since e.g. 3B would require 3A from above to be finished
-//       //  |. . . . . . . . . . . . . . . . . . . . . . . .   |. . . . . . . . . . . . . . . . . . . . . . . .   |_ _ _ / _ _ / . . . . . . . . . . . . . . . . .       note: a chunk is phases A+B or phase A, therefore actual chunk size is not fixed
-//       //  |. . . . . . . . . . . . . . . . . . . . . . . .   |. . . . . . . . . . . . . . . . . . . . . . . .   |. . . . . . . . . . . . . . . . . . . . . . . .
-//       //  |. . . . . . . . . . . . . . . . . . . . . . . .   |. . . . . . . . . . . . . . . . . . . . . . . .   |. . . c+w . . . . . . . . . . . . . . . . . . .       important: c > w for the algorithm to work (phase A before phase B),
-//       //  |. . . . . . . . . . . . . . . . . . . . . . . .   |. . . . . . . . . . . . . . . . . . . . . . . .   |. . . . . . . . . . . . . . . . . . . . . . . .                  if c < w swap them
+      // if this is not a special diagonal (not the -1st)
+      if( s >= 0 )
+      {
+         // the index of the tile's header_row and header_col in the next tile_diagonal
+         // +   leave space for the right tile's header_row at the beginning [────, ═══, ═══, ═══), but only inside the <upper left triangle + middle parallelogram>
+         // +   leave space for the below tile's header_col at the end [║, ║, │) automatically, but only inside the <upper left triangle>
+         int t_hr = blockIdx.x + (s+1 < tcols);
+         int t_hc = blockIdx.x;
+         // the starting location of the header_row in the header_row tile_diagonal
+         // the starting location of the header_col in the header_col tile_diagonal
+         int jbeg = (1+tileAx)*t_hr + 0;
+         int ibeg = (1+tileAy)*t_hc + 0;
 
-//       // the thread's warp and index inside the warp
-//       const int warpIdx       = threadIdx.x / warpsz;
-//       const int warpThreadIdx = threadIdx.x % warpsz;
 
-//       // the elements needed in order to slide the calculation window to the right each iteration
-//       // +   save the left element before any calculation (to simplify the algorithm; the thread now only needs to worry how it's going to get its 'up' element)
-//       int up     = 0;   // <thread 0 in the warp>: read from hrow on each iteration
-//       int upleft = hcol[ 1+ (threadIdx.x - 1) ];
-//       int left   = hcol[ 1+ (threadIdx.x    ) ];
-//       int curr   = 0;   // stores the value of the newly calculated element
+         // map the threads from the thread block onto the header_row in the header_row tile_diagonal
+         int j = threadIdx.x;
+         // while the current thread maps onto an element in the corresponding header_row
+         while( j < (1+tileAx) )
+         {
+            // copy the current element from the corresponding output header_row
+            hrowTDo_gpu[ jbeg + j ] = hrow[ j ];
+            // map this thread to the next element with stride equal to the number of threads in this block
+            j += blockDim.x;
+         }
 
-//       // the width of phase A and B
-//       // +   phase A's width has to be longer than phase B's width in order for this warp to never access not-yet-initialized! header_row elements (see the refined idea schematic)
-//       const int phAwid = max( chunksz, warpsz );
-//       const int phBwid = min( chunksz, warpsz );
+         // map the threads from the thread block onto the header_col in the header_col tile_diagonal
+         int i = threadIdx.x;
+         // while the current thread maps onto an element in the corresponding header_col
+         while( i < (1+tileAy) )
+         {
+            // copy the current element from the corresponding output header_col
+            hcolTDo_gpu[ ibeg + i ] = hcol[ i ];
+            // map this thread to the next element with stride equal to the number of threads in this block
+            i += blockDim.x;
+         }
+      }
 
-//       // wait until the header_row for the warp is ready, and then wait for the warp's diagonal to reach the current thread
-//       // +   also initialize the thread's up element
-//       {
-//          // wait until the above warp has finished its first chunk (the header_row for this warp is ready)
-//          while( warpstate[ warpIdx ] == presync )
-//          {
-//             // presync   active   postsync   stop
-//             // 0      -> 1     -> 2       -> 3
-//             __syncthreads();
-//          }
+      // if this is the zeroth block in the grid and the tile_diagonal touches the top of the matrix
+      // +   initialize the header_row for the right tile (this also supports the special -1st diagonal)
+      if( blockIdx.x == 0 && (s+1 < tcols) )
+      {
+         // the starting location of the header_row in the header_row tile_diagonal
+         // the starting location of the header_row in the matrix's header row
+         int jbegTD = (1+tileAx)*blockIdx.x + 0;
+         int jbegM = (1 + (tileAx)*( s+1 ) ) - 1;
+         
 
-//          //    |/ / . . . .             . . / / / /             . . . . . .|/ /
-//          //   /|/ . . . . . ...  +  ... . / / / / . ...  +  ... . . . . . /|/
-//          // / /|. . . . . .             / / / / . .             . . . . / /|
+         // map the threads from the thread block onto the header_row in the header_row tile_diagonal
+         int j = threadIdx.x;
+         // while the current thread maps onto an element in the corresponding header_row in the matrix header_row
+         while( j < (1+tileAx) )
+         {
+            // copy the current element from the corresponding matrix header_row
+            hrowTDo_gpu[ jbegTD + j ] = hrow_gpu[ jbegM + j ];
+            // map this thread to the next element with stride equal to the number of threads in this block
+            j += blockDim.x;
+         }
+         
+      }
+      // if this is the last block in the grid and the tile_diagonal touches the left of the matrix
+      // +   initialize the header_col for the below tile (this also supports the special -1st diagonal)
+      if( blockIdx.x == gridDim.x - 1 && (s+1 < trows) )
+      {
+         // the starting location of the header_col in the header_col tile_diagonal
+         // the starting location of the header_col in the matrix's header column
+         int ibegTD = (1+tileAy)*blockIdx.x + 0;
+         int ibegM = (1 + (tileAy)*( s+1 ) ) - 1;
 
-//          // if the thread is the zeroth thread in the warp
-//          if( warpThreadIdx == 0 )
-//          {
-//             // initialize its 'up' element from the header_row
-//             up = hrow[ 1+ (0) ];
-//          }
-//          // otherwise, wait for the warp's diagonal to reach the current thread
-//          else for( int i = 0; i < warpThreadIdx; i++ )
-//          {
-//             // used only for synchronization here, except for the last shuffle which truly initializes the 'up' element
-//             up = __shfl_up_sync( 0xffff/*mask*/, curr/*var*/, 1/*delta,*/ /*width=warpSize*/ );
-//          }
-//       }
 
-//       // current thread: start calculation
-//       {
-//          // the current element to be calculated
-//          int i = threadIdx.x;
-//          int j = 0;
+         // map the threads from the thread block onto the header_col in the header_col tile_diagonal
+         int i = threadIdx.x;
+         // while the current thread maps onto an element in the corresponding header_col in the matrix header_col
+         while( i < (1+tileAy) )
+         {
+            // copy the current element from the corresponding matrix header_col
+            hcolTDo_gpu[ ibegTD + i ] = hcol_gpu[ ibegM + i ];
+            // map this thread to the next element with stride equal to the number of threads in this block
+            i += blockDim.x;
+         }
+      }
+   }
+}
 
-//          // for all elements in the thread's tile row
-//          while( j < tileAx )
-//          {
-//             // calculate the current element's value
-//             {
-//                curr = upleft + el(subst,substsz, seqY[i],seqX[j]);  // MOVE DOWN-RIGHT
-//                curr = max( curr, up   + indel );   // MOVE DOWN
-//                curr = max( curr, left + indel );   // MOVE RIGHT
-//             }
 
-//             // save the results to the header_row and header_column
-//             {
-//                // if this is the last thread in the warp
-//                if( warpThreadIdx == warpsz-1 )
-//                {
-//                   // always save its current element to the header_row
-//                   hrow[ 1+ (j) ] = curr;
-//                }
 
-//                // if this is the last element in the tile row
-//                if( j == tileAx-1 )
-//                {
-//                   // save that element to the header_column
-//                   hcol[ 1+ (i) ] = curr;
-//                }
-//             }
+// parallel gpu implementation of the Needleman-Wunsch algorithm
+NwStat NwAlign_Gpu5_DiagDiagDiag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
+{
+   // TODO
+   return NwStat::errorInvalidValue;
 
-//             // slide the calculation window to the right
-//             // +   also synchronize the warp minor diagonal
-//             {
-//                // update the elements in the calculation window
-//                upleft = up;
-//                left   = curr;
-//                // copy from a lane with lower id relative to the caller; also sync the threads in the warp
-//                // +   NOTE: 'curr' is unused after this step
-//                up     = __shfl_up_sync( 0xffff/*mask*/, curr/*var*/, 1/*delta,*/ /*width=warpSize*/ );
+   // // tile size for the kernel
+   // unsigned tileAx;
+   // unsigned tileAy;   // TODO: must be a multiple of the warp size
+   // // horizontal size of the chunk in the tile
+   // int chunksz;
+   // int warpcnt;
 
-//                // if the thread is the zeroth thread in the warp and the next 'up' element exists
-//                // +   NOTE: 'up' is not initialized after! the last iteration (which is ok)
-//                if( warpThreadIdx == 0 && (j+1) < tileAx )
-//                {
-//                   // initialize the 'up' element with the next 'up' element from the header_row
-//                   up  = hrow[ 1+ (j+1) ];
-//                }
+   // // get the parameter values
+   // try
+   // {
+   //    tileAx = pr["tileAx"].curr();
+   //    tileAy = pr["tileAy"].curr();
+   //    chunksz = pr["chunksz"].curr();
+   //    warpcnt = tileAy/nw.warpsz;
+   // }
+   // catch( const std::out_of_range& ex )
+   // {
+   //    return NwStat::errorInvalidValue;
+   // }
 
-//                // move to the next element in the thread's tile row
-//                j++;
-//             }
+   // // adjusted gpu score matrix dimensions
+   // // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile A size (in order to be evenly divisible)
+   // int adjrows = 1 + tileAy*ceil( float( nw.adjrows-1 )/tileAy );
+   // int adjcols = 1 + tileAx*ceil( float( nw.adjcols-1 )/tileAx );
+   // // special case when one of the sequences is very short
+   // if( adjrows == 1 ) { adjrows = 1 + tileAy; }
+   // if( adjcols == 1 ) { adjcols = 1 + tileAx; }
 
-//             // synchronize the warp with the thread block, after the last! thread in the warp finishes its chunk row
-//             {
-//                TODO;
-//                __syncthreads();
-//             }
-//          }
+   // // start the timer
+   // Stopwatch& sw = res.sw_align;
+   // sw.start();
 
-//          // last thread: save the zeroth elements in the header_row and header_column
-//          if( threadIdx.x == blockDim.x-1 )
-//          {
-//             hrow[ 0 ] = hcol[ 1+ (tileAy-1) ];
-//             hcol[ 0 ] = hrow[ 1+ (tileAx-1) ];
-//          }
 
-//          // wait until the last warp finishes calculating its last chunk stripe
-//          // also update the next warp's status
-//          TODO;
-//          for( int i = 0; i < warpIdx; i++ )
-//          {
-//             __syncthreads();
-//          }
-//       }
-//    }
+   // // TODO: chunk size >= 1
+   // // TODO: special case if (s == -1)
+   // // TODO: allocate header row and column memory
+   // // TODO: transfer appropriate memory to GPU
+   // // TODO: initialize the header row and column for the score matrix
+   // // TODO: create kernel stream and memcpy stream
+   // // TODO: initialize the padding in the global X and Y sequences, as well as the matrix header_row and header_col
+   // // reserve space in the ram and gpu global memory
+   // try
+   // {
+   //    ////// device specific memory
+   //    nw.seqX_gpu.init(         adjcols );
+   //    nw.seqY_gpu.init( adjrows         );
+   //    // sparse representation of score matrix
+   //    nw.hrow_gpu.init(         adjcols );
+   //    nw.hcol_gpu.init( adjrows         );
+   //    nw.hrowTDi_gpu.init();
+   //    nw.hcolTDi_gpu.init();
+   //    nw.hrowTDo_gpu.init();
+   //    nw.hcolTDo_gpu.init();
+
+   //    ////// host specific memory
+   //    nw.subst.init();
+   //    nw.seqX.init();
+   //    nw.seqY.init();
+   //    nw.score.init();
+   //    // sparse representation of score matrix
+   //    nw.hrowM.init();
+   //    nw.hcolM.init();
+   // }
+   // catch( const std::exception& ex )
+   // {
+   //    return NwStat::errorMemoryAllocation;
+   // }
+
+   // // measure allocation time
+   // sw.lap( "alloc" );
+
    
-//    // all threads in this block should finish calculating the below tile's header_row and right tile's header_column
-//    __syncthreads();
+   // // copy data from host to device
+   // if( cudaSuccess != ( cudaStatus = memTransfer( nw.seqX_gpu, nw.seqX, nw.adjcols ) ) )
+   // {
+   //    return NwStat::errorMemoryTransfer;
+   // }
+   // if( cudaSuccess != ( cudaStatus = memTransfer( nw.seqY_gpu, nw.seqY, nw.adjrows ) ) )
+   // {
+   //    return NwStat::errorMemoryTransfer;
+   // }
+   // // also initialize padding, since it is used to access elements in the substitution matrix
+   // if( cudaSuccess != ( cudaStatus = memSet( nw.seqX_gpu, nw.adjcols, 0/*value*/ ) ) )
+   // {
+   //    return NwStat::errorMemoryTransfer;
+   // }
+   // if( cudaSuccess != ( cudaStatus = memSet( nw.seqY_gpu, nw.adjrows, 0/*value*/ ) ) )
+   // {
+   //    return NwStat::errorMemoryTransfer;
+   // }
 
-//    //   MOVE DOWN             d=0                              d=1                              d=2                              d=3                              end
-//    //   ~   ~ ~ ~   . . .   . . .        .   . . ~   ~ ~ ~   . . .        .   . . .   . . ~   ~ ~ ~        .   . . .   . . .   . . .        .   . . .   . . .   . . .
-//    //                                                                                                                                                                
-//    //   .   1 1 1   . . .   . . .        .   . . .   1 1 1   . . .        .   . . .   . . .   1 1 1        .   . . .   . . .   . . .        .   . . .   . . .   . . .
-//    //   .   1 1 1   . . .   . . .        _   _ _ _   1 1 1   . . .        .   . . _   _ _ _   1 1 1        .   . . .   . . _   _ _ _        .   . . .   . . .   . . .
-//    //                                                                                                                                                                
-//    //   .   . . .   . . .   . . .        .   2 2 2   . . .   . . .        .   . . .   2 2 2   . . .        .   . . .   . . .   1 1 1        .   . . .   . . .   . . .
-//    //   .   . . .   . . .   . . .        .   2 2 2   . . .   . . .        _   _ _ _   2 2 2   . . .        .   . . _   _ _ _   1 1 1        .   . . .   . . _   _ _ _
-//    //                                                                                                                                                                
-//    //                   || ~a ...                     || ~b -a ...                  || ~c -b -a ...                     || -c -b ...                        || -c ...   // prepend before start, and then remove from end
-//    //                       0                             0  1                          0  1  2                             0  1                                0    
-//    //                               ->                               ->                               ->                               ->                            
-//    //   MOVE RIGHT                                                                                                                                                   
-//    //   ~   . . .   . . .   . . .        .   . . |   . . .   . . .        .   . . .   . . |   . . .        .   . . .   . . .   . . |        .   . . .   . . .   . . .
-//    //                                                                                                                                                                
-//    //   ~   1 1 1   . . .   . . .        .   . . |   1 1 1   . . .        .   . . .   . . |   1 1 1        .   . . .   . . .   . . |        .   . . .   . . .   . . .
-//    //   ~   1 1 1   . . .   . . .        ~   . . |   1 1 1   . . .        .   . . |   . . |   1 1 1        .   . . .   . . |   . . |        .   . . .   . . .   . . |
-//    //                                                                                                                                                                
-//    //   .   . . .   . . .   . . .        ~   2 2 2   . . .   . . .        .   . . |   2 2 2   . . .        .   . . .   . . |   1 1 1        .   . . .   . . .   . . |
-//    //   .   . . .   . . .   . . .        ~   2 2 2   . . .   . . .        .   . . |   2 2 2   . . .        .   . . .   . . |   1 1 1        .   . . .   . . .   . . |
-//    //                                                                                                                                                                
-//    //                   || ~a ...                     || -a ~b ...                     || -a -b ...                     || -a -b ...                        || -b ...   // append to the end, and then remove from start
-//    //                       0                             0  1                             0  1                             0  1                                0    
-
-//    // store the below tile's header_row and right tile's header_column to the output header_row + header_column tile_diagonal
-//    {
-//       TODO;
-
-//       // (s,t) -- tile coordinates on the score matrix diagonal
-//       int tbeg = max( 0, s - (tcols-1) );
-//       int tend = min( s, trows-1 );
-
-//       // the starting location of the header_row in the header_row tile_diagonal
-//       // +   shift the header_row tile_diagonal's tiles by one tile to the right if the next zeroth tile on the tile_diagonal touches the matrix header row (should be initialized by the gpu)
-//       int jbeg = (1+tileAx)*( blockIdx.x + (s < tcols) );
-//       // the starting location of the header_column in the header_column tile_diagonal
-//       int ibeg = (1+tileAy)*( blockIdx.x );
-
-//       // map the threads from the thread block onto the header_row in the header_row tile_diagonal
-//       int j = threadIdx.x;
-//       // while the current thread maps onto an element in the corresponding header_row
-//       while( j < (1+tileAx) )
-//       {
-//          // copy the current element from the corresponding output header_row
-//          hrowTD_gpuo[ jbeg + j ] = hrow[ j ];
-//          // map this thread to the next element with stride equal to the number of threads in this block
-//          j += blockDim.x;
-//       }
-
-//       // map the threads from the thread block onto the header_column in the header_column tile_diagonal
-//       int i = threadIdx.x;
-//       // while the current thread maps onto an element in the corresponding header_column
-//       while( i < (1+tileAy) )
-//       {
-//          // copy the current element from the corresponding output header_column
-//          hcolTD_gpuo[ ibeg + i ] = hcol[ i ];
-//          // map this thread to the next element with stride equal to the number of threads in this block
-//          i += blockDim.x;
-//       }
-//    }
-// }
+   // // measure memory transfer time
+   // sw.lap( "cpy-dev" );
 
 
 
-// // parallel gpu implementation of the Needleman-Wunsch algorithm
-// NwStat NwAlign_Gpu5_DiagDiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
-// {
-//    // TODO: allocate header row and column memory
-//    // TODO: initialize the header row and column for the score matrix
-//    // hrowM
-//    // hcolM
+   // //  x x x x x x       x x x x x x       x x x x x x
+   // //  x / / / . .       x . . . / /       x . . . . .|/ /
+   // //  x / / . . .   +   x . . / / .   +   x . . . . /|/
+   // //  x / . . . .       x . / / . .       x . . . / /|
+   // // launch kernel for each minor tile diagonal of the score matrix
+   // {
+   //    // grid and block dimensions for kernel
+   //    dim3 gridA {};
+   //    dim3 blockA {};
+   //    // the number of tiles per row and column of the score matrix
+   //    int trows = ceil( float( adjrows-1 )/tileAy );
+   //    int tcols = ceil( float( adjcols-1 )/tileAx );
 
-//    // tile size for the kernel
-//    unsigned tileAx = 320;
-//    unsigned tileAy = 4*nw.warpsz;   // must be a multiple of the warp size
-//    int chunksz = 32;
+   //    // calculate size of shared memory per block in bytes
+   //    int shmemsz = (
+   //       /*subst[]*/ nw.substsz*nw.substsz *sizeof( int )
+   //       /*seqX[]*/ + tileAx               *sizeof( int )
+   //       /*seqY[]*/ + tileAy               *sizeof( int )
+   //       /*hrow[]*/ + (1+tileAx)           *sizeof( int )
+   //       /*hcol[]*/ + (1+tileAy)           *sizeof( int )
+   //       /*warpstate*/ + warpcnt           *sizeof( int )
+   //    );
 
-//    // substitution matrix, sequences which will be compared and the score matrix stored in gpu global memory
-//    NwInput nw_gpu = {
-//       // nw.seqX,
-//       // nw.seqY,
-//       // nw.score,
-//       // nw.subst,
+   //    // for all minor diagonals in the score matrix (excluding the header row and column)
+   //    for( int d = 0;   d < tcols-1 + trows;   d++ )
+   //    {
+   //       // calculate grid and block dimensions for kernel B
+   //       {
+   //          int pbeg = max( 0, d - (tcols-1) );
+   //          int pend = min( d, trows-1 );
+            
+   //          // the number of elements on the current diagonal
+   //          int dsize = pend-pbeg + 1;
 
-//       // nw.adjrows,
-//       // nw.adjcols,
-//       // nw.substsz,
-
-//       // nw.indel,
-//    };
-
-//    // adjusted gpu score matrix dimensions
-//    // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile A size (in order to be evenly divisible)
-//    nw_gpu.adjrows = 1 + tileAy*ceil( float( nw.adjrows-1 )/tileAy );
-//    nw_gpu.adjcols = 1 + tileAx*ceil( float( nw.adjcols-1 )/tileAx );
-//    nw_gpu.substsz = nw.substsz;
-//    nw_gpu.indel = nw.indel;
-
-//    // allocate space in the gpu global memory
-//    cudaMalloc( &nw_gpu.seqX,  nw_gpu.adjcols                * sizeof( int ) );
-//    cudaMalloc( &nw_gpu.seqY,  nw_gpu.adjrows                * sizeof( int ) );
-//    cudaMalloc( &nw_gpu.score, nw_gpu.adjrows*nw_gpu.adjcols * sizeof( int ) );
-//    cudaMalloc( &nw_gpu.subst, nw_gpu.substsz*nw_gpu.substsz * sizeof( int ) );
-
-//    // start the host timer and initialize the gpu timer
-//    sw.lap( "cpu-start" );
-//    res.Tgpu = 0;
-
-//    // copy data from host to device
-//    // +   gpu padding remains uninitialized, but this is not an issue since padding is only used to simplify kernel code (optimization)
-//    cudaMemcpy( nw_gpu.seqX,  nw.seqX,  nw.adjcols * sizeof( int ), cudaMemcpyHostToDevice );
-//    cudaMemcpy( nw_gpu.seqY,  nw.seqY,  nw.adjrows * sizeof( int ), cudaMemcpyHostToDevice );
-//    cudaMemcpy( nw_gpu.subst, nw.subst, nw_gpu.substsz*nw_gpu.substsz * sizeof( int ), cudaMemcpyHostToDevice );
+   //          // take the number of threads per tile as the only dimension
+   //          blockA.x = tileAy;
+   //          // take the number of blocks on the current score matrix diagonal as the only dimension
+   //          // +   launch at least one block on the x axis
+   //          gridA.x = ceil( float( dsize ) / tileAy );
+   //       }
 
 
-//    // launch kernel
-//    {
-//       // grid and block dimensions for kernel
-//       dim3 gridA {};
-//       dim3 blockA {};
-//       // the number of tiles per row and column of the score matrix
-//       int trows = ceil( float( nw_gpu.adjrows-1 )/tileAy );
-//       int tcols = ceil( float( nw_gpu.adjcols-1 )/tileAx );
+   //       // create variables for gpu arrays in order to be able to take their addresses
+   //       int* seqX_gpu = nw.seqX_gpu.data();
+   //       int* seqY_gpu = nw.seqY_gpu.data();
+   //       int* hrow_gpu = nw.hrow_gpu.data();
+   //       int* hcol_gpu = nw.hcol_gpu.data();
+   //       int* subst_gpu = nw.subst_gpu.data();
+   //       // tile size and miscellaneous
+   //       int* hrowTDi_gpu = nw.hrowTDi_gpu.data();
+   //       int* hcolTDi_gpu = nw.hcolTDi_gpu.data();
+   //       int* hrowTDo_gpu = nw.hrowTDo_gpu.data();
+   //       int* hcolTDo_gpu = nw.hcolTDo_gpu.data();
 
-//       // calculate size of shared memory per block in bytes
-//       int shmemsz = (
-//          /*subst[]*/ nw_gpu.substsz*nw_gpu.substsz *sizeof( int )
-//          /*seqX[]*/ + tileAx                       *sizeof( int )
-//          /*seqY[]*/ + tileAy                       *sizeof( int )
-//          /*hrow[]*/ + (1+tileAx)                   *sizeof( int )
-//          /*hcol[]*/ + (1+tileAy)                   *sizeof( int )
-//       );
-      
-//       // calculate grid and block dimensions for kernel
-//       {
-//          // take the number of threads on the largest diagonal of the tile
-//          // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-//          blockA.x = nw.warpsz * ceil( max( tileAy, tileAx )*2./nw.warpsz );
-//          // take the number of tiles on the largest score matrix diagonal as the only dimension
-//          gridA.x = min( trows, tcols );
+   //       // group arguments to be passed to kernel
+   //       void* kargs[]
+   //       {
+   //          // nw input
+   //          seqX_gpu,
+   //          seqY_gpu,
+   //          hrow_gpu,
+   //          hcol_gpu,
+   //          subst_gpu,
+   //          /*&nw.adjrows,*/
+   //          /*&nw.adjcols,*/
+   //          &nw.substsz,
+   //          &nw.indel,
+   //          &nw.warpsz,
+   //          // tile size and miscellaneous
+   //          hrowTDi_gpu,
+   //          hcolTDi_gpu,
+   //          hrowTDo_gpu,
+   //          hcolTDo_gpu,
+   //          &trows,
+   //          &tcols,
+   //          &tileAx,
+   //          &tileAy,
+   //          &chunksz,
+   //          &d
+   //       };
 
-//          // the maximum number of parallel blocks on a streaming multiprocessor
-//          int maxBlocksPerSm = 0;
-//          // number of threads per block that the kernel will be launched with
-//          int numThreads = blockA.x;
+   //       // launch the kernel B in the given stream (don't statically allocate shared memory)
+   //       if( cudaSuccess != ( cudaStatus = cudaLaunchKernel( ( void* )Nw_Gpu5_Kernel, gridA, blockA, kargs, shmemsz, nullptr/*stream*/ ) ) )
+   //       {
+   //          return NwStat::errorKernelFailure;
+   //       }
+   //    }
+   // }
 
-//          // calculate the max number of parallel blocks per streaming multiprocessor
-//          cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxBlocksPerSm, Nw_Gpu5_Kernel, numThreads, shmemsz );
-//          // the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
-//          gridA.x = min( gridA.x, nw.sm_count*maxBlocksPerSm );
-//       }
+   // // wait for the gpu to finish before going to the next step
+   // if( cudaSuccess != ( cudaStatus = cudaDeviceSynchronize() ) )
+   // {
+   //    return NwStat::errorKernelFailure;
+   // }
+
+   // // measure calculation time
+   // sw.lap( "calc-1" );
 
 
-//       // create variables for gpu arrays in order to be able to take their addresses
-//       int* seqX_gpu = nw.seqX_gpu.data();
-//       int* seqY_gpu = nw.seqY_gpu.data();
-//       int* score_gpu = nw.score_gpu.data();
-//       int* subst_gpu = nw.subst_gpu.data();
+   // // save the calculated score matrix
+   // if( cudaSuccess != ( cudaStatus = memTransfer( nw.score, nw.score_gpu, nw.adjrows, nw.adjcols, adjcols ) ) )
+   // {
+   //    return NwStat::errorMemoryTransfer;
+   // }
 
-//       // group arguments to be passed to kernel
-//       void* kargs[]
-//       {
-//          seqX_gpu,
-//          seqY_gpu,
-//          score_gpu,
-//          subst_gpu,
-//          /*&nw.adjrows,*/
-//          /*&nw.adjcols,*/
-//          &nw.substsz,
-//          &nw.indel,
-//          &nw.warpsz,
-//          &trows,
-//          &tcols,
-//          &tileAx,
-//          &tileAy,
-//          &chunksz
-//       };
-      
-//       // launch the kernel in the given stream (don't statically allocate shared memory)
-//       // +   capture events around kernel launch as well
-//       // +   update the stop event when the kernel finishes
-//       cudaLaunchCooperativeKernel( ( void* )Nw_Gpu5_Kernel, gridA, blockA, kargs, shmemsz, nullptr/*stream*/ );
-//    }
+   // // measure memory transfer time
+   // sw.lap( "cpy-host" );
 
-//    // wait for the gpu to finish before going to the next step
-//    cudaDeviceSynchronize();
-
-//    // \brief Copies data between host and device
-//    // 
-//    // Copies a matrix (\p height rows of \p width bytes each) from the memory
-//    // area pointed to by \p src to the memory area pointed to by \p dst, where
-//    // \p kind specifies the direction of the copy, and must be one of
-//    // ::cudaMemcpyHostToHost, ::cudaMemcpyHostToDevice, ::cudaMemcpyDeviceToHost,
-//    // ::cudaMemcpyDeviceToDevice, or ::cudaMemcpyDefault. Passing
-//    // ::cudaMemcpyDefault is recommended, in which case the type of transfer is
-//    // inferred from the pointer values. However, ::cudaMemcpyDefault is only
-//    // allowed on systems that support unified virtual addressing. \p dpitch and
-//    // \p spitch are the widths in memory in bytes of the 2D arrays pointed to by
-//    // \p dst and \p src, including any padding added to the end of each row. The
-//    // memory areas may not overlap. \p width must not exceed either \p dpitch or
-//    // \p spitch. Calling ::cudaMemcpy2D() with \p dst and \p src pointers that do
-//    // not match the direction of the copy results in an undefined behavior.
-//    // ::cudaMemcpy2D() returns an error if \p dpitch or \p spitch exceeds
-//    // the maximum allowed.
-
-//    // save the calculated score matrix
-//    // +   starts an async data copy from device to host, then waits for the copy to finish
-//    cudaMemcpy2D(
-//       nw    .score,                     // dst    - Destination memory address
-//       nw    .adjcols * sizeof( int ),   // dpitch - Pitch of destination memory (padded row size in bytes; in other words distance between the starting points of two rows)
-//       nw_gpu.score,                     // src    - Source memory address
-//       nw_gpu.adjcols * sizeof( int ),   // spitch - Pitch of source memory (padded row size in bytes)
-      
-//       nw.adjcols * sizeof( int ),       // width  - Width of matrix transfer (non-padding row size in bytes)
-//       nw.adjrows,                       // height - Height of matrix transfer (#rows)
-//       cudaMemcpyDeviceToHost            // kind   - Type of transfer
-//    );      
-
-//    // stop the cpu timer
-//    sw.lap( "cpu-end" );
-//    res.Tcpu = sw.dt( "cpu-end", "cpu-start" );
-// }
+   // return NwStat::success;
+}
 
 
 
