@@ -2,7 +2,7 @@
 #include "common.hpp"
 
 // get one of the optimal matching paths to a file
-NwStat NwTrace2_Tiled( const NwInput& nw, NwResult& res )
+NwStat NwTrace2_Sparse( const NwInput& nw, NwResult& res )
 {
    // TODO
    return NwStat::errorInvalidValue;

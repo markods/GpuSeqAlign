@@ -575,9 +575,6 @@ __global__ static void Nw_Gpu5_Kernel(
 // parallel gpu implementation of the Needleman-Wunsch algorithm
 NwStat NwAlign_Gpu5_DiagDiagDiag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
 {
-   // TODO
-   return NwStat::errorInvalidValue;
-
    // // tile size for the kernel
    // unsigned tileAx;
    // unsigned tileAy;   // TODO: must be a multiple of the warp size
@@ -611,6 +608,18 @@ NwStat NwAlign_Gpu5_DiagDiagDiag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
    // sw.start();
 
 
+   // // s=0   1     2       3      4
+   // // ┌─────╔═════┌─────  ╔═════┌─────    5
+   // // │     ║  A  │       ║  A  │       ║ <-- x
+   // //  ╔════╝┌────┘  ╔════╝┌────┘  ╔════╝
+   // //  ║  B  │       ║  B  │       ║  A  │ 6
+   // //   ┌────┘  ╔════╝┌────┘  ╔════╝┌────┘
+   // //   │       ║  C  │       ║  B  │     │
+   // //      ═════╝─────┘  ═════╝─────┘─────┘
+   // //                    ^-- y
+   // // 
+   // // reading the current diagonal (double-lined)
+
    // // TODO: chunk size >= 1
    // // TODO: special case if (s == -1)
    // // TODO: allocate header row and column memory
@@ -618,9 +627,35 @@ NwStat NwAlign_Gpu5_DiagDiagDiag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
    // // TODO: initialize the header row and column for the score matrix
    // // TODO: create kernel stream and memcpy stream
    // // TODO: initialize the padding in the global X and Y sequences, as well as the matrix header_row and header_col
+
    // // reserve space in the ram and gpu global memory
    // try
    // {
+   //    ////// device specific memory
+   //    nw.subst_gpu.init(  );
+   //    nw.seqX_gpu.init(  );
+   //    nw.seqY_gpu.init(  );
+   //    nw.score_gpu.init(  );
+   //    // sparse representation of the score matrix
+   //    nw.hrow_gpu.init(  );
+   //    nw.hcol_gpu.init(  );
+   //    nw.hrowTDi_gpu.init(  );
+   //    nw.hcolTDi_gpu.init(  );
+   //    nw.hrowTDo_gpu.init(  );
+   //    nw.hcolTDo_gpu.init(  );
+
+   //    ////// host specific memory
+   //    nw.subst.init(  );
+   //    nw.seqX.init(  );
+   //    nw.seqY.init(  );
+   //    nw.score.init(  );
+   //    // sparse representation of the score matrix
+   //    nw.hrowM_di.init(  );   // diag index array into hrowM
+   //    nw.hrowM.init(  );
+   //    nw.hcolM_di.init(  );   // diag index arrya into hcolM
+   //    nw.hcolM.init(  );
+
+
    //    ////// device specific memory
    //    nw.seqX_gpu.init(         adjcols );
    //    nw.seqY_gpu.init( adjrows         );

@@ -347,8 +347,10 @@ struct NwInput
    std::vector<int> seqX;
    std::vector<int> seqY;
    HostArray<int> score;
-   // sparse representation of score matrix
+   // sparse representation of the score matrix
+   HostArray<int> hrowM_di;   // diag index array into hrowM
    HostArray<int> hrowM;
+   HostArray<int> hcolM_di;   // diag index array into hcolM
    HostArray<int> hcolM;
    
    ////// device specific memory
@@ -356,7 +358,7 @@ struct NwInput
    DeviceArray<int> seqX_gpu;
    DeviceArray<int> seqY_gpu;
    DeviceArray<int> score_gpu;
-   // sparse representation of score matrix
+   // sparse representation of the score matrix
    DeviceArray<int> hrow_gpu;
    DeviceArray<int> hcol_gpu;
    DeviceArray<int> hrowTDi_gpu;
@@ -401,7 +403,9 @@ struct NwInput
       seqY.clear();
       score.clear();
       // sparse representation of score matrix
+      hrowM_di.clear();
       hrowM.clear();
+      hcolM_di.clear();
       hcolM.clear();
    }
 };

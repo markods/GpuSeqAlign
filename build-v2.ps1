@@ -2,17 +2,9 @@
 # Manual
 #
 # + Setup:
-#    + Add Ant to the environment variable 'path' (if it isn't already there):
-#       + .../NetBeans/netbeans/extide/ant/bin
-#    + If the powershell won't run the script because of the execution policy, run this command:
+#    + If powershell won't run the script because of the execution policy, run this command:
 #       + Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope CurrentUser
 #    + Enjoy!
-#
-# + Examples:
-#    + build =help
-#    + build =jflex =cup =clean =build =test
-#    + build =build   =compile -o codeC.obj codeC.mj   =run -debug codeC.obj
-#    + build =build   =compile -o codeA.obj codeA.mj   =run -debug codeA.obj
 #
 # + PowerShell deep dives:
 #    + https://docs.microsoft.com/en-us/powershell/scripting/learn/deep-dives/everything-about-hashtable?view=powershell-7.1
@@ -64,7 +56,7 @@ using namespace System.Text.Json;
     ( "=run", "subst-blosum1.json", "param-best1.json", "seq-gen3-10_000.json" );
 
 [string] $script:HelpMessage = @"
-build   [[-]-help]   [=clean ...] [=build ...]   [=run fsubsts fparams fseqs ...\n]
+build   [[-]-help]   [=clean ...] [=build ...]   [=run fsubsts fparams fseqs ...]
 
 Default:             build   --help
 
@@ -83,7 +75,7 @@ Switches:
     -help            same as --help
 
     =clean           clean project
-       -all          +   clean logs and .vs folder as well
+       -all          +   clean logs as well
     =build           build project
        -debug        +   don't optimise and define the DEBUG symbol
 
@@ -637,6 +629,8 @@ class Pipeline
                 $script:LastStatusCode = -1; return;
             }
         }
+        # clear the build parameters, so that the default stage invocation succeeds (it accepts no parameters)
+        $Stage.CmdArgArr.Clear();
 
         # all .cpp and .cu source files
         $SourceFiles  = @();

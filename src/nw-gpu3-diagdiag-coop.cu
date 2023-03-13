@@ -324,6 +324,11 @@ NwStat NwAlign_Gpu3_DiagDiag_Coop( NwParams& pr, NwInput& nw, NwResult& res )
       return NwStat::errorInvalidValue;
    }
 
+   if( tileAx != nw.warpsz && tileAy != nw.warpsz )
+   {
+      return NwStat::errorInvalidValue;
+   }
+
    // adjusted gpu score matrix dimensions
    // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile A size (in order to be evenly divisible)
    int adjrows = 1 + tileAy*ceil( float( nw.adjrows-1 )/tileAy );

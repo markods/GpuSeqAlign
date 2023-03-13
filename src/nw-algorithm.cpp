@@ -361,7 +361,7 @@ NwStat openOutFile( const std::string& path, std::ofstream& ofs )
    return NwStat::success;
 }
 
-// write the selected character to the give stream
+// write the selected character to the given stream
 void writeProgressChar( std::ostream& os, char c )
 {
    os << c; os.flush();
