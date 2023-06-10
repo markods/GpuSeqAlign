@@ -82,7 +82,7 @@ NwStat NwTrace2_Sparse( const NwInput& nw, NwResult& res )
 
 
 // hash the score matrix
-NwStat NwHash2_Tiled( const int* const mat, const int rows, const int cols, unsigned& _hash )
+NwStat NwHash2_Sparse( const int* const mat, const int rows, const int cols, unsigned& _hash )
 {
    // TODO
    return NwStat::errorInvalidValue;
@@ -108,7 +108,7 @@ NwStat NwHash2_Tiled( const int* const mat, const int rows, const int cols, unsi
 
 
 // print the score matrix
-NwStat NwPrint2_Tiled( std::ostream& os, const int* const mat, const int rows, const int cols )
+NwStat NwPrint2_Sparse( std::ostream& os, const int* const mat, const int rows, const int cols )
 {
    // TODO
    return NwStat::errorInvalidValue;

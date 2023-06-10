@@ -575,6 +575,9 @@ __global__ static void Nw_Gpu5_Kernel(
 // parallel gpu implementation of the Needleman-Wunsch algorithm
 NwStat NwAlign_Gpu5_DiagDiagDiag_Ml( NwParams& pr, NwInput& nw, NwResult& res )
 {
+   // TODO
+   return NwStat::errorInvalidValue;
+
    // // tile size for the kernel
    // unsigned tileAx;
    // unsigned tileAy;   // TODO: must be a multiple of the warp size
