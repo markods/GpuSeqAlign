@@ -240,7 +240,7 @@ public:
       {
          return _laps.at( lap_name );
       }
-      catch( const std::exception& ex )
+      catch( const std::exception& )
       {
          return 0;
       }
@@ -275,7 +275,7 @@ public:
    void reset() { _currIdx = 0; }
 
    std::vector<int> _values;
-   int _currIdx;
+   int _currIdx = 0;
 };
 
 // parameters for the Needleman-Wunsch algorithm variant
@@ -398,9 +398,10 @@ struct NwInput
       hcolTDo_gpu.clear();
 
       ////// host specific memory
-      subst.clear();
-      seqX.clear();
-      seqY.clear();
+      // TODO: popraviti dealokacije
+   // subst.clear();
+   // seqX.clear();
+   // seqY.clear();
       score.clear();
       // sparse representation of score matrix
       hrowM_di.clear();

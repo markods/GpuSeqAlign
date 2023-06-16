@@ -89,9 +89,9 @@ struct NwParamData
 struct NwSeqData
 {
    std::string substName;
-   int indel;
+   int indel = 0;
    // repeat each comparison this many times
-   int repeat;
+   int repeat = 0;
    // each sequence will be an int vector and have a header (zeroth) element
    std::vector<std::string> seqList;
 };
@@ -190,7 +190,7 @@ NwStat readFromJson( const std::string& path, T& var )
          return NwStat::errorIoStream;
       }
    }
-   catch( const std::exception& ex )
+   catch( const std::exception& )
    {
       return NwStat::errorIoStream;
    }
@@ -205,7 +205,7 @@ NwStat readFromJson( const std::string& path, T& var )
          /*ignore_comments*/ true
       );
    }
-   catch( const std::exception& ex )
+   catch( const std::exception& )
    {
       NwStat::errorInvalidFormat;
    }

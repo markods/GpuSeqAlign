@@ -663,7 +663,7 @@ class Pipeline
             '"',                         # 
             "--std=c++17",               # set the c++ standard (currently nvcc doesn't support c++20)
             '--ptxas-options=-v',        # show verbose cuda kernel compilation info
-            '-arch=sm_61',               # architecture - cuda 6.1
+            '-arch=sm_86',               # architecture - cuda 8.6
           # "-use_fast_math",            # use fast math
             '-maxrregcount 32',          # maximum registers available per thread
             "$Optimization",             # define the debug symbol, or optimise code, depending on what is requested

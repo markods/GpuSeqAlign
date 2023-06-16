@@ -353,7 +353,7 @@ NwStat openOutFile( const std::string& path, std::ofstream& ofs )
          return NwStat::errorIoStream;
       }
    }
-   catch( const std::exception& ex )
+   catch( const std::exception& )
    {
       return NwStat::errorIoStream;
    }

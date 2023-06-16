@@ -3,6 +3,7 @@
 docs/
 build/
 nsight/
+.contextkeeper/
 **/enc_temp_folder/
 
 *.pdf

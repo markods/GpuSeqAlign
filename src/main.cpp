@@ -1,12 +1,13 @@
 /*
-./build-v2 -2
-./build-v2 -3
-./build-v2 -4
+./build -2
+./build -3
+./build -4
 */
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 #include <chrono>
 #include <string>
 #include <map>
@@ -43,7 +44,7 @@ int main( int argc, char *argv[] )
    NwResData resData;
    std::ofstream ofsRes;
 
-   resData.projPath  = "../../";
+   resData.projPath  = std::filesystem::current_path().string() + "/../../";
    resData.resrcPath = resData.projPath + "resrc/";
    resData.resPath   = resData.projPath + "log/";
 
@@ -127,14 +128,14 @@ int main( int argc, char *argv[] )
    // initialize the substitution matrix on the cpu and gpu
    {
       nw.subst = substData.substMap[ seqData.substName ];
-      nw.substsz = std::sqrt( nw.subst.size() );
+      nw.substsz = ( int )std::sqrt( nw.subst.size() );
 
       // reserve space in the gpu global memory
       try
       {
          nw.subst_gpu.init( nw.substsz*nw.substsz );
       }
-      catch( const std::exception& ex )
+      catch( const std::exception& )
       {
          std::cerr << "ERR - could not reserve space for the substitution matrix in the gpu"; exit( -1 );
       }
@@ -190,12 +191,12 @@ int main( int argc, char *argv[] )
          // get the Y sequence
          // NOTE: the padding (zeroth element) was already added to the sequence
          nw.seqY = seqList[ iY ];
-         nw.adjrows = nw.seqY.size();
+         nw.adjrows = ( int )nw.seqY.size();
 
          // get the X sequence
          // NOTE: the padding (zeroth element) was already added to the sequence
          nw.seqX = seqList[ iX ];
-         nw.adjcols = nw.seqX.size();
+         nw.adjcols = ( int )nw.seqX.size();
 
          // if the number of columns is less than the number of rows, swap them and the sequences
          if( nw.adjcols < nw.adjrows )
