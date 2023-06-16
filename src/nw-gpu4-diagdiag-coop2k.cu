@@ -18,7 +18,7 @@ __global__ static void Nw_Gpu4_KernelA(
     extern __shared__ int shmem[/* substsz*substsz + tileAx + tileAy */];
     // the substitution matrix and relevant parts of the two sequences
     // +   stored in shared memory for faster random access
-    // TODO: align allocations to 0-th shared memory bank?
+    // NOTE: should we align allocations to 0-th shared memory bank?
     int *const subst /*[substsz*substsz]*/ = shmem + 0;
     int *const seqX /*[tileAx]*/ = subst + substsz * substsz;
     int *const seqY /*[tileAy]*/ = seqX + tileAx;

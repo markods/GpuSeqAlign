@@ -386,7 +386,7 @@ struct NwInput
         hcolTDo_gpu.clear();
 
         ////// host specific memory
-        // TODO: popraviti dealokacije
+        // TODO: fix deallocations
         // subst.clear();
         // seqX.clear();
         // seqY.clear();

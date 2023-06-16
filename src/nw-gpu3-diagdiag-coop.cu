@@ -21,7 +21,7 @@ __global__ static void Nw_Gpu3_Kernel(
 {
     extern __shared__ int shmem[/* substsz*substsz + tileAx + tileAy + (1+tileAy)*(1+tileAx) */];
     // the substitution matrix and relevant parts of the two sequences
-    // TODO: align allocations to 0-th shared memory bank?
+    // NOTE: should we align allocations to 0-th shared memory bank?
     int *const subst /*[substsz*substsz]*/ = shmem + 0;
     int *const seqX /*[tileAx]*/ = subst + substsz * substsz;
     int *const seqY /*[tileAy]*/ = seqX + tileAx;
