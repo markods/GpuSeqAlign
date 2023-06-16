@@ -310,10 +310,10 @@ int main(int argc, char *argv[])
                 // seqX-seqY comparison separator
                 writeProgressChar(std::cout, '|');
             }
-
-            // algorithm separator
-            writeProgressChar(std::cout, '\n');
         }
+
+        // algorithm separator
+        writeProgressChar(std::cout, '\n');
     }
 
     // print the number of calculation errors
