@@ -1,27 +1,27 @@
 // algorithm parameters
 {
-   "Cpu3_DiagRow_St":
+   "NwAlign_Cpu3_St_DiagRow":
    {
       // // size of square block (that will be a unit of work)
       // // +   8*(16 ints) on standard architectures, or 8 cache lines
       // int blocksz = 8 * 64/*B*//sizeof( int );
       "blocksz":  [ 32, 64, 128, 192, 256, 384, 512, 1024, 1536, 2048, 4096, 8192 ]
    },
-   "Cpu4_DiagRow_Mt":
+   "NwAlign_Cpu4_Mt_DiagRow":
    {
       // // size of square block (that will be a unit of work)
       // // +   8*(16 ints) on standard architectures, or 8 cache lines
       // int blocksz = 8 * 64/*B*//sizeof( int );
       "blocksz": [ 32, 64, 128, 192, 256, 384, 512, 1024, 1536, 2048, 4096, 8192 ]
    },
-   "Gpu1_Diag_Ml":
+   "NwAlign_Gpu1_Ml_Diag":
    {
       // // number of threads per block
       // // +   the tile is one-dimensional
       // unsigned threadsPerBlock = 8*warpsz;
       "threadsPerBlock": [ 32, 64, 96, 128, 160, 192, 256, 384, 512 ]
    },
-   "Gpu2_DiagRow_Ml2K":
+   "NwAlign_Gpu2_Ml_DiagRow2Pass":
    {
       // // tile size for the kernel B
       // unsigned tileBx = 8;
@@ -33,7 +33,7 @@
       // unsigned threadsPerBlockB = 8*warpsz;
       "threadsPerBlock": [ 32, 64, 96, 128, 160 ]
    },
-   "Gpu3_DiagDiag_Coop":
+   "NwAlign_Gpu5_Coop_DiagDiag":
    {
       // // tile size for the kernel
       // // +   tile A must have one dimension fixed to the number of threads in a warp
@@ -42,7 +42,7 @@
       // unsigned tileAy = warpsz;
       "tileAy": [ 32 ]
    },
-   "Gpu4_DiagDiag_Coop2K":
+   "NwAlign_Gpu6_Coop_DiagDiag2Pass":
    {
       // // tile sizes for kernels A and B
       // // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
@@ -56,7 +56,7 @@
       // unsigned tileBy = warpsz;
       "tileBy": [ 32 ]
    },
-   "Gpu5_DiagDiagDiag_Ml":
+   "NwAlign_Gpu10_Ml_DiagDiagDiag":
    {
       // // tile size for the kernel
       // unsigned tileAx = 320;

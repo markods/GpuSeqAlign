@@ -284,12 +284,6 @@ int main(int argc, char *argv[])
 
                         // reset allocations
                         nw.resetAllocs();
-
-                        // if there is an error in any of the steps, stop the repetition
-                        if (res.errstep != 0)
-                        {
-                            break;
-                        }
                     }
 
                     // add the result to the results list

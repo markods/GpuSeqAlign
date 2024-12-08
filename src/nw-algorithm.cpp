@@ -6,15 +6,15 @@
 #include <vector>
 
 // align functions implemented in other files
-NwStat NwAlign_Cpu1_Row_St(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Cpu2_Diag_St(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Cpu3_DiagRow_St(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Cpu4_DiagRow_Mt(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Gpu1_Diag_Ml(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Gpu2_DiagRow_Ml2K(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Gpu3_DiagDiag_Coop(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Gpu4_DiagDiag_Coop2K(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Gpu5_DiagDiagDiag_Ml(NwParams &pr, NwInput &nw, NwResult &res);
+NwStat NwAlign_Cpu1_St_Row(NwParams &pr, NwInput &nw, NwResult &res);
+NwStat NwAlign_Cpu2_St_Diag(NwParams &pr, NwInput &nw, NwResult &res);
+NwStat NwAlign_Cpu3_St_DiagRow(NwParams &pr, NwInput &nw, NwResult &res);
+NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams &pr, NwInput &nw, NwResult &res);
+NwStat NwAlign_Gpu1_Ml_Diag(NwParams &pr, NwInput &nw, NwResult &res);
+NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams &pr, NwInput &nw, NwResult &res);
+NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res);
+NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res);
+NwStat NwAlign_Gpu10_Ml_DiagDiagDiag(NwParams &pr, NwInput &nw, NwResult &res);
 
 // traceback, hash and print functions implemented in other files
 NwStat NwTrace1_Plain(const NwInput &nw, NwResult &res);
@@ -27,15 +27,15 @@ NwStat NwPrint2_Sparse(std::ostream &os, const int *const mat, const int rows, c
 // all algorithms
 NwAlgorithmData algData{
     /*algMap:*/ {
-        {"Cpu1_Row_St", {NwAlign_Cpu1_Row_St, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-        {"Cpu2_Diag_St", {NwAlign_Cpu2_Diag_St, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-        {"Cpu3_DiagRow_St", {NwAlign_Cpu3_DiagRow_St, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-        {"Cpu4_DiagRow_Mt", {NwAlign_Cpu4_DiagRow_Mt, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-        {"Gpu1_Diag_Ml", {NwAlign_Gpu1_Diag_Ml, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-        {"Gpu2_DiagRow_Ml2K", {NwAlign_Gpu2_DiagRow_Ml2K, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-        {"Gpu3_DiagDiag_Coop", {NwAlign_Gpu3_DiagDiag_Coop, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-        {"Gpu4_DiagDiag_Coop2K", {NwAlign_Gpu4_DiagDiag_Coop2K, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-        {"Gpu5_DiagDiagDiag_Ml", {NwAlign_Gpu5_DiagDiagDiag_Ml, NwTrace2_Sparse, NwHash2_Sparse, NwPrint2_Sparse}},
+        {"NwAlign_Cpu1_St_Row", {NwAlign_Cpu1_St_Row, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+        {"NwAlign_Cpu2_St_Diag", {NwAlign_Cpu2_St_Diag, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+        {"NwAlign_Cpu3_St_DiagRow", {NwAlign_Cpu3_St_DiagRow, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+        {"NwAlign_Cpu4_Mt_DiagRow", {NwAlign_Cpu4_Mt_DiagRow, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+        {"NwAlign_Gpu1_Ml_Diag", {NwAlign_Gpu1_Ml_Diag, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+        {"NwAlign_Gpu2_Ml_DiagRow2Pass", {NwAlign_Gpu2_Ml_DiagRow2Pass, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+        {"NwAlign_Gpu5_Coop_DiagDiag", {NwAlign_Gpu5_Coop_DiagDiag, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+        {"NwAlign_Gpu6_Coop_DiagDiag2Pass", {NwAlign_Gpu6_Coop_DiagDiag2Pass, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+        {"NwAlign_Gpu10_Ml_DiagDiagDiag", {NwAlign_Gpu10_Ml_DiagDiagDiag, NwTrace2_Sparse, NwHash2_Sparse, NwPrint2_Sparse}},
     },
 };
 

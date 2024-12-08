@@ -3,7 +3,7 @@
 
 // cuda kernel A for the parallel implementation
 // +   initializes the score matrix in the gpu
-__global__ static void Nw_Gpu4_KernelA(
+__global__ static void Nw_Gpu6_KernelA(
     const int *const seqX_gpu,
     const int *const seqY_gpu,
     int *const score_gpu,
@@ -130,7 +130,7 @@ __global__ static void Nw_Gpu4_KernelA(
 // cuda kernel B for the parallel implementation
 // +   calculates the score matrix in the gpu using the initialized score matrix from kernel A
 // +   the given matrix minus the padding (zeroth row and column) must be evenly divisible by the tile B
-__global__ static void Nw_Gpu4_KernelB(
+__global__ static void Nw_Gpu6_KernelB(
     int *const score_gpu,
     const int indel,
     const int warpsz,
@@ -284,7 +284,7 @@ __global__ static void Nw_Gpu4_KernelB(
 }
 
 // parallel gpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Gpu4_DiagDiag_Coop2K(NwParams &pr, NwInput &nw, NwResult &res)
+NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // tile sizes for kernels A and B
     // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
@@ -407,7 +407,7 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K(NwParams &pr, NwInput &nw, NwResult &res)
             &tileAy};
 
         // launch the kernel in the given stream (don't statically allocate shared memory)
-        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void *)Nw_Gpu4_KernelA, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
+        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void *)Nw_Gpu6_KernelA, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
         {
             return NwStat::errorKernelFailure;
         }
@@ -447,7 +447,7 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K(NwParams &pr, NwInput &nw, NwResult &res)
             int numThreads = blockB.x;
 
             // calculate the max number of parallel blocks per streaming multiprocessor
-            if (cudaSuccess != (cudaStatus = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxBlocksPerSm, Nw_Gpu4_KernelB, numThreads, shmemsz)))
+            if (cudaSuccess != (cudaStatus = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxBlocksPerSm, Nw_Gpu6_KernelB, numThreads, shmemsz)))
             {
                 return NwStat::errorKernelFailure;
             }
@@ -470,7 +470,7 @@ NwStat NwAlign_Gpu4_DiagDiag_Coop2K(NwParams &pr, NwInput &nw, NwResult &res)
             &tileBy};
 
         // launch the kernel in the given stream (don't statically allocate shared memory)
-        if (cudaSuccess != (cudaStatus = cudaLaunchCooperativeKernel((void *)Nw_Gpu4_KernelB, gridB, blockB, kargs, shmemsz, nullptr /*stream*/)))
+        if (cudaSuccess != (cudaStatus = cudaLaunchCooperativeKernel((void *)Nw_Gpu6_KernelB, gridB, blockB, kargs, shmemsz, nullptr /*stream*/)))
         {
             return NwStat::errorKernelFailure;
         }

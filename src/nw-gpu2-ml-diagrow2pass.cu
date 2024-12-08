@@ -106,7 +106,7 @@ __global__ static void Nw_Gpu2_KernelB(
 }
 
 // parallel gpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Gpu2_DiagRow_Ml2K(NwParams &pr, NwInput &nw, NwResult &res)
+NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // tile size for the kernel B
     unsigned tileBx;

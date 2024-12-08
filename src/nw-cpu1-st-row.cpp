@@ -1,7 +1,7 @@
 #include "common.hpp"
 
 // sequential cpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Cpu1_Row_St(NwParams &pr, NwInput &nw, NwResult &res)
+NwStat NwAlign_Cpu1_St_Row(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // the dimensions of the matrix without its row and column header
     const int rows = -1 + nw.adjrows;

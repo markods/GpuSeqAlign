@@ -1,7 +1,7 @@
 #include "common.hpp"
 
 // parallel cpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Cpu4_DiagRow_Mt(NwParams &pr, NwInput &nw, NwResult &res)
+NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // size of square block that will be a unit of work
     // +   8*(16 ints) on standard architectures, or 8 cache lines

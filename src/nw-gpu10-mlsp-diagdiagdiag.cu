@@ -8,7 +8,7 @@ __device__ static int num_of_chunks_in_tile(int tile_wid, int chunk_wid, int chu
 }
 
 // cuda kernel for the parallel implementation
-__global__ static void Nw_Gpu5_Kernel(
+__global__ static void Nw_Gpu10_Kernel(
     // nw input
     const int *const seqX_gpu,
     const int *const seqY_gpu,
@@ -562,7 +562,7 @@ __global__ static void Nw_Gpu5_Kernel(
 }
 
 // parallel gpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Gpu5_DiagDiagDiag_Ml(NwParams &pr, NwInput &nw, NwResult &res)
+NwStat NwAlign_Gpu10_Ml_DiagDiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // TODO
     return NwStat::errorInvalidValue;
@@ -785,7 +785,7 @@ NwStat NwAlign_Gpu5_DiagDiagDiag_Ml(NwParams &pr, NwInput &nw, NwResult &res)
     //             &d};
 
     //         // launch the kernel B in the given stream (don't statically allocate shared memory)
-    //         if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void *)Nw_Gpu5_Kernel, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
+    //         if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void *)Nw_Gpu10_Kernel, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
     //         {
     //             return NwStat::errorKernelFailure;
     //         }

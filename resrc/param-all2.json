@@ -1,6 +1,6 @@
 // algorithm parameters
 {
-   "Gpu4_DiagDiag_Coop2K":
+   "NwAlign_Gpu6_Coop_DiagDiag2Pass":
    {
       // // tile sizes for kernels A and B
       // // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing

@@ -2,7 +2,7 @@
 #include <cooperative_groups.h>
 
 // cuda kernel for the parallel implementation
-__global__ static void Nw_Gpu3_Kernel(
+__global__ static void Nw_Gpu5_Kernel(
     // nw input
     const int *const seqX_gpu,
     const int *const seqY_gpu,
@@ -307,7 +307,7 @@ __global__ static void Nw_Gpu3_Kernel(
 }
 
 // parallel gpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Gpu3_DiagDiag_Coop(NwParams &pr, NwInput &nw, NwResult &res)
+NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // tile size for the kernel
     // +   tile A must have one dimension fixed to the number of threads in a warp
@@ -418,7 +418,7 @@ NwStat NwAlign_Gpu3_DiagDiag_Coop(NwParams &pr, NwInput &nw, NwResult &res)
             int numThreads = blockA.x;
 
             // calculate the max number of parallel blocks per streaming multiprocessor
-            if (cudaSuccess != (cudaStatus = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxBlocksPerSm, Nw_Gpu3_Kernel, numThreads, shmemsz)))
+            if (cudaSuccess != (cudaStatus = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxBlocksPerSm, Nw_Gpu5_Kernel, numThreads, shmemsz)))
             {
                 return NwStat::errorKernelFailure;
             }
@@ -450,7 +450,7 @@ NwStat NwAlign_Gpu3_DiagDiag_Coop(NwParams &pr, NwInput &nw, NwResult &res)
             &tileAy};
 
         // launch the kernel in the given stream (don't statically allocate shared memory)
-        if (cudaSuccess != (cudaStatus = cudaLaunchCooperativeKernel((void *)Nw_Gpu3_Kernel, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
+        if (cudaSuccess != (cudaStatus = cudaLaunchCooperativeKernel((void *)Nw_Gpu5_Kernel, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
         {
             return NwStat::errorKernelFailure;
         }
