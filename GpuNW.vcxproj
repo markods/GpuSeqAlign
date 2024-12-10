@@ -28,7 +28,7 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\nw-gpu1-ml-diag.cu" />
-    <CudaCompile Include="src\nw-gpu10-mlsp-diagdiagdiag.cu" />
+    <CudaCompile Include="src\nw-gpu10-mlsp-diagdiagdiagskew2.cu" />
     <CudaCompile Include="src\nw-gpu2-ml-diagrow2pass.cu" />
     <CudaCompile Include="src\nw-gpu5-coop-diagdiag.cu" />
     <CudaCompile Include="src\nw-gpu6-coop-diagdiag2pass.cu" />

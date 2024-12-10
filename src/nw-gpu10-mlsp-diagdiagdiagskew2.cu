@@ -562,7 +562,7 @@ __global__ static void Nw_Gpu10_Kernel(
 }
 
 // parallel gpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Gpu10_Ml_DiagDiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
+NwStat NwAlign_Gpu10_Mlsp_DiagDiagDiagSkew2(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // TODO
     return NwStat::errorInvalidValue;

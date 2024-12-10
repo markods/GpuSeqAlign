@@ -60,7 +60,7 @@
       // unsigned tileBy = warpsz;
       "tileBy": [ 32 ]
    },
-   "NwAlign_Gpu10_Ml_DiagDiagDiag":
+   "NwAlign_Gpu10_Mlsp_DiagDiagDiagSkew2":
    {
       // // tile size for the kernel
       // unsigned tileAx = 320;
