@@ -179,6 +179,8 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        std::cout << algName << ": |";
+
         // get the current algorithm and initialize its parameters
         NwAlgorithm &alg = algData.algMap[algName];
         alg.init(paramTuple.second /*algParams*/);
@@ -282,8 +284,7 @@ int main(int argc, char *argv[])
                             exit(-1);
                         }
 
-                        // reset allocations
-                        nw.resetAllocs();
+                        nw.resetAllocsBenchmarkCycle();
                     }
 
                     // add the result to the results list
@@ -307,8 +308,10 @@ int main(int argc, char *argv[])
         }
 
         // algorithm separator
-        writeProgressChar(std::cout, '\n');
+        std::cout << "\n\n";
     }
+
+    nw.resetAllocsBenchmarkEnd();
 
     // print the number of calculation errors
     if (compareData.calcErrors > 0)

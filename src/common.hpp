@@ -368,16 +368,16 @@ struct NwInput
     int maxThreadsPerBlock;
 
     // free all memory allocated by the Needleman-Wunsch algorithms
-    void resetAllocs()
+    void resetAllocsBenchmarkCycle()
     {
         // NOTE: first free device memory, since there is less of it for other algorithms
 
         ////// device specific memory
-        subst_gpu.clear();
+        //subst_gpu.clear();
         seqX_gpu.clear();
         seqY_gpu.clear();
         score_gpu.clear();
-        // sparse representation of score matrix
+        ////// sparse representation of score matrix
         hrow_gpu.clear();
         hcol_gpu.clear();
         hrowTDi_gpu.clear();
@@ -386,16 +386,45 @@ struct NwInput
         hcolTDo_gpu.clear();
 
         ////// host specific memory
-        // TODO: fix deallocations
         // subst.clear();
         // seqX.clear();
         // seqY.clear();
         score.clear();
-        // sparse representation of score matrix
+        ////// sparse representation of score matrix
         hrowM_di.clear();
         hrowM.clear();
         hcolM_di.clear();
         hcolM.clear();
+    }
+
+    // free all remaining memory not cleared by resetAllocs
+    void resetAllocsBenchmarkEnd()
+    {
+        // NOTE: first free device memory, since there is less of it for other algorithms
+
+        ////// device specific memory
+        subst_gpu.clear();
+        //seqX_gpu.clear();
+        //seqY_gpu.clear();
+        //score_gpu.clear();
+        ////// sparse representation of score matrix
+        //hrow_gpu.clear();
+        //hcol_gpu.clear();
+        //hrowTDi_gpu.clear();
+        //hcolTDi_gpu.clear();
+        //hrowTDo_gpu.clear();
+        //hcolTDo_gpu.clear();
+
+        ////// host specific memory
+        subst.clear();
+        seqX.clear();
+        seqY.clear();
+        //score.clear();
+        ////// sparse representation of score matrix
+        //hrowM_di.clear();
+        //hrowM.clear();
+        //hcolM_di.clear();
+        //hcolM.clear();
     }
 };
 
