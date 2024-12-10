@@ -35,7 +35,7 @@ NwAlgorithmData algData{
         {"NwAlign_Gpu2_Ml_DiagRow2Pass", {NwAlign_Gpu2_Ml_DiagRow2Pass, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
         {"NwAlign_Gpu5_Coop_DiagDiag", {NwAlign_Gpu5_Coop_DiagDiag, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
         {"NwAlign_Gpu6_Coop_DiagDiag2Pass", {NwAlign_Gpu6_Coop_DiagDiag2Pass, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-        {"NwAlign_Gpu10_Mlsp_DiagDiagDiagSkew2", {NwAlign_Gpu10_Mlsp_DiagDiagDiagSkew2, NwTrace2_Sparse, NwHash2_Sparse, NwPrint2_Sparse}},
+        // {"NwAlign_Gpu10_Mlsp_DiagDiagDiagSkew2", {NwAlign_Gpu10_Mlsp_DiagDiagDiagSkew2, NwTrace2_Sparse, NwHash2_Sparse, NwPrint2_Sparse}},
     },
 };
 
