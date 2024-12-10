@@ -1,4 +1,4 @@
-## GpuSeqAlignment - benchmark for dynamic-programming-based gpu sequence alignment algorithms
+## GpuSeqAlignment - a benchmark for dynamic-programming-based GPU sequence alignment algorithms
 This project compares different implementations of the Needleman-Wunsch and Smith-Waterman (🔍) algorithms for efficiency and memory consumption.
 
 The bulk of the work is calculating the dynamic-programming score matrix (not necessarily square). After that it's transferred to main memory. Most optimizations apply to the score matrix calculation.
