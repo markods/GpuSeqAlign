@@ -710,6 +710,7 @@ class Pipeline
 function Build-V2
 {
     $ScriptArgs = $args.Count -ne 0 ? $args : $( "--help" );
+    "build $ScriptArgs" | Write-Output;
 
     Parser_Parse $script:Pipeline $ScriptArgs;
     if( $script:LastStatusCode -ne 0 ) { return; }
