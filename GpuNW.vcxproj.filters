@@ -1,0 +1,100 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CudaCompile Include="src\nw-gpu1-ml-diag.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\nw-gpu2-ml-diagrow2pass.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\nw-gpu5-coop-diagdiag.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\nw-gpu6-coop-diagdiag2pass.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\nw-gpu10-mlsp-diagdiagdiagskew2.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\common.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\nw-algorithm.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\nw-cpu1-st-row.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\nw-cpu2-st-diag.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\nw-cpu3-st-diagrow.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\nw-cpu4-mt-diagrow.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\nw-trace1-plain.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\nw-trace2-sparse.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\common.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\json.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\nw-algorithm.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{8bbe0983-56f4-401b-b495-1406c356180e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resrc">
+      <UniqueIdentifier>{b209cc95-8b16-4c55-9219-5a750a5de149}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resrc\param-all1.json">
+      <Filter>resrc</Filter>
+    </None>
+    <None Include="resrc\param-all2.json">
+      <Filter>resrc</Filter>
+    </None>
+    <None Include="resrc\param-best1.json">
+      <Filter>resrc</Filter>
+    </None>
+    <None Include="resrc\param-test1.json">
+      <Filter>resrc</Filter>
+    </None>
+    <None Include="resrc\seq-gen1-100.json">
+      <Filter>resrc</Filter>
+    </None>
+    <None Include="resrc\seq-gen2-1000.json">
+      <Filter>resrc</Filter>
+    </None>
+    <None Include="resrc\seq-gen3-10_000.json">
+      <Filter>resrc</Filter>
+    </None>
+    <None Include="resrc\seq-one1.json">
+      <Filter>resrc</Filter>
+    </None>
+    <None Include="resrc\seq-test1.json">
+      <Filter>resrc</Filter>
+    </None>
+    <None Include="resrc\subst-blosum1.json">
+      <Filter>resrc</Filter>
+    </None>
+  </ItemGroup>
+</Project>

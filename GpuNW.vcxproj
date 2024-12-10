@@ -33,6 +33,18 @@
     <CudaCompile Include="src\nw-gpu5-coop-diagdiag.cu" />
     <CudaCompile Include="src\nw-gpu6-coop-diagdiag2pass.cu" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="resrc\param-all1.json" />
+    <None Include="resrc\param-all2.json" />
+    <None Include="resrc\param-best1.json" />
+    <None Include="resrc\param-test1.json" />
+    <None Include="resrc\seq-gen1-100.json" />
+    <None Include="resrc\seq-gen2-1000.json" />
+    <None Include="resrc\seq-gen3-10_000.json" />
+    <None Include="resrc\seq-one1.json" />
+    <None Include="resrc\seq-test1.json" />
+    <None Include="resrc\subst-blosum1.json" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{760CE57B-A3BD-45D3-A9D2-E2997D70B26A}</ProjectGuid>
     <RootNamespace>GpuNW</RootNamespace>
