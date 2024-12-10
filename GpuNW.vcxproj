@@ -14,10 +14,10 @@
     <ClCompile Include="src\common.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\nw-algorithm.cpp" />
-    <ClCompile Include="src\nw-cpu1-row-st.cpp" />
-    <ClCompile Include="src\nw-cpu2-diag-st.cpp" />
-    <ClCompile Include="src\nw-cpu3-diagrow-st.cpp" />
-    <ClCompile Include="src\nw-cpu4-diagrow-mt.cpp" />
+    <ClCompile Include="src\nw-cpu1-st-row.cpp" />
+    <ClCompile Include="src\nw-cpu2-st-diag.cpp" />
+    <ClCompile Include="src\nw-cpu3-st-diagrow.cpp" />
+    <ClCompile Include="src\nw-cpu4-mt-diagrow.cpp" />
     <ClCompile Include="src\nw-trace1-plain.cpp" />
     <ClCompile Include="src\nw-trace2-sparse.cpp" />
   </ItemGroup>
@@ -27,11 +27,11 @@
     <ClInclude Include="src\nw-algorithm.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="src\nw-gpu1-diag-ml.cu" />
-    <CudaCompile Include="src\nw-gpu2-diagrow-ml2k.cu" />
-    <CudaCompile Include="src\nw-gpu3-diagdiag-coop.cu" />
-    <CudaCompile Include="src\nw-gpu4-diagdiag-coop2k.cu" />
-    <CudaCompile Include="src\nw-gpu5-diagdiagdiag-ml.cu" />
+    <CudaCompile Include="src\nw-gpu1-ml-diag.cu" />
+    <CudaCompile Include="src\nw-gpu10-mlsp-diagdiagdiag.cu" />
+    <CudaCompile Include="src\nw-gpu2-ml-diagrow2pass.cu" />
+    <CudaCompile Include="src\nw-gpu5-coop-diagdiag.cu" />
+    <CudaCompile Include="src\nw-gpu6-coop-diagdiag2pass.cu" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{760CE57B-A3BD-45D3-A9D2-E2997D70B26A}</ProjectGuid>
@@ -56,7 +56,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.1.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.6.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -137,6 +137,6 @@
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.1.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.6.targets" />
   </ImportGroup>
 </Project>
