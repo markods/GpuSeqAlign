@@ -677,7 +677,7 @@ class Pipeline
         Stage_ExecuteScript $script:StageScript_Default $Stage $false | Write-Output;
     },
     "${script:ProjectRoot}/src",
-    $false
+    $true
 );
 # run the exe
 [Stage] $script:NwRunStg = [Stage]::new(
