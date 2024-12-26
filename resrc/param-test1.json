@@ -49,6 +49,20 @@
       // unsigned tileBy = warpsz;
       "tileBy": [ 32 ]
    },
+   "NwAlign_Gpu4_Ml_DiagDiag2Pass":
+   {
+      // // tile sizes for kernels A and B
+      // // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
+      // // +   tile B must have one dimension fixed to the number of threads in a warp
+      // unsigned tileAx = 1*warpsz;
+      "tileAx": [ 32 ],
+      // unsigned tileAy = 32;
+      "tileAy": [ 32 ],
+      // unsigned tileBx = 60;
+      "tileBx": [ 60 ],
+      // unsigned tileBy = warpsz;
+      "tileBy": [ 32 ]
+   },
    "NwAlign_Gpu5_Coop_DiagDiag":
    {
       // // tile size for the kernel

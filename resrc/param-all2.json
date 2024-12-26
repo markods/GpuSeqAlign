@@ -1,5 +1,19 @@
 // algorithm parameters
 {
+   "NwAlign_Gpu4_Ml_DiagDiag2Pass":
+   {
+      // // tile sizes for kernels A and B
+      // // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
+      // // +   tile B must have one dimension fixed to the number of threads in a warp
+      // unsigned tileAx = 1*warpsz;
+      "tileAx": [ 32, 64, 96, 128, 160, 192, 256, 384, 512 ],
+      // unsigned tileAy = 32;
+      "tileAy": [ 16, 20, 32, 36, 40, 42, 46, 64, 128 ],
+      // unsigned tileBx = 60;
+      "tileBx": [ 66 ],
+      // unsigned tileBy = warpsz;
+      "tileBy": [ 32 ]
+   },
    "NwAlign_Gpu6_Coop_DiagDiag2Pass":
    {
       // // tile sizes for kernels A and B
