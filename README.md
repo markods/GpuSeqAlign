@@ -1,7 +1,7 @@
 ## GpuSeqAlignment - a benchmark for dynamic-programming-based GPU sequence alignment algorithms
-This project compares different implementations of the Needleman-Wunsch and Smith-Waterman (🔍) algorithms for efficiency and memory consumption.
+This project compares different CPU and GPU implementations of the Needleman-Wunsch and Smith-Waterman (🔍) algorithms for efficiency and memory consumption.
 
-The bulk of the work is calculating the dynamic-programming score matrix (not necessarily square). After that it's transferred to main memory. Most optimizations apply to the score matrix calculation.
+For the GPU algorithms, the bulk of the work is calculating the dynamic-programming score matrix (not necessarily square). Another concern is its transfer to main memory. Most optimizations apply to the score matrix calculation.
 
 Present algorithms:
 | Algorithm                      | NW_LG | NW_AG         | SW_LG | SW_AG | Description                                                                                                                                    |
@@ -13,7 +13,7 @@ Present algorithms:
 | ---                            | ---   | ---           | ---   | ---   | ---                                                                                                                                            |
 | gpu1-ml-diag                   | ✅     | 🔍             | 🔍     | 🔍     | Launch kernel per each minor diagonal. One thread per element.                                                                                 |
 | gpu2-ml-diagrow2pass           | ✅     | 🔍             | 🔍     | 🔍     | Like gpu1-ml-diag, but one thread per tile. Two-pass, first does neighbour-independent work.                                                   |
-| gpu3-ml-diagdiag               | ⚠️     | 🔍             | 🔍     | 🔍     | Kernel per per each minor tile diagonal. Multiple threads per tile - one per tile row. Threads sync on each minor diagonal in tile.            |
+| gpu3-ml-diagdiag               | ⚠️     | 🔍             | 🔍     | 🔍     | Kernel per each minor tile diagonal. Multiple threads per tile - one per tile row. Threads sync on each minor diagonal in tile.                |
 | gpu4-ml-diagdiag2pass          | ⚠️     | 🔍             | 🔍     | 🔍     | Like gpu3-ml-diagdiag, but two-pass like in gpu2-ml-diagrow2pass.                                                                              |
 | gpu5-coop-diagdiag             | ✅     | ❌<sup>1</sup> | 🔍     | 🔍     | Like gpu3-ml-diagdiag, but use grid sync instead of multi-launching kernels.                                                                   |
 | gpu6-coop-diagdiag2pass        | ✅     | ❌<sup>1</sup> | 🔍     | 🔍     | Like gpu4-ml-diagdiag2pass, but use grid sync instead of multi-launching kernels.                                                              |
