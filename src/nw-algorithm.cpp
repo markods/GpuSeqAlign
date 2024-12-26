@@ -108,34 +108,22 @@ void resHeaderToCsv(std::ostream &os, const NwResData &resData)
     os << "# " << std::setw(1) << std::left << "seqFname: \"" << resData.seqFname << "\"" << '\n';
     os << "# ______________________________________________________________________________" << '\n';
 
-    os << std::setw(22) << std::left << "algName"
-       << ", ";
-    os << std::setw(2) << std::right << "iY"
-       << ", ";
-    os << std::setw(2) << std::right << "iX"
-       << ", ";
-    os << std::setw(4) << std::right << "reps"
-       << ",   ";
+    os << std::setw(42) << std::left << "algName" << ", ";
+    os << std::setw(2) << std::right << "iY" << ", ";
+    os << std::setw(2) << std::right << "iX" << ", ";
+    os << std::setw(4) << std::right << "reps" << ",   ";
 
-    os << std::setw(5) << std::right << "lenY"
-       << ", ";
-    os << std::setw(5) << std::right << "lenX"
-       << ",   ";
+    os << std::setw(5) << std::right << "lenY" << ", ";
+    os << std::setw(5) << std::right << "lenX" << ",   ";
 
-    os << std::setw(42) << std::left << "algParams"
-       << ",   ";
+    os << std::setw(42) << std::left << "algParams" << ",   ";
 
-    os << std::setw(1) << std::right << "step"
-       << ",";
-    os << std::setw(1) << std::right << "stat"
-       << ",";
-    os << std::setw(3) << std::right << "cuda"
-       << ",   ";
+    os << std::setw(1) << std::right << "step" << ",";
+    os << std::setw(1) << std::right << "stat" << ",";
+    os << std::setw(3) << std::right << "cuda" << ",   ";
 
-    os << std::setw(10) << std::right << "score_hash"
-       << ", ";
-    os << std::setw(10) << std::right << "trace_hash"
-       << ",   ";
+    os << std::setw(10) << std::right << "score_hash" << ", ";
+    os << std::setw(10) << std::right << "trace_hash" << ",   ";
 
     os << std::setw(1) << std::left << "       alloc,        cpy-dev,       init-hdr,         calc-1,       calc-2,       calc-3,       cpy-host,          total,     calc-sum" << '\n';
 }
@@ -145,7 +133,7 @@ void to_csv(std::ostream &os, const NwResult &res)
     {
         os.fill(' ');
 
-        os << std::setw(22) << std::left << ("\"" + res.algName + "\"") << ", ";
+        os << std::setw(42) << std::left << ("\"" + res.algName + "\"") << ", ";
         os << std::setw(2) << std::right << res.iY << ", ";
         os << std::setw(2) << std::right << res.iX << ", ";
         os << std::setw(4) << std::right << res.reps << ",   ";

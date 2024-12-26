@@ -308,7 +308,8 @@ int main(int argc, char *argv[])
         }
 
         // algorithm separator
-        std::cout << "\n\n";
+        std::cout << std::endl
+                  << std::endl;
     }
 
     nw.resetAllocsBenchmarkEnd();
