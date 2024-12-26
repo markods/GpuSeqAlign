@@ -1,3 +1,5 @@
+#pragma warning(push, 0)  // Disable all warnings
+
 //     __ _____ _____ _____
 //  __|  |   __|     |   | |  JSON for Modern C++
 // |  |  |__   |  |  | | | |  version 3.11.3

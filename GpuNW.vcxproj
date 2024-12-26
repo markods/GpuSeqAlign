@@ -30,6 +30,7 @@
     <CudaCompile Include="src\nw-gpu1-ml-diag.cu" />
     <CudaCompile Include="src\nw-gpu10-mlsp-diagdiagdiagskew2.cu" />
     <CudaCompile Include="src\nw-gpu2-ml-diagrow2pass.cu" />
+    <CudaCompile Include="src\nw-gpu3-ml-diagdiag.cu" />
     <CudaCompile Include="src\nw-gpu5-coop-diagdiag.cu" />
     <CudaCompile Include="src\nw-gpu6-coop-diagdiag2pass.cu" />
   </ItemGroup>
@@ -103,7 +104,7 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_86,sm_86</CodeGeneration>
+      <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <MaxRegCount>32</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <AdditionalCompilerOptions>/openmp</AdditionalCompilerOptions>
@@ -133,7 +134,7 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_86,sm_86</CodeGeneration>
+      <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <MaxRegCount>32</MaxRegCount>
       <Optimization>O2</Optimization>
       <PtxAsOptionV>true</PtxAsOptionV>
