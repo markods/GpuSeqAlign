@@ -307,7 +307,7 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res)
         return NwStat::errorInvalidValue;
     }
 
-    if (tileAx != nw.warpsz && tileAy != nw.warpsz)
+    if (tileBx != nw.warpsz && tileBy != nw.warpsz)
     {
         return NwStat::errorInvalidValue;
     }
