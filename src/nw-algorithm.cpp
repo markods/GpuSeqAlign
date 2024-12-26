@@ -1,6 +1,7 @@
 #include "nw-algorithm.hpp"
 #include <ctime>
 #include <fstream>
+#include <filesystem>
 #include <iomanip>
 #include <sstream>
 #include <vector>
@@ -349,6 +350,9 @@ NwStat openOutFile(const std::string &path, std::ofstream &ofs)
 {
     try
     {
+        // Create directories if they don't exist
+        std::filesystem::create_directories(std::filesystem::path(path).parent_path());
+
         ofs.open(path, std::ios_base::out);
         if (!ofs)
         {
