@@ -24,12 +24,12 @@ __global__ static void Nw_Gpu1_Kernel(
 
     // (d,p) -- element coordinates on the score matrix diagonal
     int pbeg = max(0, d - (cols - 1));
-    int pend = min(d, rows - 1);
+    int pend = min(d + 1, rows);
     // position of the current thread's element on the matrix diagonal
     int p = pbeg + (blockDim.x * blockIdx.x + threadIdx.x);
 
     // if the thread maps onto an element on the current matrix diagonal
-    if (p <= pend)
+    if (p < pend)
     {
         // position of the current element
         int i = 1 + (p);
@@ -48,7 +48,7 @@ __global__ static void Nw_Gpu1_Kernel(
             }
         }
         // if the thread maps onto the end of the diagonal
-        if (d < rows && p == pend)
+        if (d < rows && p == pend - 1)
         {
             // initialize LEFT header element
             el(score_gpu, adjcols, i, 0) = i * indel;
@@ -161,10 +161,10 @@ NwStat NwAlign_Gpu1_Ml_Diag(NwParams &pr, NwInput &nw, NwResult &res)
             // calculate grid and block dimensions for kernel
             {
                 int pbeg = max(0, d - (cols - 1));
-                int pend = min(d, rows - 1);
+                int pend = min(d + 1, rows);
 
                 // the number of elements on the current diagonal
-                int dsize = pend - pbeg + 1;
+                int dsize = pend - pbeg;
 
                 // take the number of threads per block as the only dimension
                 blockA.x = threadsPerBlock;

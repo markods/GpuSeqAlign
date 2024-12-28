@@ -735,10 +735,10 @@
 //     //         // calculate grid and block dimensions for kernel B
 //     //         {
 //     //             int pbeg = max(0, d - (tcols - 1));
-//     //             int pend = min(d, trows - 1);
+//     //             int pend = min(d + 1, trows);
 
 //     //             // the number of elements on the current diagonal
-//     //             int dsize = pend - pbeg + 1;
+//     //             int dsize = pend - pbeg;
 
 //     //             // take the number of threads per tile as the only dimension
 //     //             blockA.x = tileAy;

@@ -213,12 +213,12 @@ __global__ static void Nw_Gpu4_KernelB(
             {
                 // (d,p) -- element coordinates in the tile
                 int pbeg = max(0, d - (cols - 1));
-                int pend = min(d, rows - 1);
+                int pend = min(d + 1, rows);
                 // position of the current thread's element on the tile diagonal
                 int p = pbeg + threadIdx.x;
 
                 // if the thread maps onto an element on the current tile diagonal
-                if (p <= pend)
+                if (p < pend)
                 {
                     // position of the current element
                     int i = 1 + (p);
@@ -440,10 +440,10 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res)
             // calculate grid and block dimensions for kernel B
             {
                 int pbeg = max(0, d - (tcols - 1));
-                int pend = min(d, trows - 1);
+                int pend = min(d + 1, trows);
 
                 // the number of elements on the current diagonal
-                int dsize = pend - pbeg + 1;
+                int dsize = pend - pbeg;
 
                 // take the number of threads on the largest diagonal of the tile
                 // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory

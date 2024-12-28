@@ -214,12 +214,12 @@ __global__ static void Nw_Gpu6_KernelB(
                 {
                     // (d,p) -- element coordinates in the tile
                     int pbeg = max(0, d - (cols - 1));
-                    int pend = min(d, rows - 1);
+                    int pend = min(d + 1, rows);
                     // position of the current thread's element on the tile diagonal
                     int p = pbeg + threadIdx.x;
 
                     // if the thread maps onto an element on the current tile diagonal
-                    if (p <= pend)
+                    if (p < pend)
                     {
                         // position of the current element
                         int i = 1 + (p);

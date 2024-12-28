@@ -66,7 +66,7 @@ __global__ static void Nw_Gpu2_KernelB(
 
     // (d,p) -- tile coordinates on the score matrix diagonal
     int pbeg = max(0, d - (tcols - 1));
-    int pend = min(d, trows - 1);
+    int pend = min(d + 1, trows);
     // position of the current thread's tile on the matrix diagonal
     int p = pbeg + (blockDim.x * blockIdx.x + threadIdx.x);
 
@@ -76,7 +76,7 @@ __global__ static void Nw_Gpu2_KernelB(
     //  x / . . . .       x . / / . .       x . . . / /|
 
     // if the thread maps onto a tile on the current matrix diagonal
-    if (p <= pend)
+    if (p < pend)
     {
         // position of the top left tile element in the current tile diagonal in the score matrix
         int ibeg = 1 + (p)*tileBy;
@@ -255,10 +255,10 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams &pr, NwInput &nw, NwResult &res)
             // calculate grid and block dimensions for kernel B
             {
                 int pbeg = max(0, d - (tcols - 1));
-                int pend = min(d, trows - 1);
+                int pend = min(d + 1, trows);
 
                 // the number of elements on the current diagonal
-                int dsize = pend - pbeg + 1;
+                int dsize = pend - pbeg;
 
                 // take the number of threads per block as the only dimension
                 blockB.x = threadsPerBlockB;
