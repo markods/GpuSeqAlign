@@ -153,7 +153,7 @@ __global__ static void Nw_Gpu4_KernelB(
     {
         // (s,t) -- tile coordinates in the grid of tiles (score matrix)
         int tbeg = max(0, d - (tcols - 1));
-        int tend = min(d, trows - 1);
+        int tend = min(d + 1, trows);
 
         // map a tile on the current diagonal of tiles to this thread block
         // +   then go to the next tile on the diagonal with stride equal to the number of thread blocks in the thread grid
@@ -461,7 +461,7 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res)
             int *subst_gpu = nw.subst_gpu.data();
 
             // group arguments to be passed to kernel B
-            void* kargs[]{
+            void *kargs[]{
                 &score_gpu,
                 &nw.indel,
                 &nw.warpsz,
@@ -469,7 +469,7 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res)
                 &tcols,
                 &tileBx,
                 &tileBy,
-                &d };
+                &d};
 
             // launch the kernel B in the given stream (don't statically allocate shared memory)
             if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void *)Nw_Gpu4_KernelB, gridB, blockB, kargs, shmemsz, nullptr /*stream*/)))

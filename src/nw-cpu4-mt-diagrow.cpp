@@ -68,10 +68,10 @@ NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams &pr, NwInput &nw, NwResult &res)
         for (int s = 0; s < colblocks - 1 + rowblocks; s++)
         {
             int tbeg = max2(0, s - (colblocks - 1));
-            int tend = min2(s, rowblocks - 1);
+            int tend = min2(s + 1, rowblocks);
 
             #pragma omp for schedule(static)
-            for (int t = tbeg; t <= tend; t++)
+            for (int t = tbeg; t < tend; t++)
             {
                 // calculate the block boundaries
                 int ibeg = 1 + (t)*blocksz;

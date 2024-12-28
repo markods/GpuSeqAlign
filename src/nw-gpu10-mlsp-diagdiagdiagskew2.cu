@@ -68,12 +68,12 @@
 
 //         // (s,t) -- tile coordinates on the score matrix diagonal
 //         int tbeg = max(0, s - (tcols - 1));
-//         // int tend = min( s, trows-1 );
+//         // int tend = min( s + 1, trows );
 //         // position of the current thread's tile on the score matrix diagonal
 //         int t = tbeg + blockIdx.x;
 
 //         // unnecessary question, since the number of launched blocks will always be the same as the number of tiles on the diagonal
-//         // if( t <= tend )
+//         // if( t < tend )
 
 //         //       x x x x x
 //         //       | | | | |

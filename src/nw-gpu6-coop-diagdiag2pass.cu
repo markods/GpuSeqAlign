@@ -153,11 +153,11 @@ __global__ static void Nw_Gpu6_KernelB(
     {
         // (s,t) -- tile coordinates in the grid of tiles (score matrix)
         int tbeg = max(0, s - (tcols - 1));
-        int tend = min(s, trows - 1);
+        int tend = min(s + 1, trows);
 
         // map a tile on the current diagonal of tiles to this thread block
         // +   then go to the next tile on the diagonal with stride equal to the number of thread blocks in the thread grid
-        for (int t = tbeg + blockIdx.x; t <= tend; t += gridDim.x)
+        for (int t = tbeg + blockIdx.x; t < tend; t += gridDim.x)
         {
             // initialize the score matrix tile
             {

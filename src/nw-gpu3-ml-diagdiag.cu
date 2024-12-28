@@ -74,7 +74,7 @@ __global__ static void Nw_Gpu3_KernelB(
     {
         // (s,t) -- tile coordinates in the grid of tiles (score matrix)
         int tbeg = max(0, d - (tcols - 1));
-        int tend = min(d, trows - 1);
+        int tend = min(d + 1, trows);
 
         // map a tile on the current diagonal of tiles to this thread block
         int t = tbeg + blockIdx.x;
