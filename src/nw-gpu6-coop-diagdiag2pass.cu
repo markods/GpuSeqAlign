@@ -302,7 +302,7 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res)
         tileBx = pr["tileBx"].curr();
         tileBy = pr["tileBy"].curr();
     }
-    catch (const std::out_of_range &ex)
+    catch (const std::out_of_range &)
     {
         return NwStat::errorInvalidValue;
     }
@@ -339,7 +339,7 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res)
 
         nw.score.init(nw.adjrows * nw.adjcols);
     }
-    catch (const std::exception &ex)
+    catch (const std::exception &)
     {
         return NwStat::errorMemoryAllocation;
     }

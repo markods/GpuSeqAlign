@@ -155,7 +155,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams &pr, NwInput &nw, NwResult &res)
 
         nw.score.init(nw.adjrows * nw.adjcols);
     }
-    catch (const std::exception &ex)
+    catch (const std::exception &)
     {
         return NwStat::errorMemoryAllocation;
     }

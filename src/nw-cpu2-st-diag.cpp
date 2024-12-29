@@ -3,6 +3,8 @@
 // sequential cpu implementation of the Needleman-Wunsch algorithm
 NwStat NwAlign_Cpu2_St_Diag(NwParams &pr, NwInput &nw, NwResult &res)
 {
+    (void)pr;
+
     // the dimensions of the matrix without its row and column header
     const int rows = -1 + nw.adjrows;
     const int cols = -1 + nw.adjcols;
@@ -16,7 +18,7 @@ NwStat NwAlign_Cpu2_St_Diag(NwParams &pr, NwInput &nw, NwResult &res)
     {
         nw.score.init(nw.adjrows * nw.adjcols);
     }
-    catch (const std::exception &ex)
+    catch (const std::exception &)
     {
         return NwStat::errorMemoryAllocation;
     }

@@ -297,7 +297,7 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res)
         tileBx = pr["tileBx"].curr();
         tileBy = pr["tileBy"].curr();
     }
-    catch (const std::out_of_range &ex)
+    catch (const std::out_of_range &)
     {
         return NwStat::errorInvalidValue;
     }
@@ -334,7 +334,7 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res)
 
         nw.score.init(nw.adjrows * nw.adjcols);
     }
-    catch (const std::exception &ex)
+    catch (const std::exception &)
     {
         return NwStat::errorMemoryAllocation;
     }
@@ -455,10 +455,7 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res)
             }
 
             // create variables for gpu arrays in order to be able to take their addresses
-            int *seqX_gpu = nw.seqX_gpu.data();
-            int *seqY_gpu = nw.seqY_gpu.data();
             int *score_gpu = nw.score_gpu.data();
-            int *subst_gpu = nw.subst_gpu.data();
 
             // group arguments to be passed to kernel B
             void *kargs[]{

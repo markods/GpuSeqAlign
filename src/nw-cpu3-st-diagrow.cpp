@@ -12,7 +12,7 @@ NwStat NwAlign_Cpu3_St_DiagRow(NwParams &pr, NwInput &nw, NwResult &res)
     {
         blocksz = pr["blocksz"].curr();
     }
-    catch (const std::out_of_range &ex)
+    catch (const std::out_of_range &)
     {
         return NwStat::errorInvalidValue;
     }
@@ -34,7 +34,7 @@ NwStat NwAlign_Cpu3_St_DiagRow(NwParams &pr, NwInput &nw, NwResult &res)
     {
         nw.score.init(nw.adjrows * nw.adjcols);
     }
-    catch (const std::exception &ex)
+    catch (const std::exception &)
     {
         return NwStat::errorMemoryAllocation;
     }

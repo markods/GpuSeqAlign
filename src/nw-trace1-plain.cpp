@@ -20,7 +20,7 @@ NwStat NwTrace1_Plain(const NwInput &nw, NwResult &res)
     {
         trace.reserve(nw.adjrows - 1 + nw.adjcols);
     }
-    catch (const std::exception &ex)
+    catch (const std::exception &)
     {
         return NwStat::errorMemoryAllocation;
     }
