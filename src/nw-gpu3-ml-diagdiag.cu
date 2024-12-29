@@ -289,10 +289,10 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // tile size for the kernel
     // +   tile B must have one dimension fixed to the number of threads in a warp
-    unsigned tileBx;
-    unsigned tileBy;
+    int tileBx;
+    int tileBy;
     // number of threads per block for kernels A and B
-    unsigned threadsPerBlockA;
+    int threadsPerBlockA;
 
     // get the parameter values
     try
@@ -313,8 +313,8 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
 
     // adjusted gpu score matrix dimensions
     // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile B size (in order to be evenly divisible)
-    int adjrows = 1 + tileBy * ceil(float(nw.adjrows - 1) / tileBy);
-    int adjcols = 1 + tileBx * ceil(float(nw.adjcols - 1) / tileBx);
+    int adjrows = 1 + tileBy * (int)ceil(float(nw.adjrows - 1) / tileBy);
+    int adjcols = 1 + tileBx * (int)ceil(float(nw.adjcols - 1) / tileBx);
     // special case when very small and very large sequences are compared
     if (adjrows == 1)
     {
@@ -386,7 +386,7 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
             // take the number of threads per block as the only dimension
             blockA.x = threadsPerBlockA;
             // take the number of blocks on the score matrix diagonal as the only dimension
-            gridA.x = ceil(float(max2(adjrows, adjcols)) / threadsPerBlockA);
+            gridA.x = (int)ceil(float(max2(adjrows, adjcols)) / threadsPerBlockA);
         }
 
         // create variables for gpu arrays in order to be able to take their addresses
@@ -425,8 +425,8 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
         dim3 gridB{};
         dim3 blockB{};
         // the number of tiles per row and column of the score matrix
-        int trows = ceil(float(adjrows - 1) / tileBy);
-        int tcols = ceil(float(adjcols - 1) / tileBx);
+        int trows = (int)ceil(float(adjrows - 1) / tileBy);
+        int tcols = (int)ceil(float(adjcols - 1) / tileBx);
 
         // calculate size of shared memory per block in bytes
         int shmemsz = (
@@ -451,7 +451,7 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
 
                 // take the number of threads on the largest diagonal of the tile
                 // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-                blockB.x = nw.warpsz * ceil(max(tileBy, tileBx) * 2. / nw.warpsz);
+                blockB.x = nw.warpsz * (int)ceil(max(tileBy, tileBx) * 2. / nw.warpsz);
 
                 // take the number of blocks on the current score matrix diagonal as the only dimension
                 // +   launch at least one block on the x axis

@@ -311,8 +311,8 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // tile size for the kernel
     // +   tile A must have one dimension fixed to the number of threads in a warp
-    unsigned tileAx;
-    unsigned tileAy;
+    int tileAx;
+    int tileAy;
 
     // get the parameter values
     try
@@ -332,8 +332,8 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
 
     // adjusted gpu score matrix dimensions
     // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile A size (in order to be evenly divisible)
-    int adjrows = 1 + tileAy * ceil(float(nw.adjrows - 1) / tileAy);
-    int adjcols = 1 + tileAx * ceil(float(nw.adjcols - 1) / tileAx);
+    int adjrows = 1 + tileAy * (int)ceil(float(nw.adjrows - 1) / tileAy);
+    int adjcols = 1 + tileAx * (int)ceil(float(nw.adjcols - 1) / tileAx);
     // special case when very small and very large sequences are compared
     if (adjrows == 1)
     {
@@ -393,8 +393,8 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
         dim3 gridA{};
         dim3 blockA{};
         // the number of tiles per row and column of the score matrix
-        int trows = ceil(float(adjrows - 1) / tileAy);
-        int tcols = ceil(float(adjcols - 1) / tileAx);
+        int trows = (int)ceil(float(adjrows - 1) / tileAy);
+        int tcols = (int)ceil(float(adjcols - 1) / tileAx);
 
         // calculate size of shared memory per block in bytes
         int shmemsz = (
@@ -410,7 +410,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
         {
             // take the number of threads on the largest diagonal of the tile
             // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-            blockA.x = nw.warpsz * ceil(max(tileAy, tileAx) * 2. / nw.warpsz);
+            blockA.x = nw.warpsz * (int)ceil(max(tileAy, tileAx) * 2. / nw.warpsz);
 
             // the maximum number of parallel blocks on a streaming multiprocessor
             int maxBlocksPerSm = 0;

@@ -170,7 +170,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(NwParams &pr, NwInput &nw, NwResult &res)
                 blockA.x = threadsPerBlock;
                 // take the number of blocks on the current score matrix diagonal as the only dimension
                 // +   launch at least one block on the x axis
-                gridA.x = ceil(float(dsize) / threadsPerBlock);
+                gridA.x = (int)ceil(float(dsize) / threadsPerBlock);
             }
 
             // create variables for gpu arrays in order to be able to take their addresses

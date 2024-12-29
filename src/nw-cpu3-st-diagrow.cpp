@@ -22,8 +22,8 @@ NwStat NwAlign_Cpu3_St_DiagRow(NwParams &pr, NwInput &nw, NwResult &res)
     const int cols = -1 + nw.adjcols;
 
     // number of blocks in a row and column (rounded up)
-    const int rowblocks = ceil(float(rows) / blocksz);
-    const int colblocks = ceil(float(cols) / blocksz);
+    const int rowblocks = (int)ceil(float(rows) / blocksz);
+    const int colblocks = (int)ceil(float(cols) / blocksz);
 
     // start the timer
     Stopwatch &sw = res.sw_align;

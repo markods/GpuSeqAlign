@@ -130,8 +130,8 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams &pr, NwInput &nw, NwResult &res)
 
     // adjusted gpu score matrix dimensions
     // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile A size (in order to be evenly divisible)
-    int adjrows = 1 + tileBy * ceil(float(nw.adjrows - 1) / tileBy);
-    int adjcols = 1 + tileBx * ceil(float(nw.adjcols - 1) / tileBx);
+    int adjrows = 1 + tileBy * (int)ceil(float(nw.adjrows - 1) / tileBy);
+    int adjcols = 1 + tileBx * (int)ceil(float(nw.adjcols - 1) / tileBx);
     // special case when very small and very large sequences are compared
     if (adjrows == 1)
     {
@@ -203,7 +203,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams &pr, NwInput &nw, NwResult &res)
             // take the number of threads per block as the only dimension
             blockA.x = threadsPerBlockA;
             // take the number of blocks on the score matrix diagonal as the only dimension
-            gridA.x = ceil(float(max2(adjrows, adjcols)) / threadsPerBlockA);
+            gridA.x = (int)ceil(float(max2(adjrows, adjcols)) / threadsPerBlockA);
         }
 
         // create variables for gpu arrays in order to be able to take their addresses
@@ -242,8 +242,8 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams &pr, NwInput &nw, NwResult &res)
         dim3 gridB{};
         dim3 blockB{};
         // the number of tiles per row and column of the score matrix
-        int trows = ceil(float(adjrows - 1) / tileBy);
-        int tcols = ceil(float(adjcols - 1) / tileBx);
+        int trows = (int)ceil(float(adjrows - 1) / tileBy);
+        int tcols = (int)ceil(float(adjcols - 1) / tileBx);
 
         // calculate size of shared memory per block in bytes
         int shmemsz = (
@@ -264,7 +264,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams &pr, NwInput &nw, NwResult &res)
                 blockB.x = threadsPerBlockB;
                 // take the number of blocks on the current score matrix diagonal as the only dimension
                 // +   launch at least one block on the x axis
-                gridB.x = ceil(float(dsize) / threadsPerBlockB);
+                gridB.x = (int)ceil(float(dsize) / threadsPerBlockB);
             }
 
             // create variables for gpu arrays in order to be able to take their addresses
