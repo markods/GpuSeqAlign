@@ -569,8 +569,8 @@ class Pipeline
         $BuildItems = @(
             # remove the build directory
             [PSCustomObject]@{ Path="./build"; Filter=""; }
-            # remove the .vs directory
-            [PSCustomObject]@{ Path ="./.vs"; Filter=""; }
+            # # remove the .vs directory
+            # [PSCustomObject]@{ Path ="./.vs"; Filter=""; }
             # remove the VS's temp folder
             [PSCustomObject]@{ Path ="./enc_temp_folder"; Filter=""; }
         );
