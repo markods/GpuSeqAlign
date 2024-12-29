@@ -98,6 +98,7 @@
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <ConformanceMode>true</ConformanceMode>
       <DisableLanguageExtensions>true</DisableLanguageExtensions>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -108,8 +109,6 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <MaxRegCount>32</MaxRegCount>
-      <PtxAsOptionV>true</PtxAsOptionV>
-      <AdditionalCompilerOptions>/openmp</AdditionalCompilerOptions>
       <CompileOut>$(SolutionDir)build\vs-$(Configuration)-$(Platform)\%(Filename)%(Extension).obj</CompileOut>
     </CudaCompile>
     <CudaLink>
@@ -128,6 +127,7 @@
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <ConformanceMode>true</ConformanceMode>
       <DisableLanguageExtensions>true</DisableLanguageExtensions>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -141,8 +141,6 @@
       <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <MaxRegCount>32</MaxRegCount>
       <Optimization>O2</Optimization>
-      <PtxAsOptionV>true</PtxAsOptionV>
-      <AdditionalCompilerOptions>/openmp</AdditionalCompilerOptions>
       <CompileOut>$(SolutionDir)build\vs-$(Configuration)-$(Platform)\%(Filename)%(Extension).obj</CompileOut>
     </CudaCompile>
     <CudaLink>
