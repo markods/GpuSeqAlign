@@ -646,23 +646,27 @@ class Pipeline
         # determine all other parameteres
         if( $isWindows )
         {
-            # set the openmp flag for the compiler (visual studio c++ on windows or gcc on linux)
             $Openmp = '/openmp';
+            $WarningLevel = "/W4";
         }
         else
         {
-            # set the openmp flag for the compiler (visual studio c++ on windows or gcc on linux)
             $Openmp = '-openmp';
+            $WarningLevel = "-W4";
         }
 
 
         # create the build command
         $Stage.CmdPartArr = 'nvcc',      # call the nvidia c++ compiler wrapper
-            '-Xcompiler', '"',           # pass the string arguments to the underlying c++ compiler (msvc)
-                "$Openmp",               # +   use openmp
+            '--compiler-options', '"',   # pass the string arguments to the underlying c++ compiler (msvc)
+                "$WarningLevel",         # 
+                "$Openmp",               # use openmp
+            '"',                         # 
+            '--ptxas-options', '"',      # 
+                "-warn-spills",          # 
+               #"-v",                    # show verbose cuda kernel compilation info
             '"',                         # 
             "--std=c++17",               # set the c++ standard (currently nvcc doesn't support c++20)
-            '--ptxas-options=-v',        # show verbose cuda kernel compilation info
             '-arch=sm_61',               # architecture - cuda 6.1
           # "-use_fast_math",            # use fast math
             '-maxrregcount 32',          # maximum registers available per thread
