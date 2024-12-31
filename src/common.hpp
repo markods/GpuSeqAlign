@@ -336,12 +336,18 @@ struct NwInput
     std::vector<int> seqX;
     std::vector<int> seqY;
     HostArray<int> score;
+    // sparse representation of the score matrix
+    HostArray<int> hrowTM;
+    HostArray<int> hcolTM;
 
     ////// device specific memory
     DeviceArray<int> subst_gpu;
     DeviceArray<int> seqX_gpu;
     DeviceArray<int> seqY_gpu;
     DeviceArray<int> score_gpu;
+    // sparse representation of the score matrix
+    DeviceArray<int> hrowTM_gpu;
+    DeviceArray<int> hcolTM_gpu;
 
     // alignment parameters
     int substsz;
@@ -365,12 +371,18 @@ struct NwInput
         seqX_gpu.clear();
         seqY_gpu.clear();
         score_gpu.clear();
+        ////// sparse representation of score matrix
+        hrowTM_gpu.clear();
+        hcolTM_gpu.clear();
 
         ////// host specific memory
         // subst.clear();
         // seqX.clear();
         // seqY.clear();
         score.clear();
+        ////// sparse representation of score matrix
+        hrowTM.clear();
+        hcolTM.clear();
     }
 
     // free all remaining memory not cleared by resetAllocs

@@ -33,6 +33,7 @@
     <CudaCompile Include="src\nw-gpu4-ml-diagdiag2pass.cu" />
     <CudaCompile Include="src\nw-gpu5-coop-diagdiag.cu" />
     <CudaCompile Include="src\nw-gpu6-coop-diagdiag2pass.cu" />
+    <CudaCompile Include="src\nw-gpu7-mlsp-diagdiag.cu" />
   </ItemGroup>
   <ItemGroup>
     <None Include="resrc\param-all1.json" />

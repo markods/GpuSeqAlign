@@ -22,6 +22,9 @@
     <CudaCompile Include="src\nw-gpu4-ml-diagdiag2pass.cu">
       <Filter>src</Filter>
     </CudaCompile>
+    <CudaCompile Include="src\nw-gpu7-mlsp-diagdiag.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\common.cpp">
