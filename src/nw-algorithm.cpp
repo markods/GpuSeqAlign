@@ -22,10 +22,10 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res);
 // traceback, hash and print functions implemented in other files
 NwStat NwTrace1_Plain(const NwInput &nw, NwResult &res);
 NwStat NwTrace2_Sparse(const NwInput &nw, NwResult &res);
-NwStat NwHash1_Plain(const int *const mat, const int rows, const int cols, unsigned &hash);
-NwStat NwHash2_Sparse(const int *const mat, const int rows, const int cols, unsigned &hash);
-NwStat NwPrint1_Plain(std::ostream &os, const int *const mat, const int rows, const int cols);
-NwStat NwPrint2_Sparse(std::ostream &os, const int *const mat, const int rows, const int cols);
+NwStat NwHash1_Plain(const NwInput &nw, NwResult &res);
+NwStat NwHash2_Sparse(const NwInput &nw, NwResult &res);
+NwStat NwPrint1_Plain(std::ostream &os, const NwInput &nw, NwResult &res);
+NwStat NwPrint2_Sparse(std::ostream &os, const NwInput &nw, NwResult &res);
 
 // all algorithms
 NwAlgorithmData algData{

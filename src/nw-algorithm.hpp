@@ -11,8 +11,8 @@ using json = nlohmann::ordered_json;
 
 using NwAlignFn = NwStat (*)(NwParams &pr, NwInput &nw, NwResult &res);
 using NwTraceFn = NwStat (*)(const NwInput &nw, NwResult &res);
-using NwHashFn = NwStat (*)(const int *const mat, const int rows, const int cols, unsigned &hash);
-using NwPrintFn = NwStat (*)(std::ostream &os, const int *const mat, const int rows, const int cols);
+using NwHashFn = NwStat (*)(const NwInput &nw, NwResult &res);
+using NwPrintFn = NwStat (*)(std::ostream &os, const NwInput &nw, NwResult &res);
 
 // the Needleman-Wunsch algorithm implementations
 class NwAlgorithm
@@ -51,8 +51,8 @@ public:
 
     NwStat align(NwInput &nw, NwResult &res) { return _alignFn(_alignPr, nw, res); }
     NwStat trace(const NwInput &nw, NwResult &res) { return _traceFn(nw, res); }
-    NwStat hash(const NwInput &nw, NwResult &res) { return _hashFn(nw.score.data(), nw.adjrows, nw.adjcols, res.score_hash); }
-    NwStat print(std::ostream &os, const NwInput &nw) { return _printFn(os, nw.score.data(), nw.adjrows, nw.adjcols); }
+    NwStat hash(const NwInput &nw, NwResult &res) { return _hashFn(nw, res); }
+    NwStat print(std::ostream &os, const NwInput &nw, NwResult &res) { return _printFn(os, nw, res); }
 
 private:
     NwAlignFn _alignFn;

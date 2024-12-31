@@ -96,40 +96,42 @@ NwStat NwTrace1_Plain(const NwInput &nw, NwResult &res)
 }
 
 // hash the score matrix
-NwStat NwHash1_Plain(const int *const mat, const int rows, const int cols, unsigned &_hash)
+NwStat NwHash1_Plain(const NwInput &nw, NwResult &res)
 {
     // variable used to calculate the hash function
     // http://www.cse.yorku.ca/~oz/hash.html
     // the starting value is a magic constant
     unsigned hash = 5381;
 
-    for (int i = 0; i < rows; i++)
+    for (int i = 0; i < nw.adjrows; i++)
     {
-        for (int j = 0; j < cols; j++)
+        for (int j = 0; j < nw.adjcols; j++)
         {
             // add the current element to the hash
-            int curr = el(mat, cols, i, j);
+            int curr = el(nw.score, nw.adjcols, i, j);
             hash = ((hash << 5) + hash) ^ curr;
         }
     }
 
     // save the resulting hash
-    _hash = hash;
+    res.score_hash = hash;
 
     return NwStat::success;
 }
 
 // print the score matrix
-NwStat NwPrint1_Plain(std::ostream &os, const int *const mat, const int rows, const int cols)
+NwStat NwPrint1_Plain(std::ostream &os, const NwInput &nw, NwResult &res)
 {
+    (void)res;
+
     FormatFlagsGuard fg{os, 4};
 
     // print the score matrix
-    for (int i = 0; i < rows; i++)
+    for (int i = 0; i < nw.adjrows; i++)
     {
-        for (int j = 0; j < cols; j++)
+        for (int j = 0; j < nw.adjcols; j++)
         {
-            os << el(mat, cols, i, j) << ' ';
+            os << el(nw.score, nw.adjcols, i, j) << ' ';
         }
         os << '\n';
     }

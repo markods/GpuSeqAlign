@@ -100,12 +100,10 @@ NwStat NwTrace2_Sparse(const NwInput &nw, NwResult &res)
 }
 
 // hash the score matrix
-NwStat NwHash2_Sparse(const int *const mat, const int rows, const int cols, unsigned &_hash)
+NwStat NwHash2_Sparse(const NwInput &nw, NwResult &res)
 {
-    (void)mat;
-    (void)rows;
-    (void)cols;
-    (void)_hash;
+    (void)nw;
+    (void)res;
     return NwStat::errorInvalidValue;
 
     // // variable used to calculate the hash function
@@ -113,12 +111,12 @@ NwStat NwHash2_Sparse(const int *const mat, const int rows, const int cols, unsi
     // // the starting value is a magic constant
     // unsigned hash = 5381;
 
-    // for (int i = 0; i < rows; i++)
+    // for (int i = 0; i < nw.adjrows; i++)
     // {
-    //     for (int j = 0; j < cols; j++)
+    //     for (int j = 0; j < nw.adjcols; j++)
     //     {
     //         // add the current element to the hash
-    //         int curr = el(mat, cols, i, j);
+    //         int curr = el(nw.score, nw.adjcols, i, j);
     //         hash = ((hash << 5) + hash) ^ curr;
     //     }
     // }
@@ -130,22 +128,21 @@ NwStat NwHash2_Sparse(const int *const mat, const int rows, const int cols, unsi
 }
 
 // print the score matrix
-NwStat NwPrint2_Sparse(std::ostream &os, const int *const mat, const int rows, const int cols)
+NwStat NwPrint2_Sparse(std::ostream &os, const NwInput &nw, NwResult &res)
 {
     (void)os;
-    (void)mat;
-    (void)rows;
-    (void)cols;
+    (void)nw;
+    (void)res;
     return NwStat::errorInvalidValue;
 
     // FormatFlagsGuard fg{os, 4};
 
     // // print the score matrix
-    // for (int i = 0; i < rows; i++)
+    // for (int i = 0; i < nw.adjrows; i++)
     // {
-    //     for (int j = 0; j < cols; j++)
+    //     for (int j = 0; j < nw.adjcols; j++)
     //     {
-    //         os << el(mat, cols, i, j) << ' ';
+    //         os << el(nw.score, nw.adjcols, i, j) << ' ';
     //     }
     //     os << '\n';
     // }
