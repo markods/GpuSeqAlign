@@ -86,12 +86,14 @@
    {
       // // number of threads per block for kernel A
       // unsigned threadsPerBlockA = 16*warpsz;
-      "threadsPerBlockA": [ 32, 64, 96, 128, 160 ],
+      "threadsPerBlockA": [ 128 ],
       // // tile size for the kernel
       // // +   tile B must have one dimension fixed to the number of threads in a warp
       // unsigned tileBx = 40;
       "tileBx": [ 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76 ],
       // unsigned tileBy = warpsz;
-      "tileBy": [ 32 ]
+      "tileBy": [ 32 ],
+      // reduce the number of warps in the thread block in kernel B
+      "warpDivFactorB": [ 2 ]
    }
 }

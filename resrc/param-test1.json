@@ -96,6 +96,8 @@
       // unsigned tileBx = 40;
       "tileBx": [ 40 ],
       // unsigned tileBy = warpsz;
-      "tileBy": [ 32 ]
+      "tileBy": [ 32 ],
+      // reduce the number of warps in the thread block in kernel B
+      "warpDivFactorB": [ 2 ]
    }
 }

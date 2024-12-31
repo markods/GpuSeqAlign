@@ -1,305 +1,308 @@
 #include "common.hpp"
 
-// cuda kernel A for the parallel implementation
-// +   initializes the score matrix's header row and column in the gpu
+// Initialize the score matrix's header row and column.
+// The score matrix is represented as two matrices (row-major order):
+// + tile header row matrix,
+// + tile header column matrix.
 __global__ static void Nw_Gpu7_KernelA(
-    int *const score_gpu,
-    const int adjrows,
-    const int adjcols,
-    const int indel)
-{
-    int j = (blockDim.x * blockIdx.x + threadIdx.x);
-    if (j < adjcols)
-    {
-        el(score_gpu, adjcols, 0, j) = j * indel;
-    }
-
-    // skip the zeroth element in the zeroth column, since it is already initialized
-    int i = 1 + j;
-    if (i < adjrows)
-    {
-        el(score_gpu, adjcols, i, 0) = i * indel;
-    }
-}
-
-// cuda kernel for the parallel implementation
-__global__ static void Nw_Gpu7_KernelB(
-    // nw input
-    const int *const seqX_gpu,
-    const int *const seqY_gpu,
-    int *const score_gpu,
-    const int *const subst_gpu,
-    // const int adjrows,   // can be calculated as 1 + trows*tileBy
-    // const int adjcols,   // can be calculated as 1 + tcols*tileBx
-    const int substsz,
-    const int indel,
-    const int warpsz,
-    // tile size
+    int *const tileHrowMat_gpu,
+    int *const tileHcolMat_gpu,
     const int trows,
     const int tcols,
     const unsigned tileBx,
     const unsigned tileBy,
-    const int d // the current minor tile diagonal in the score matrix (exclude the header row and column)
-)
+    const int indel)
+{
+    int tid = (blockDim.x * blockIdx.x + threadIdx.x);
+
+    // Initialize score matrix header row.
+    {
+        // The tile header row and column have an extra zeroth element that needs initializing.
+        // That's why we divide by (1 + ...).
+        int jTile = tid / (1 + tileBx);
+        int iTile = 0;
+
+        if (jTile < tcols)
+        {
+            int jTileElem = tid % (1 + tileBx);
+            int j = jTile * tileBx + jTileElem;
+
+            int kHrow = tcols * iTile + jTile;
+            int kHrowElem = kHrow * (1 + tileBx) + 0 + jTileElem;
+
+            tileHrowMat_gpu[kHrowElem] = j * indel;
+        }
+    }
+
+    // Initialize score matrix header column.
+    {
+        // The tile header row and column have an extra zeroth element that needs initializing.
+        // That's why we divide by (1 + ...).
+        int jTile = 0;
+        int iTile = tid / (1 + tileBy);
+
+        if (iTile < trows)
+        {
+            int iTileElem = tid % (1 + tileBy);
+            int i = iTile * tileBy + iTileElem;
+
+            int kHcol = tcols * iTile + jTile; // row-major
+            int kHcolElem = kHcol * (1 + tileBy) + 0 + iTileElem;
+
+            tileHcolMat_gpu[kHcolElem] = i * indel;
+        }
+    }
+}
+
+// Calculate the score matrix.
+// The score matrix is represented as two matrices (row-major order):
+// + tile header row matrix,
+// + tile header column matrix.
+__global__ static void Nw_Gpu7_KernelB(
+    // standard params
+    const int *const seqX_gpu,
+    const int *const seqY_gpu,
+    int *const tileHrowMat_gpu,
+    int *const tileHcolMat_gpu,
+    const int *const subst_gpu,
+    const int substsz,
+    const int indel,
+    const int warpsz,
+    // params related to tile B
+    const int trows,
+    const int tcols,
+    const unsigned tileBx,
+    const unsigned tileBy,
+    const int d)
 {
     extern __shared__ int shmem[/* substsz*substsz + tileBx + tileBy + (1+tileBy)*(1+tileBx) */];
-    // the substitution matrix and relevant parts of the two sequences
-    // NOTE: should we align allocations to 0-th shared memory bank?
     int *const subst /*[substsz*substsz]*/ = shmem + 0;
     int *const seqX /*[tileBx]*/ = subst + substsz * substsz;
     int *const seqY /*[tileBy]*/ = seqX + tileBx;
     int *const tile /*[(1+tileBy)*(1+tileBx)]*/ = seqY + tileBy;
 
-    // initialize the substitution shared memory copy
+    // Initialize the substitution matrix in shared memory.
     {
-        // map the threads from the thread block onto the substitution matrix elements
         int i = threadIdx.x;
-        // while the current thread maps onto an element in the matrix
         while (i < substsz * substsz)
         {
-            // copy the current element from the global substitution matrix
             el(subst, substsz, 0, i) = el(subst_gpu, substsz, 0, i);
-            // map this thread to the next element with stride equal to the number of threads in this block
             i += blockDim.x;
         }
     }
 
-    // all threads in this block should finish initializing their substitution shared memory
+    // Block should finish initializing substitution matrix in shared memory.
     __syncthreads();
 
-    //  / / / . .       . . . / /       . . . . .|/ /
-    //  / / . . .   +   . . / / .   +   . . . . /|/
-    //  / . . . .       . / / . .       . . . / /|
-    // map a tile on the current tile diagonal to this thread block
+    // Tile schematic:
+    //       x x x x x
+    //       | | | | |
+    //     h h h h h h
+    // y --h . . . . .
+    // y --h . . . . .
+    // y --h . . . . .
+    // Observe that the X and Y seqences don't need to be extended by 1 to the left and by 1 to the top.
+
+    // Map a tile on the current tile diagonal to this thread block.
+    // (d,t) -- tile coordinates in the grid of tiles (score matrix).
+    int tbeg = max(0, d - (tcols - 1));
+    int tend = min(d + 1, trows);
+    int t = tbeg + blockIdx.x;
+
+    // Initialize the tile's window into the global X sequence.
     {
-        // (s,t) -- tile coordinates in the grid of tiles (score matrix)
-        int tbeg = max(0, d - (tcols - 1));
-        int tend = min(d + 1, trows);
+        int jbeg = 1 + (d - t) * tileBx;
 
-        // map a tile on the current diagonal of tiles to this thread block
-        int t = tbeg + blockIdx.x;
-
-        // initialize the tile's window into the global X and Y sequences
+        int j = threadIdx.x;
+        while (j < tileBx)
         {
-            //       x x x x x
-            //       | | | | |
-            //     h h h h h h     // note the x and y seqences on this schematic
-            // y --h u . . . .     // +   they don't! need to be extended by 1 to the left and by 1 to the top
-            // y --h . . . . .
-            // y --h . . . . .
-            // position of the top left uninitialized! element <u> of the current tile in the score matrix
-            // +   only the uninitialized elements will be calculated, and they need the corresponding global sequence X and Y elements
-            int ibeg = 1 + (t)*tileBy;
-            int jbeg = 1 + (d - t) * tileBx;
+            seqX[j] = seqX_gpu[jbeg + j];
+            j += blockDim.x;
+        }
+    }
 
-            // map the threads from the thread block onto the global X sequence's elements (which will be used in this tile)
-            int j = threadIdx.x;
-            // while the current thread maps onto an element in the tile's X sequence
-            while (j < tileBx)
+    // Initialize the tile's window into the global Y sequence.
+    {
+        int ibeg = 1 + (t)*tileBy;
+
+        int i = threadIdx.x;
+        while (i < tileBy)
+        {
+            seqY[i] = seqY_gpu[ibeg + i];
+            i += blockDim.x;
+        }
+    }
+
+    // Initialize the tile's header row in shared memory.
+    {
+        int iTile = t;
+        int jTile = d - t;
+        int kHrow = tcols * iTile + jTile;
+        int jbeg = kHrow * (1 + tileBx);
+
+        int j = threadIdx.x;
+        while (j < 1 + tileBx)
+        {
+            el(tile, 1 + tileBx, 0, j) = tileHrowMat_gpu[jbeg + j];
+            j += blockDim.x;
+        }
+    }
+
+    // Initialize the tile's header column in shared memory.
+    {
+        int iTile = t;
+        int jTile = d - t;
+        int kHcol = tcols * iTile + jTile; // row-major
+        int ibeg = kHcol * (1 + tileBy);
+
+        int i = threadIdx.x;
+        while (i < 1 + tileBy)
+        {
+            el(tile, 1 + tileBx, i, 0) = tileHcolMat_gpu[ibeg + i];
+            i += blockDim.x;
+        }
+    }
+
+    // Block should finish initializing the tile's windows into the X and Y sequences and its header row and column.
+    __syncthreads();
+
+    // Partially calculate the tile's elements by doing only neighbour-independent work.
+    // The expression for calculating the final element value becomes simpler later on.
+    {
+        // Current thread position in the tile.
+        int i = threadIdx.x / tileBx;
+        int j = threadIdx.x % tileBx;
+        // Position increment is split into row and column increments to avoid using division and modulo operator in the inner loop.
+        int di = blockDim.x / tileBx;
+        int dj = blockDim.x % tileBx;
+
+        while (i < tileBy)
+        {
+            el(tile, 1 + tileBx, 1 + i, 1 + j) = el(subst, substsz, seqY[i], seqX[j]) - indel;
+
+            i += di;
+            j += dj;
+            if (j >= tileBx)
             {
-                // initialize that element in the X seqence's shared window
-                seqX[j] = seqX_gpu[jbeg + j];
-
-                // map this thread to the next element with stride equal to the number of threads in this block
-                j += blockDim.x;
-            }
-
-            // map the threads from the thread block onto the global Y sequence's elements (which will be used in this tile)
-            int i = threadIdx.x;
-            // while the current thread maps onto an element in the tile's Y sequence
-            while (i < tileBy)
-            {
-                // initialize that element in the Y seqence's shared window
-                seqY[i] = seqY_gpu[ibeg + i];
-
-                // map this thread to the next element with stride equal to the number of threads in this block
-                i += blockDim.x;
+                i++;
+                j -= tileBx;
             }
         }
+    }
 
-        // initialize the tile's header row and column
+    // Block should finish partially calculating this tile's elements.
+    __syncthreads();
+
+    // Calculate the tile elements.
+    // Only threads in the first warp from this block are active here, other warps have to wait.
+    if (threadIdx.x < warpsz)
+    {
+        // Number of rows and columns in the tile (without its header row and column).
+        int rows = tileBy;
+        int cols = tileBx;
+
+        // Cases:     1.                2.                3.
+        //  x x x x x x       x x x x x x       x x x x x x
+        //  x / / . . .       x . . / / /       x . . . . .|/ /
+        //  x / . . . .   +   x . / / / .   +   x . . . . /|/
+        //  x . . . . .       x / / / . .       x . . . / /|
+
+        // For all element (minor) diagonals in the tile.
+        // (s,p) -- element coordinates in the tile (when traversing in minor-diagonal order).
+        for (int s = 0; s < rows + cols - 1; s++)
         {
-            //       x x x x x
-            //       | | | | |
-            //     p h h h h h
-            // y --h . . . . .
-            // y --h . . . . .
-            // y --h . . . . .
-            // position of the top left element <p> of the current tile in the score matrix
-            // +   start indexes from the header, since the tile header (<h>) should be copied from the global score matrix
-            int ibeg = (1 + (t)*tileBy) - 1 /*header*/;
-            int jbeg = (1 + (d - t) * tileBx) - 1 /*header*/;
-            // the number of columns in the score matrix
-            int adjcols = 1 + tcols * tileBx;
+            int pbeg = max(0, s - (cols - 1));
+            int pend = min(s + 1, rows);
+            int p = pbeg + threadIdx.x;
 
-            // map the threads from the thread block onto the tile's header row (stored in the global score matrix)
+            // Only if the thread maps onto an element on the current tile diagonal (case 3.).
+            if (p < pend)
+            {
+                // Element coordinates in the tile extended with header row and column (when traversing in minor-diagonal order).
+                int i = 1 + (p);
+                int j = 1 + (s - p);
+
+                // Calculate the current element's value.
+                // Subtract the insert delete cost from the result, since the kernel A added that value in all movement directions implicitly.
+                int temp1 = el(tile, 1 + tileBx, i - 1, j - 1) + el(tile, 1 + tileBx, i, j);
+                int temp2 = max(el(tile, 1 + tileBx, i - 1, j), el(tile, 1 + tileBx, i, j - 1));
+                el(tile, 1 + tileBx, i, j) = max(temp1, temp2) + indel;
+            }
+
+            // Warp should finish calculating the current element diagonal.
+            __syncwarp();
+        }
+    }
+
+    // Block should finish calculating this tile.
+    __syncthreads();
+
+    // Save the tile last row to the tile header row matrix.
+    {
+        int iTileBelow = (t) + 1;
+        int jTileBelow = (d - t);
+
+        // Bottommost tile should not save its row.
+        if (iTileBelow < trows)
+        {
+            int kHrowBelow = tcols * iTileBelow + jTileBelow;
+            int jbeg = kHrowBelow * (1 + tileBx);
+
             int j = threadIdx.x;
-            // while the current thread maps onto an element in the tile's header row (stored in the global score matrix)
             while (j < 1 + tileBx)
             {
-                // initialize that element in the tile's shared memory
-                el(tile, 1 + tileBx, 0, j) = el(score_gpu, adjcols, ibeg + 0, jbeg + j);
-
-                // map this thread to the next element with stride equal to the number of threads in this block
+                tileHrowMat_gpu[jbeg + j] = el(tile, 1 + tileBx, tileBy /*last row*/, j);
                 j += blockDim.x;
             }
+        }
+    }
 
-            // map the threads from the thread block onto the tile's header column (stored in the global score matrix)
-            // +   skip the zeroth element since it is already initialized
-            int i = 1 + threadIdx.x;
-            // while the current thread maps onto an element in the tile's header column (stored in the global score matrix)
+    // Save the tile last column to the tile header column matrix.
+    {
+        int iTileRight = (t);
+        int jTileRight = (d - t) + 1;
+
+        // Rightmost tile should not save its column.
+        if (jTileRight < tcols)
+        {
+            int kHcol = tcols * iTileRight + jTileRight; // row-major
+            int ibeg = kHcol * (1 + tileBy);
+
+            int i = threadIdx.x;
             while (i < 1 + tileBy)
             {
-                // initialize that element in the tile's shared memory
-                el(tile, 1 + tileBx, i, 0) = el(score_gpu, adjcols, ibeg + i, jbeg + 0);
-
-                // map this thread to the next element with stride equal to the number of threads in this block
+                tileHcolMat_gpu[ibeg + i] = el(tile, 1 + tileBx, i, tileBx /*last column*/);
                 i += blockDim.x;
             }
         }
-
-        // make sure that all threads have finished initializing their corresponding elements in the shared X and Y sequences, and the tile's header row and column sequences
-        __syncthreads();
-
-        // initialize the score matrix tile
-        {
-            //       x x x x x
-            //       | | | | |
-            //     p h h h h h
-            // y --h . . . . .
-            // y --h . . . . .
-            // y --h . . . . .
-            // position of the top left element <p> of the current tile in the score matrix
-
-            // current thread position in the tile
-            int i = threadIdx.x / tileBx;
-            int j = threadIdx.x % tileBx;
-            // stride on the current thread position in the tile, equal to the number of threads in this thread block
-            // +   it is split into row and column increments for the thread's position for performance reasons (avoids using division and modulo operator in the inner cycle)
-            int di = blockDim.x / tileBx;
-            int dj = blockDim.x % tileBx;
-
-            // while the current thread maps onto an element in the tile
-            while (i < tileBy)
-            {
-                // use the substitution matrix to partially calculate the score matrix element value
-                // +   increase the value by insert delete cost, since then the formula for calculating the actual element value later on becomes simpler
-                el(tile, 1 + tileBx, 1 + i, 1 + j) = el(subst, substsz, seqY[i], seqX[j]) - indel;
-
-                // map the current thread to the next tile element
-                i += di;
-                j += dj;
-                // if the column index is out of bounds, increase the row index by one and wrap around the column index
-                if (j >= tileBx)
-                {
-                    i++;
-                    j -= tileBx;
-                }
-            }
-        }
-
-        // all threads in this block should finish initializing this tile in shared memory
-        __syncthreads();
-
-        // calculate the tile elements
-        // +   only threads in the first warp from this block are active here, other warps have to wait
-        if (threadIdx.x < warpsz)
-        {
-            // the number of rows and columns in the tile without its first row and column (the part of the tile to be calculated)
-            int rows = tileBy;
-            int cols = tileBx;
-
-            //  x x x x x x       x x x x x x       x x x x x x
-            //  x / / / . .       x . . . / /       x . . . . .|/ /
-            //  x / / . . .   +   x . . / / .   +   x . . . . /|/
-            //  x / . . . .       x . / / . .       x . . . / /|
-
-            // for all diagonals in the tile without its first row and column
-            for (int d = 0; d < cols - 1 + rows; d++)
-            {
-                // (d,p) -- element coordinates in the tile
-                int pbeg = max(0, d - (cols - 1));
-                int pend = min(d + 1, rows);
-                // position of the current thread's element on the tile diagonal
-                int p = pbeg + threadIdx.x;
-
-                // if the thread maps onto an element on the current tile diagonal
-                if (p < pend)
-                {
-                    // position of the current element
-                    int i = 1 + (p);
-                    int j = 1 + (d - p);
-
-                    // calculate the current element's value
-                    // +   always subtract the insert delete cost from the result, since the kernel A added that value to each element of the score matrix
-                    int temp1 = el(tile, 1 + tileBx, i - 1, j - 1) + el(tile, 1 + tileBx, i, j);
-                    int temp2 = max(el(tile, 1 + tileBx, i - 1, j), el(tile, 1 + tileBx, i, j - 1));
-                    el(tile, 1 + tileBx, i, j) = max(temp1, temp2) + indel;
-                }
-
-                // all threads in this warp should finish calculating the tile's current diagonal
-                __syncwarp();
-            }
-        }
-
-        // all threads in this block should finish calculating this tile
-        __syncthreads();
-
-        // save the score matrix tile
-        {
-            // position of the first (top left) calculated element of the current tile in the score matrix
-            int ibeg = (1 + (t)*tileBy);
-            int jbeg = (1 + (d - t) * tileBx);
-            // the number of columns in the score matrix
-            int adjcols = 1 + tcols * tileBx;
-
-            // current thread position in the tile
-            int i = threadIdx.x / tileBx;
-            int j = threadIdx.x % tileBx;
-            // stride on the current thread position in the tile, equal to the number of threads in this thread block
-            // +   it is split into row and column increments for the thread's position for performance reasons (avoids using division and modulo operator in the inner cycle)
-            int di = blockDim.x / tileBx;
-            int dj = blockDim.x % tileBx;
-
-            // while the current thread maps onto an element in the tile
-            while (i < tileBy)
-            {
-                // copy the current element from the tile to the global score matrix
-                el(score_gpu, adjcols, ibeg + i, jbeg + j) = el(tile, 1 + tileBx, 1 + i, 1 + j);
-
-                // map the current thread to the next tile element
-                i += di;
-                j += dj;
-                // if the column index is out of bounds, increase the row index by one and wrap around the column index
-                if (j >= tileBx)
-                {
-                    i++;
-                    j -= tileBx;
-                }
-            }
-        }
-
-        // all threads in this block should finish saving this tile
-        __syncthreads();
     }
+
+    // Block should finish saving tile last row/column to tile header row/column matrix.
+    __syncthreads();
 }
 
-// parallel gpu implementation of the Needleman-Wunsch algorithm
+// Parallel gpu implementation of the Needleman-Wunsch algorithm.
+// The score matrix is represented as two matrices (row-major order):
+// + tile header row matrix,
+// + tile header column matrix.
+//
+// Assumes that the row sequence (X) is longer or equal in length to the column sequence (Y).
 NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
 {
-    // tile size for the kernel
-    // +   tile B must have one dimension fixed to the number of threads in a warp
+    // Number of threads per block for kernel A.
+    int threadsPerBlockA;
+    // Tile B must have one dimension fixed to the number of threads in a warp.
     int tileBx;
     int tileBy;
-    // number of threads per block for kernels A and B
-    int threadsPerBlockA;
+    // Reduce the number of warps in the thread block in kernel B.
+    int warpDivFactorB;
 
-    // get the parameter values
     try
     {
         threadsPerBlockA = pr["threadsPerBlockA"].curr();
         tileBx = pr["tileBx"].curr();
         tileBy = pr["tileBy"].curr();
+        warpDivFactorB = pr["warpDivFactorB"].curr();
     }
     catch (const std::out_of_range &)
     {
@@ -311,11 +314,11 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
         return NwStat::errorInvalidValue;
     }
 
-    // adjusted gpu score matrix dimensions
-    // +   the matrix dimensions are rounded up to 1 + the nearest multiple of the tile B size (in order to be evenly divisible)
+    // Adjusted gpu score matrix dimensions.
+    // The matrix dimensions are rounded up to 1 + <the nearest multiple of the tile B size>.
     int adjrows = 1 + tileBy * (int)ceil(float(nw.adjrows - 1) / tileBy);
     int adjcols = 1 + tileBx * (int)ceil(float(nw.adjcols - 1) / tileBx);
-    // special case when very small and very large sequences are compared
+    // Special case when very small and very large sequences are compared.
     if (adjrows == 1)
     {
         adjrows = 1 + tileBy;
@@ -324,29 +327,34 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
     {
         adjcols = 1 + tileBx;
     }
+    // The number of tiles per row and column of the score matrix.
+    int trows = (int)ceil(float(adjrows - 1) / tileBy);
+    int tcols = (int)ceil(float(adjcols - 1) / tileBx);
 
-    // start the timer
+    // Start the timer.
     Stopwatch &sw = res.sw_align;
     sw.start();
 
-    // reserve space in the ram and gpu global memory
+    // Allocate space in the ram and gpu global memory.
     try
     {
         nw.seqX_gpu.init(adjcols);
         nw.seqY_gpu.init(adjrows);
-        nw.score_gpu.init(adjrows * adjcols);
+        nw.tileHrowMat_gpu.init(trows * tcols * (1 + tileBx));
+        nw.tileHcolMat_gpu.init(trows * tcols * (1 + tileBy));
 
-        nw.score.init(nw.adjrows * nw.adjcols);
+        nw.tileHrowMat.init(trows * tcols * (1 + tileBx));
+        nw.tileHcolMat.init(trows * tcols * (1 + tileBy));
     }
     catch (const std::exception &)
     {
         return NwStat::errorMemoryAllocation;
     }
 
-    // measure allocation time
+    // Measure allocation time.
     sw.lap("alloc");
 
-    // copy data from host to device
+    // Copy data from host to device.
     if (cudaSuccess != (cudaStatus = memTransfer(nw.seqX_gpu, nw.seqX, nw.adjcols)))
     {
         return NwStat::errorMemoryTransfer;
@@ -355,7 +363,7 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
     {
         return NwStat::errorMemoryTransfer;
     }
-    // also initialize padding, since it is used to access elements in the substitution matrix
+    // Also initialize padding, since it is used to access elements in the substitution matrix.
     if (cudaSuccess != (cudaStatus = memSet(nw.seqX_gpu, nw.adjcols, 0 /*value*/)))
     {
         return NwStat::errorMemoryTransfer;
@@ -365,70 +373,67 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
         return NwStat::errorMemoryTransfer;
     }
 
-    // measure memory transfer time
+    // Measure memory transfer time.
     sw.lap("cpy-dev");
 
     //  x x x x x x
     //  x . . . . .
     //  x . . . . .
     //  x . . . . .
-    // launch kernel A to initialize the score matrix's header row and column
+    // Launch kernel A to initialize the score matrix's header row and column.
+    // The score matrix is represented as two matrices (row-major order):
+    // + tile header row matrix,
+    // + tile header column matrix.
     {
-        // grid and block dimensions for kernel A
-        dim3 gridA{};
-        dim3 blockA{};
+        // Size of shared memory per block in bytes.
+        int shmemByteSize = (0);
 
-        // calculate size of shared memory per block in bytes
-        int shmemsz = (0);
+        dim3 blockDim{};
+        blockDim.x = threadsPerBlockA;
 
-        // calculate grid and block dimensions for kernel A
+        // Calculate the necessary number of blocks to cover the larger score matrix dimension.
+        dim3 gridDim{};
         {
-            // take the number of threads per block as the only dimension
-            blockA.x = threadsPerBlockA;
-            // take the number of blocks on the score matrix diagonal as the only dimension
-            gridA.x = (int)ceil(float(max2(adjrows, adjcols)) / threadsPerBlockA);
+            int tileHrowMat_RowElemCount = tcols * (1 + tileBx);
+            int tileHcolMat_ColElemCount = trows * (1 + tileBy);
+            int largerDimElemCount = max2(tileHrowMat_RowElemCount, tileHcolMat_ColElemCount);
+            gridDim.x = (int)ceil(float(largerDimElemCount) / threadsPerBlockA);
         }
 
-        // create variables for gpu arrays in order to be able to take their addresses
-        int *score_gpu = nw.score_gpu.data();
+        int *tileHrowMat_gpu = nw.tileHrowMat_gpu.data();
+        int *tileHcolMat_gpu = nw.tileHcolMat_gpu.data();
 
-        // group arguments to be passed to kernel A
         void *kargs[]{
-            &score_gpu,
-            &adjrows,
-            &adjcols,
+            &tileHrowMat_gpu,
+            &tileHcolMat_gpu,
+            &trows,
+            &tcols,
+            &tileBx,
+            &tileBy,
             &nw.indel};
 
-        // launch the kernel A in the given stream (don't statically allocate shared memory)
-        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void *)Nw_Gpu7_KernelA, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
+        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void *)Nw_Gpu7_KernelA, gridDim, blockDim, kargs, shmemByteSize, nullptr /*stream*/)))
         {
             return NwStat::errorKernelFailure;
         }
     }
 
-    // wait for the gpu to finish before going to the next step
+    // Wait for the gpu to finish before going to the next step.
     if (cudaSuccess != (cudaStatus = cudaDeviceSynchronize()))
     {
         return NwStat::errorKernelFailure;
     }
 
-    // measure header initialization time
+    // Measure header initialization time.
     sw.lap("init-hdr");
 
     //  x x x x x x       x x x x x x       x x x x x x
     //  x / / / . .       x . . . / /       x . . . . .|/ /
     //  x / / . . .   +   x . . / / .   +   x . . . . /|/
     //  x / . . . .       x . / / . .       x . . . / /|
-    // launch kernel B for each minor tile diagonal of the score matrix
+    // Launch kernel B for each (minor) tile diagonal of the score matrix.
     {
-        // grid and block dimensions for kernel B
-        dim3 gridB{};
-        dim3 blockB{};
-        // the number of tiles per row and column of the score matrix
-        int trows = (int)ceil(float(adjrows - 1) / tileBy);
-        int tcols = (int)ceil(float(adjcols - 1) / tileBx);
-
-        // calculate size of shared memory per block in bytes
+        // Size of shared memory per block in bytes.
         int shmemsz = (
             /*subst[]*/ nw.substsz * nw.substsz * sizeof(int)
             /*seqX[]*/
@@ -438,50 +443,51 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
             /*tile[]*/
             + (1 + tileBy) * (1 + tileBx) * sizeof(int));
 
-        // for all minor tile diagonals in the score matrix (excluding the header row and column)
+        // The number of threads should be divisible by the warp size.
+        // But for performance reasons, we don't need all those single-use warps, just half of them (or some other fraction).
+        // That way the thread block can be smaller while doing the same amount of work.
+        dim3 blockB{};
+        {
+            int warps = (int)ceil(float(max(tileBx, tileBx)) / nw.warpsz / warpDivFactorB);
+            blockB.x = nw.warpsz * warps;
+        }
+
+        // For all (minor) tile diagonals in the score matrix.
         for (int d = 0; d < tcols - 1 + trows; d++)
         {
-            // calculate grid and block dimensions for kernel B
+            dim3 gridB{};
             {
-                int pbeg = max(0, d - (tcols - 1));
-                int pend = min(d + 1, trows);
+                int tbeg = max(0, d - (tcols - 1));
+                int tend = min(d + 1, trows);
+                // Number of tiles on the current (minor) tile diagonal.
+                int dsize = tend - tbeg;
 
-                // the number of elements on the current diagonal
-                int dsize = pend - pbeg;
-
-                // take the number of threads on the largest diagonal of the tile
-                // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-                blockB.x = nw.warpsz * (int)ceil(max(tileBy, tileBx) * 2. / nw.warpsz);
-
-                // take the number of blocks on the current score matrix diagonal as the only dimension
-                // +   launch at least one block on the x axis
                 gridB.x = dsize;
             }
 
-            // create variables for gpu arrays in order to be able to take their addresses
             int *seqX_gpu = nw.seqX_gpu.data();
             int *seqY_gpu = nw.seqY_gpu.data();
-            int *score_gpu = nw.score_gpu.data();
+            int *tileHrowMat_gpu = nw.tileHrowMat_gpu.data();
+            int *tileHcolMat_gpu = nw.tileHcolMat_gpu.data();
             int *subst_gpu = nw.subst_gpu.data();
 
-            // group arguments to be passed to kernel B
             void *kargs[]{
+                // standard params
                 &seqX_gpu,
                 &seqY_gpu,
-                &score_gpu,
+                &tileHrowMat_gpu,
+                &tileHcolMat_gpu,
                 &subst_gpu,
-                /*&adjrows,*/
-                /*&adjcols,*/
                 &nw.substsz,
                 &nw.indel,
                 &nw.warpsz,
+                // params related to tile B
                 &trows,
                 &tcols,
                 &tileBx,
                 &tileBy,
                 &d};
 
-            // launch the kernel B in the given stream (don't statically allocate shared memory)
             if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void *)Nw_Gpu7_KernelB, gridB, blockB, kargs, shmemsz, nullptr /*stream*/)))
             {
                 return NwStat::errorKernelFailure;
@@ -489,22 +495,26 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
         }
     }
 
-    // wait for the gpu to finish before going to the next step
+    // Wait for the gpu to finish before going to the next step.
     if (cudaSuccess != (cudaStatus = cudaDeviceSynchronize()))
     {
         return NwStat::errorKernelFailure;
     }
 
-    // measure calculation time
+    // Measure calculation time.
     sw.lap("calc-1");
 
-    // save the calculated score matrix
-    if (cudaSuccess != (cudaStatus = memTransfer(nw.score, nw.score_gpu, nw.adjrows, nw.adjcols, adjcols)))
+    // Save the calculated score matrix.
+    if (cudaSuccess != (cudaStatus = memTransfer(nw.tileHrowMat, nw.tileHrowMat_gpu, trows * tcols * (1 + tileBx))))
+    {
+        return NwStat::errorMemoryTransfer;
+    }
+    if (cudaSuccess != (cudaStatus = memTransfer(nw.tileHcolMat, nw.tileHcolMat_gpu, trows * tcols * (1 + tileBy))))
     {
         return NwStat::errorMemoryTransfer;
     }
 
-    // measure memory transfer time
+    // Measure memory transfer time.
     sw.lap("cpy-host");
 
     return NwStat::success;

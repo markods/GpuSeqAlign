@@ -27,5 +27,19 @@
       "tileBx": [ 66 ],
       // unsigned tileBy = warpsz;
       "tileBy": [ 32 ]
+   },
+   "NwAlign_Gpu7_Mlsp_DiagDiag":
+   {
+      // // number of threads per block for kernel A
+      // unsigned threadsPerBlockA = 16*warpsz;
+      "threadsPerBlockA": [ 32, 64, 96, 128, 160 ],
+      // // tile size for the kernel
+      // // +   tile B must have one dimension fixed to the number of threads in a warp
+      // unsigned tileBx = 40;
+      "tileBx": [ 62 ],
+      // unsigned tileBy = warpsz;
+      "tileBy": [ 32 ],
+      // reduce the number of warps in the thread block in kernel B
+      "warpDivFactorB": [ 1, 2, 3 ]
    }
 }
