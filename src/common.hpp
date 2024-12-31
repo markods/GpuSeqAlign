@@ -336,24 +336,12 @@ struct NwInput
     std::vector<int> seqX;
     std::vector<int> seqY;
     HostArray<int> score;
-    // sparse representation of the score matrix
-    HostArray<int> hrowM_di; // diag index array into hrowM
-    HostArray<int> hrowM;
-    HostArray<int> hcolM_di; // diag index array into hcolM
-    HostArray<int> hcolM;
 
     ////// device specific memory
     DeviceArray<int> subst_gpu;
     DeviceArray<int> seqX_gpu;
     DeviceArray<int> seqY_gpu;
     DeviceArray<int> score_gpu;
-    // sparse representation of the score matrix
-    DeviceArray<int> hrow_gpu;
-    DeviceArray<int> hcol_gpu;
-    DeviceArray<int> hrowTDi_gpu;
-    DeviceArray<int> hcolTDi_gpu;
-    DeviceArray<int> hrowTDo_gpu;
-    DeviceArray<int> hcolTDo_gpu;
 
     // alignment parameters
     int substsz;
@@ -377,24 +365,12 @@ struct NwInput
         seqX_gpu.clear();
         seqY_gpu.clear();
         score_gpu.clear();
-        ////// sparse representation of score matrix
-        hrow_gpu.clear();
-        hcol_gpu.clear();
-        hrowTDi_gpu.clear();
-        hcolTDi_gpu.clear();
-        hrowTDo_gpu.clear();
-        hcolTDo_gpu.clear();
 
         ////// host specific memory
         // subst.clear();
         // seqX.clear();
         // seqY.clear();
         score.clear();
-        ////// sparse representation of score matrix
-        hrowM_di.clear();
-        hrowM.clear();
-        hcolM_di.clear();
-        hcolM.clear();
     }
 
     // free all remaining memory not cleared by resetAllocs
@@ -404,27 +380,11 @@ struct NwInput
 
         ////// device specific memory
         subst_gpu.clear();
-        //seqX_gpu.clear();
-        //seqY_gpu.clear();
-        //score_gpu.clear();
-        ////// sparse representation of score matrix
-        //hrow_gpu.clear();
-        //hcol_gpu.clear();
-        //hrowTDi_gpu.clear();
-        //hcolTDi_gpu.clear();
-        //hrowTDo_gpu.clear();
-        //hcolTDo_gpu.clear();
 
         ////// host specific memory
         subst.clear();
         seqX.clear();
         seqY.clear();
-        //score.clear();
-        ////// sparse representation of score matrix
-        //hrowM_di.clear();
-        //hrowM.clear();
-        //hcolM_di.clear();
-        //hcolM.clear();
     }
 };
 
