@@ -13,9 +13,6 @@
     <CudaCompile Include="src\nw-gpu6-coop-diagdiag2pass.cu">
       <Filter>src</Filter>
     </CudaCompile>
-    <CudaCompile Include="src\nw-gpu10-mlsp-diagdiagdiagskew2.cu">
-      <Filter>src</Filter>
-    </CudaCompile>
     <CudaCompile Include="src\nw-gpu3-ml-diagdiag.cu">
       <Filter>src</Filter>
     </CudaCompile>
