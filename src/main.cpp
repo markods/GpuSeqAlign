@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        std::cout << algName << ": |";
+        std::cout << algName << ":";
 
         // get the current algorithm and initialize its parameters
         NwAlgorithm &alg = algData.algMap[algName];
@@ -195,6 +195,9 @@ int main(int argc, char *argv[])
         // for all Y sequences + for all X sequences (also compare every sequence with itself)
         for (int iY = 0; iY < seqList.size(); iY++)
         {
+            std::cout << std::endl
+                      << "|";
+
             for (int iX = iY; iX < seqList.size(); iX++)
             {
                 // get the Y sequence
@@ -274,11 +277,11 @@ int main(int argc, char *argv[])
                         // if the result is successful, print a dot, otherwise an x
                         if (res.stat == NwStat::success)
                         {
-                            writeProgressChar(std::cout, '.');
+                            std::cout << '.' << std::flush;
                         }
                         else
                         {
-                            writeProgressChar(std::cout, 'x');
+                            std::cout << res.errstep << std::flush;
                         }
 
                         // clear cuda non-sticky errors and get possible cuda sticky errors
@@ -310,7 +313,7 @@ int main(int argc, char *argv[])
                 alg.alignPr().reset();
 
                 // seqX-seqY comparison separator
-                writeProgressChar(std::cout, '|');
+                std::cout << '|' << std::flush;
             }
         }
 

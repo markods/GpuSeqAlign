@@ -119,7 +119,7 @@ void resHeaderToCsv(std::ostream &os, const NwResData &resData)
     os << std::setw(5) << std::right << "lenY" << ", ";
     os << std::setw(5) << std::right << "lenX" << ",   ";
 
-    os << std::setw(42) << std::left << "algParams" << ",   ";
+    os << std::setw(64) << std::left << "algParams" << ",   ";
 
     os << std::setw(1) << std::right << "step" << ",";
     os << std::setw(1) << std::right << "stat" << ",";
@@ -144,7 +144,7 @@ void to_csv(std::ostream &os, const NwResult &res)
         os << std::setw(5) << std::right << res.seqY_len << ", ";
         os << std::setw(5) << std::right << res.seqX_len << ",   ";
 
-        os << std::setw(42) << std::left;
+        os << std::setw(64) << std::left;
         paramsToCsv(os, res.algParams);
         os << ",   ";
 
@@ -369,9 +369,3 @@ NwStat openOutFile(const std::string &path, std::ofstream &ofs)
     return NwStat::success;
 }
 
-// write the selected character to the given stream
-void writeProgressChar(std::ostream &os, char c)
-{
-    os << c;
-    os.flush();
-}
