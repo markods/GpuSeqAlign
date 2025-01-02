@@ -123,18 +123,6 @@ NwStat NwHash1_Plain(const NwInput &nw, NwResult &res)
 NwStat NwPrint1_Plain(std::ostream &os, const NwInput &nw, NwResult &res)
 {
     (void)res;
-
-    FormatFlagsGuard fg{os, 4};
-
-    // print the score matrix
-    for (int i = 0; i < nw.adjrows; i++)
-    {
-        for (int j = 0; j < nw.adjcols; j++)
-        {
-            os << el(nw.score, nw.adjcols, i, j) << ' ';
-        }
-        os << '\n';
-    }
-
+    NwPrintMat(os, nw.score.data(), nw.adjrows, nw.adjcols);
     return NwStat::success;
 }
