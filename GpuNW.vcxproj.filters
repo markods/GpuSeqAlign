@@ -105,5 +105,8 @@
     <None Include="resrc\subst-blosum1.json">
       <Filter>resrc</Filter>
     </None>
+    <None Include="resrc\param-test2-gpu.json">
+      <Filter>resrc</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -41,6 +41,7 @@
     <None Include="resrc\param-all2.json" />
     <None Include="resrc\param-best1.json" />
     <None Include="resrc\param-test1.json" />
+    <None Include="resrc\param-test2-gpu.json" />
     <None Include="resrc\seq-gen1-100.json" />
     <None Include="resrc\seq-gen2-1000.json" />
     <None Include="resrc\seq-gen3-10_000.json" />
