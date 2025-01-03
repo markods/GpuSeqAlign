@@ -106,13 +106,20 @@ int main(int argc, char *argv[])
         // seqX_gpu;    <-- algorithm-reserved
         // seqY_gpu;    <-- algorithm-reserved
         // score_gpu;   <-- algorithm-reserved
+        // // sparse representation of the score matrix
+        // tileHrowMat_gpu;   <-- algorithm-reserved
+        // tileHcolMat_gpu;   <-- algorithm-reserved
 
         ////// alignment parameters
         // substsz;   <-- once
         // adjrows;   <-- loop-inited
         // adjcols;   <-- loop-inited
-
         // indel;   <-- once
+        // // sparse representation of the score matrix
+        // tileHdrMatRows;   <-- algorithm-reserved
+        // tileHdrMatCols;   <-- algorithm-reserved
+        // tileHrowLen;   <-- algorithm-reserved
+        // tileHcolLen;   <-- algorithm-reserved
 
         ////// device parameters
         // sm_count;

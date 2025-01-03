@@ -505,6 +505,11 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
     sw.lap("calc-1");
 
     // Save the calculated score matrix.
+    nw.tileHdrMatRows = trows;
+    nw.tileHdrMatCols = tcols;
+    nw.tileHrowLen = 1 + tileBx;
+    nw.tileHcolLen = 1 + tileBy;
+
     if (cudaSuccess != (cudaStatus = memTransfer(nw.tileHrowMat, nw.tileHrowMat_gpu, trows * tcols * (1 + tileBx))))
     {
         return NwStat::errorMemoryTransfer;

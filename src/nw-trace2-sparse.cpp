@@ -1,151 +1,415 @@
 #include "common.hpp"
 #include <limits>
 
-// get one of the optimal matching paths to a file
+static void NwLoadHeaderAndAlignTile(std::vector<int> &tile, const NwInput &nw, int iTile, int jTile)
+{
+    //  x x x x x x
+    //  x / / / / /
+    //  x / / / / /
+    //  x / / / / /
+
+    // Load the tile's header row.
+    {
+        int kHrow = nw.tileHdrMatCols * iTile + jTile;
+        int kHrowElem = kHrow * nw.tileHrowLen;
+
+        for (int j = 0; j < nw.tileHrowLen; j++)
+        {
+            el(tile, nw.tileHrowLen, 0, j) = nw.tileHrowMat[kHrowElem + j];
+        }
+    }
+
+    // Load the tile's header column.
+    {
+        int kHcol = nw.tileHdrMatCols * iTile + jTile; // row-major
+        int kHcolElem = kHcol * nw.tileHcolLen;
+
+        for (int i = 0; i < nw.tileHcolLen; i++)
+        {
+            el(tile, nw.tileHrowLen, i, 0) = nw.tileHcolMat[kHcolElem + i];
+        }
+    }
+
+    // Calculate remaining elements in tile.
+    {
+        // Don't add header column because it's added in the inner loop - loops start from 1.
+        int ibeg = 0 + iTile * (nw.tileHcolLen - 1);
+        int jbeg = 0 + jTile * (nw.tileHrowLen - 1);
+
+        for (int i = 1; i < nw.tileHcolLen; i++)
+        {
+            for (int j = 1; j < nw.tileHrowLen; j++)
+            {
+                if (ibeg + i >= nw.adjrows || jbeg + j >= nw.adjcols)
+                {
+                    el(tile, nw.tileHrowLen, i, j) = 0;
+                    continue;
+                }
+
+                int p1 = el(tile, nw.tileHrowLen, i - 1, j - 1) + el(nw.subst, nw.substsz, nw.seqY[ibeg + i], nw.seqX[jbeg + j]); // MOVE DOWN-RIGHT
+                int p2 = el(tile, nw.tileHrowLen, i - 1, j) + nw.indel;                                                           // MOVE DOWN
+                int p3 = el(tile, nw.tileHrowLen, i, j - 1) + nw.indel;                                                           // MOVE RIGHT
+                el(tile, nw.tileHrowLen, i, j) = max3(p1, p2, p3);
+            }
+        }
+    }
+}
+
+// Trace one of the optimal alignments in the score matrix.
+// The score matrix is represented as two matrices (row-major order):
+// + tile header row matrix,
+// + tile header column matrix.
 NwStat NwTrace2_Sparse(const NwInput &nw, NwResult &res)
 {
-    (void)nw;
-    (void)res;
-    return NwStat::errorInvalidValue;
+    std::vector<int> trace;
+    std::vector<int> tile;
 
-    // // variable used to calculate the hash function
-    // // http://www.cse.yorku.ca/~oz/hash.html
-    // // the starting value is a magic constant
-    // unsigned hash = 5381;
-    // // vector containing the trace
-    // std::vector<int> trace;
+    // Start the timer.
+    Stopwatch &sw = res.sw_trace;
+    sw.start();
 
-    // // start the timer
-    // Stopwatch &sw = res.sw_trace;
-    // sw.start();
+    // Allocate memory.
+    try
+    {
+        trace.reserve(nw.adjrows + nw.adjcols - 1);
+        std::vector<int> tmpTile(nw.tileHcolLen * nw.tileHrowLen, 0);
+        std::swap(tile, tmpTile);
+    }
+    catch (const std::exception &)
+    {
+        return NwStat::errorMemoryAllocation;
+    }
 
-    // // reserve space in the ram
-    // try
-    // {
-    //     trace.reserve(nw.adjrows - 1 + nw.adjcols);
-    // }
-    // catch (const std::exception &ex)
-    // {
-    //     return NwStat::errorMemoryAllocation;
-    // }
+    // Measure allocation time.
+    sw.lap("alloc");
 
-    // // measure trace time
-    // sw.lap("alloc");
+    // ---------------
+    // |h  h  h  h  h| h
+    // |h  .  .  .  .| .
+    // |h  .  .  .  .| .
+    // ---------------
+    //  h  .  .  .  .  .
+    // We're using the same tiles as before (the '.' in the schematic), which we extend with their header row and column,
+    // but subtract their last row and column. Meaning the tile dimensions stay the same.
+    // The last row and column are in fact the header row/column of the neighbouring tile, so no need to calculate them.
 
-    // // for all elements on one of the optimal paths
-    // bool loop = true;
-    // for (int i = nw.adjrows - 1, j = nw.adjcols - 1; loop;)
-    // {
-    //     // add the current element to the trace
-    //     int curr = el(nw.score, nw.adjcols, i, j);
-    //     trace.push_back(curr);
+    // Don't subtract 1 from i and j like so: "(i-1)/..." or "(j-1)/..." !
+    int iTile = (nw.adjrows - 1) / (nw.tileHcolLen - 1);
+    int jTile = (nw.adjcols - 1) / (nw.tileHrowLen - 1);
+    int i = (nw.adjrows - 1) % (nw.tileHcolLen - 1);
+    int j = (nw.adjcols - 1) % (nw.tileHrowLen - 1);
 
-    //     int max = std::numeric_limits<int>::min(); // maximum value of the up, left and diagonal neighbouring elements
-    //     int dir = '-';                             // the current movement direction is unknown
+    // Small adjustment for the last score matrix row and column:
+    // saturate iTile and jTile, so that we don't end up with impossible tile coordinates.
+    if (iTile == nw.tileHdrMatRows)
+    {
+        iTile -= 1;
+        i += (nw.tileHcolLen - 1);
+    }
+    if (jTile == nw.tileHdrMatCols)
+    {
+        jTile -= 1;
+        j += (nw.tileHrowLen - 1);
+    }
 
-    //     if (i > 0 && j > 0 && max < el(nw.score, nw.adjcols, i - 1, j - 1))
-    //     {
-    //         max = el(nw.score, nw.adjcols, i - 1, j - 1);
-    //         dir = 'i';
-    //     } // diagonal movement if possible
-    //     if (i > 0 && max < el(nw.score, nw.adjcols, i - 1, j))
-    //     {
-    //         max = el(nw.score, nw.adjcols, i - 1, j);
-    //         dir = 'u';
-    //     } // up       movement if possible
-    //     if (j > 0 && max < el(nw.score, nw.adjcols, i, j - 1))
-    //     {
-    //         max = el(nw.score, nw.adjcols, i, j - 1);
-    //         dir = 'l';
-    //     } // left     movement if possible
+    // Load last tile.
+    NwLoadHeaderAndAlignTile(tile, nw, iTile, jTile);
 
-    //     // move to the neighbour with the maximum value
-    //     switch (dir)
-    //     {
-    //     case 'i':
-    //         i--;
-    //         j--;
-    //         break;
-    //     case 'u':
-    //         i--;
-    //         break;
-    //     case 'l':
-    //         j--;
-    //         break;
-    //     default:
-    //         loop = false;
-    //         break;
-    //     }
-    // }
+    // While there are elements on one of the optimal paths.
+    while (true)
+    {
+        int currElem = el(tile, nw.tileHrowLen, i, j);
+        trace.push_back(currElem);
 
-    // // reverse the trace, so it starts from the top-left corner of the matrix
-    // std::reverse(trace.begin(), trace.end());
+        int max = std::numeric_limits<int>::min();
+        int di = 0;
+        int dj = 0;
 
-    // // measure trace time
-    // sw.lap("calc-1");
+        // Up-left movement if possible and better.
+        if (i > 0 && j > 0 && max < el(tile, nw.tileHrowLen, i - 1, j - 1))
+        {
+            max = el(tile, nw.tileHrowLen, i - 1, j - 1);
+            di = -1;
+            dj = -1;
+        }
+        // Up movement if possible and better.
+        if (i > 0 && max < el(tile, nw.tileHrowLen, i - 1, j))
+        {
+            max = el(tile, nw.tileHrowLen, i - 1, j);
+            di = -1;
+            dj = 0;
+        }
+        // Left movement if possible and better.
+        if (j > 0 && max < el(tile, nw.tileHrowLen, i, j - 1))
+        {
+            max = el(tile, nw.tileHrowLen, i, j - 1);
+            di = 0;
+            dj = -1;
+        }
+        i += di;
+        j += dj;
 
-    // // calculate the hash value
-    // for (auto &curr : trace)
-    // {
-    //     hash = ((hash << 5) + hash) ^ curr;
-    // }
+        // Load up / left / up-left tile if possible and we ended up in the header row / header column / intersection of the header row and header column.
+        int diTile = -(i == 0 && iTile > 0);
+        int djTile = -(j == 0 && jTile > 0);
+        if (diTile != 0 || djTile != 0)
+        {
+            iTile += diTile;
+            jTile += djTile;
 
-    // // save the hash value
-    // res.trace_hash = hash;
+            // If we are in the tile header row/column, set coordinates as if we're in the next tile's last row/column.
+            if (i == 0 && di != 0)
+            {
+                i = nw.tileHcolLen - 1;
+            }
+            if (j == 0 && dj != 0)
+            {
+                j = nw.tileHrowLen - 1;
+            }
 
-    // // measure trace time
-    // sw.lap("calc-2");
+            NwLoadHeaderAndAlignTile(tile, nw, iTile, jTile);
+        }
 
-    // return NwStat::success;
+        if (di == 0 && dj == 0)
+        {
+            break;
+        }
+    }
+
+    // Reverse the trace, so it starts from the top-left corner of the matrix instead of the bottom-right.
+    std::reverse(trace.begin(), trace.end());
+
+    // Measure trace time.
+    sw.lap("calc-1");
+
+    // Calculate the trace hash.
+    // http://www.cse.yorku.ca/~oz/hash.html
+    unsigned hash = 5381;
+    for (auto &curr : trace)
+    {
+        hash = ((hash << 5) + hash) ^ curr;
+    }
+
+    // Save the trace hash.
+    res.trace_hash = hash;
+
+    return NwStat::success;
 }
 
-// hash the score matrix
+// Hash the score matrix.
+// The score matrix is represented as two matrices (row-major order):
+// + tile header row matrix,
+// + tile header column matrix.
 NwStat NwHash2_Sparse(const NwInput &nw, NwResult &res)
 {
-    (void)nw;
-    (void)res;
-    return NwStat::errorInvalidValue;
+    // http://www.cse.yorku.ca/~oz/hash.html
+    unsigned hash = 5381;
+    std::vector<int> currRow;
+    std::vector<int> prevRow;
 
-    // // variable used to calculate the hash function
-    // // http://www.cse.yorku.ca/~oz/hash.html
-    // // the starting value is a magic constant
-    // unsigned hash = 5381;
+    // Start the timer.
+    Stopwatch &sw = res.sw_hash;
+    sw.start();
 
-    // for (int i = 0; i < nw.adjrows; i++)
-    // {
-    //     for (int j = 0; j < nw.adjcols; j++)
-    //     {
-    //         // add the current element to the hash
-    //         int curr = el(nw.score, nw.adjcols, i, j);
-    //         hash = ((hash << 5) + hash) ^ curr;
-    //     }
-    // }
+    // Allocate memory.
+    try
+    {
+        std::vector<int> tmpCurrRow(nw.adjcols, 0);
+        std::vector<int> tmpPrevRow(nw.adjcols, 0);
+        std::swap(currRow, tmpCurrRow);
+        std::swap(prevRow, tmpPrevRow);
+    }
+    catch (const std::exception &)
+    {
+        return NwStat::errorMemoryAllocation;
+    }
 
-    // // save the resulting hash
-    // _hash = hash;
+    // Measure allocation time.
+    sw.lap("alloc");
 
-    // return NwStat::success;
+    // Calculate the score matrix hash.
+    for (int i = 0; i < nw.adjrows; i++)
+    {
+        for (int j = 0; j < nw.adjcols; j++)
+        {
+            // ---------------
+            // |h  h  h  h  h| h
+            // |h  .  .  .  .| .
+            // |h  .  .  .  .| .
+            // ---------------
+            //  h  .  .  .  .  .
+            // We're using the same tiles as before (the '.' in the schematic), which we extend with their header row and column,
+            // but subtract their last row and column. Meaning the tile dimensions stay the same.
+            // The last row and column are in fact the header row/column of the neighbouring tile, so no need to calculate them.
+
+            // Don't subtract 1 from i and j like so: "(i-1)/..." or "(j-1)/..." !
+            int iTile = i / (nw.tileHcolLen - 1);
+            int jTile = j / (nw.tileHrowLen - 1);
+            int iTileElem = i % (nw.tileHcolLen - 1);
+            int jTileElem = j % (nw.tileHrowLen - 1);
+
+            // Small adjustment for the last score matrix row and column:
+            // saturate iTile and jTile, so that we don't end up with impossible tile coordinates.
+            if (iTile == nw.tileHdrMatRows)
+            {
+                iTile -= 1;
+                iTileElem += (nw.tileHcolLen - 1);
+            }
+            if (jTile == nw.tileHdrMatCols)
+            {
+                jTile -= 1;
+                jTileElem += (nw.tileHrowLen - 1);
+            }
+
+            int currElem = 0;
+            // Load the header row element instead of calculating it.
+            // Don't attempt to load the last header row, since it isn't stored in the tile header row matrix.
+            if (iTileElem == 0 && i != nw.adjrows - 1)
+            {
+                int kHrowElemBeg = (nw.tileHdrMatCols * iTile + jTile) * nw.tileHrowLen + 0;
+                currElem = nw.tileHrowMat[kHrowElemBeg + jTileElem];
+            }
+            // Load the header column element instead of calculating it.
+            // Don't attempt to load the last header column, since it isn't stored in the tile header column matrix.
+            else if (jTileElem == 0 && j != nw.adjcols - 1)
+            {
+                int kHcolElemBeg = (nw.tileHdrMatCols * iTile + jTile) * nw.tileHcolLen + 0;
+                currElem = nw.tileHcolMat[kHcolElemBeg + iTileElem];
+            }
+            else if (i > 0 && j > 0)
+            {
+                int p1 = prevRow[/*i - 1,*/ j - 1] + el(nw.subst, nw.substsz, nw.seqY[i], nw.seqX[j]); // MOVE DOWN-RIGHT
+                int p2 = prevRow[/*i - 1,*/ j] + nw.indel;                                             // MOVE DOWN
+                int p3 = currRow[/*i,*/ j - 1] + nw.indel;                                             // MOVE RIGHT
+                currElem = max3(p1, p2, p3);
+            }
+            else if (i > 0)
+            {
+                currElem = prevRow[/*i - 1,*/ j] + nw.indel; // MOVE DOWN
+            }
+            else if (j > 0)
+            {
+                currElem = currRow[/*i,*/ j - 1] + nw.indel; // MOVE RIGHT
+            }
+
+            currRow[j] = currElem;
+
+            // Add the current element to the hash.
+            hash = ((hash << 5) + hash) ^ currElem;
+        }
+
+        std::swap(currRow, prevRow);
+    }
+
+    // Save the resulting hash.
+    res.score_hash = hash;
+
+    // Measure hash time.
+    sw.lap("calc-1");
+
+    return NwStat::success;
 }
 
-// print the score matrix
+// Print the score matrix.
+// The score matrix is represented as two matrices (row-major order):
+// + tile header row matrix,
+// + tile header column matrix.
 NwStat NwPrint2_Sparse(std::ostream &os, const NwInput &nw, NwResult &res)
 {
-    (void)os;
-    (void)nw;
     (void)res;
-    return NwStat::errorInvalidValue;
 
-    // FormatFlagsGuard fg{os, 4};
+    FormatFlagsGuard fg{os, 4};
 
-    // // print the score matrix
-    // for (int i = 0; i < nw.adjrows; i++)
-    // {
-    //     for (int j = 0; j < nw.adjcols; j++)
-    //     {
-    //         os << el(nw.score, nw.adjcols, i, j) << ' ';
-    //     }
-    //     os << '\n';
-    // }
+    std::vector<int> currRow;
+    std::vector<int> prevRow;
 
-    // return NwStat::success;
+    // Allocate memory.
+    try
+    {
+        std::vector<int> tmpCurrRow(nw.adjcols, 0);
+        std::vector<int> tmpPrevRow(nw.adjcols, 0);
+        std::swap(currRow, tmpCurrRow);
+        std::swap(prevRow, tmpPrevRow);
+    }
+    catch (const std::exception &)
+    {
+        return NwStat::errorMemoryAllocation;
+    }
+
+    // Write the score matrix.
+    for (int i = 0; i < nw.adjrows; i++)
+    {
+        for (int j = 0; j < nw.adjcols; j++)
+        {
+            // ---------------
+            // |h  h  h  h  h| h
+            // |h  .  .  .  .| .
+            // |h  .  .  .  .| .
+            // ---------------
+            //  h  .  .  .  .  .
+            // We're using the same tiles as before (the '.' in the schematic), which we extend with their header row and column,
+            // but subtract their last row and column. Meaning the tile dimensions stay the same.
+            // The last row and column are in fact the header row/column of the neighbouring tile, so no need to calculate them.
+
+            // Don't subtract 1 from i and j like so: "(i-1)/..." or "(j-1)/..." !
+            int iTile = i / (nw.tileHcolLen - 1);
+            int jTile = j / (nw.tileHrowLen - 1);
+            int iTileElem = i % (nw.tileHcolLen - 1);
+            int jTileElem = j % (nw.tileHrowLen - 1);
+
+            // Small adjustment for the last score matrix row and column:
+            // saturate iTile and jTile, so that we don't end up in impossible tile coordinates.
+            if (iTile == nw.tileHdrMatRows)
+            {
+                iTile -= 1;
+                iTileElem += (nw.tileHcolLen - 1);
+            }
+            if (jTile == nw.tileHdrMatCols)
+            {
+                jTile -= 1;
+                jTileElem += (nw.tileHrowLen - 1);
+            }
+
+            int currElem = 0;
+            // Load the header row element instead of calculating it.
+            // Don't attempt to load the last header row, since it isn't stored in the tile header row matrix.
+            if (iTileElem == 0 && i != nw.adjrows - 1)
+            {
+                int kHrowElemBeg = (nw.tileHdrMatCols * iTile + jTile) * nw.tileHrowLen + 0;
+                currElem = nw.tileHrowMat[kHrowElemBeg + jTileElem];
+            }
+            // Load the header column element instead of calculating it.
+            // Don't attempt to load the last header colum, since it isn't stored in the tile header column matrix.
+            else if (jTileElem == 0 && j != nw.adjcols - 1)
+            {
+                int kHcolElemBeg = (nw.tileHdrMatCols * iTile + jTile) * nw.tileHcolLen + 0;
+                currElem = nw.tileHcolMat[kHcolElemBeg + iTileElem];
+            }
+            else if (i > 0 && j > 0)
+            {
+                int p1 = prevRow[/*i - 1,*/ j - 1] + el(nw.subst, nw.substsz, nw.seqY[i], nw.seqX[j]); // MOVE DOWN-RIGHT
+                int p2 = prevRow[/*i - 1,*/ j] + nw.indel;                                             // MOVE DOWN
+                int p3 = currRow[/*i,*/ j - 1] + nw.indel;                                             // MOVE RIGHT
+                currElem = max3(p1, p2, p3);
+            }
+            else if (i > 0)
+            {
+                currElem = prevRow[/*i - 1,*/ j] + nw.indel; // MOVE DOWN
+            }
+            else if (j > 0)
+            {
+                currElem = currRow[/*i,*/ j - 1] + nw.indel; // MOVE RIGHT
+            }
+
+            currRow[j] = currElem;
+
+            // Write the current element to the output stream.
+            os << std::setw(4) << currElem << ',';
+        }
+
+        std::swap(currRow, prevRow);
+        os << std::endl;
+    }
+
+    return NwStat::success;
 }

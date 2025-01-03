@@ -358,8 +358,12 @@ struct NwInput
     int substsz;
     int adjrows;
     int adjcols;
-
     int indel;
+    // sparse representation of the score matrix
+    int tileHdrMatRows;
+    int tileHdrMatCols;
+    int tileHrowLen;
+    int tileHcolLen;
 
     // device parameters
     int sm_count;
@@ -372,7 +376,7 @@ struct NwInput
         // NOTE: first free device memory, since there is less of it for other algorithms
 
         ////// device specific memory
-        //subst_gpu.clear();
+        // subst_gpu.clear();
         seqX_gpu.clear();
         seqY_gpu.clear();
         score_gpu.clear();
