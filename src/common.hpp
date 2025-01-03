@@ -36,6 +36,11 @@ inline const int &max3(const int &a, const int &b, const int &c) noexcept
     return (a >= b) ? ((a >= c) ? a : c) : ((b >= c) ? b : c);
 }
 
+void NwPrintVect(std::ostream &os, const int *const vect, const int len);
+void NwPrintMat(std::ostream &os, const int *const mat, const int rows, const int cols);
+void NwPrintTiledMat(std::ostream &os, const int *const mat, const int rows, const int cols, const int tileWid /*without header column*/, const int tileHei /*without header row*/);
+void NwPrintHdrMat(std::ostream &os, const int *const tileHdrMat, const int rows, const int cols, const int hdrLen);
+
 // Needleman-Wunsch status
 enum class NwStat : int
 {
