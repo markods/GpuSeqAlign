@@ -18,11 +18,12 @@ Present algorithms:
 | gpu5-coop-diagdiag             | ✅     | ❌<sup>1</sup> | 🔍     | 🔍     | Like gpu3-ml-diagdiag, but use grid sync instead of multi-launching kernels.                                                                   |
 | gpu6-coop-diagdiag2pass        | ✅     | ❌<sup>1</sup> | 🔍     | 🔍     | Like gpu4-ml-diagdiag2pass, but use grid sync instead of multi-launching kernels.                                                              |
 | ---                            | ---   | ---           | ---   | ---   | ---                                                                                                                                            |
-| gpu7-mlsp-diagdiag             | ✅     | 🔍             | 🔍     | 🔍     | Like gpu3-ml-diagdiag, but keeps only a portion of the score matrix in device shared memory, and returns only that.                            |
-| gpu8-mlsp-diagdiagdiag         | ⚠️     | 🔍             | 🔍     | 🔍     | Like gpu7-mlsp-diagdiag, but divides the rectangular tile into rectangular sub-tiles. Diagonal of subtiles is visited in minor-diagonal order. |
-| gpu9-mlsp-diagdiagdiagskew     | ⚠️     | 🔍             | 🔍     | 🔍     | Like gpu8-mlsp-diagdiagdiag, but uses parallelogram-shaped subtiles (skewed) instead of rectangular.                                           |
-| gpu10-mlsp-diagdiagdiagskew2   | ⚠️     | 🔍             | 🔍     | 🔍     | Like gpu9-mlsp-diagdiagdiagskew, but uses two different skewed subtiles (for subtiles A B, a single row of a tile looks like e.g. ABABAAAA).   |
-| gpu11-mlsppt-diagdiagdiagskew2 | 🔍     | 🔍             | 🔍     | 🔍     | Like gpu10-mlsp-diagdiagdiagskew2, but does memory transfer parallel to score matrix calculation.                                              |
+| gpu7-mlsp-diagdiag             | ✅     | 🔍             | 🔍     | 🔍     | Like gpu3-ml-diagdiag, but represents the score matrix as a tile header row matrix and tile header column. Transfers back only those.          |
+| gpu8-mlsp-diagdiag             | ⚠️     | 🔍             | 🔍     | 🔍     | Like gpu7-mlsp-diagdiag, but stores the tile completely in registers, instead of in shared memory.                                             |
+| gpu9-mlsp-diagdiagdiag         | ⚠️     | 🔍             | 🔍     | 🔍     | Like gpu8-mlsp-diagdiag, but divides the rectangular tile into rectangular sub-tiles. Diagonal of subtiles is visited in minor-diagonal order. |
+| gpu10-mlsp-diagdiagdiagskew    | ⚠️     | 🔍             | 🔍     | 🔍     | Like gpu9-mlsp-diagdiagdiag, but uses parallelogram-shaped subtiles (skewed) instead of rectangular.                                           |
+| gpu11-mlsp-diagdiagdiagskew2   | ⚠️     | 🔍             | 🔍     | 🔍     | Like gpu10-mlsp-diagdiagdiagskew, but uses two different skewed subtiles (for subtiles A B, a single row of a tile looks like e.g. ABABAAAA).  |
+| gpu12-mlsppt-diagdiagdiagskew2 | 🔍     | 🔍             | 🔍     | 🔍     | Like gpu11-mlsp-diagdiagdiagskew2, but does memory transfer parallel to score matrix calculation.                                              |
 
 Table terms:
 - 🔍 - means that the combination may be implemented in the future.  
