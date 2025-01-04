@@ -75,11 +75,12 @@ __global__ static void Nw_Gpu8_KernelB(
     const unsigned tileBy,
     const int d)
 {
-    extern __shared__ int shmem[/* substsz*substsz + tileBx + tileBy + (1+tileBy)*(1+tileBx) */];
+    extern __shared__ int shmem[/* substsz*substsz + tileBx + tileBy + (1+tileBx) + (1+tileBy) */];
     int *const subst /*[substsz*substsz]*/ = shmem + 0;
     int *const seqX /*[tileBx]*/ = subst + substsz * substsz;
     int *const seqY /*[tileBy]*/ = seqX + tileBx;
-    int *const tile /*[(1+tileBy)*(1+tileBx)]*/ = seqY + tileBy;
+    int *const tileHrow /*[(1+tileBx)]*/ = seqY + tileBy;
+    int *const tileHcol /*[(1+tileBy)]*/ = tileHrow + (1 + tileBx);
 
     // Initialize the substitution matrix in shared memory.
     {
@@ -143,7 +144,7 @@ __global__ static void Nw_Gpu8_KernelB(
         int j = threadIdx.x;
         while (j < 1 + tileBx)
         {
-            el(tile, 1 + tileBx, 0, j) = tileHrowMat_gpu[jbeg + j];
+            tileHrow[j] = tileHrowMat_gpu[jbeg + j];
             j += blockDim.x;
         }
     }
@@ -158,7 +159,7 @@ __global__ static void Nw_Gpu8_KernelB(
         int i = threadIdx.x;
         while (i < 1 + tileBy)
         {
-            el(tile, 1 + tileBx, i, 0) = tileHcolMat_gpu[ibeg + i];
+            tileHcol[i] = tileHcolMat_gpu[ibeg + i];
             i += blockDim.x;
         }
     }
@@ -166,71 +167,90 @@ __global__ static void Nw_Gpu8_KernelB(
     // Block should finish initializing the tile's windows into the X and Y sequences and its header row and column.
     __syncthreads();
 
-    // Partially calculate the tile's elements by doing only neighbour-independent work.
-    // The expression for calculating the final element value becomes simpler later on.
-    {
-        // Current thread position in the tile.
-        int i = threadIdx.x / tileBx;
-        int j = threadIdx.x % tileBx;
-        // Position increment is split into row and column increments to avoid using division and modulo operator in the inner loop.
-        int di = blockDim.x / tileBx;
-        int dj = blockDim.x % tileBx;
-
-        while (i < tileBy)
-        {
-            el(tile, 1 + tileBx, 1 + i, 1 + j) = el(subst, substsz, seqY[i], seqX[j]) - indel;
-
-            i += di;
-            j += dj;
-            if (j >= tileBx)
-            {
-                i++;
-                j -= tileBx;
-            }
-        }
-    }
-
-    // Block should finish partially calculating this tile's elements.
-    __syncthreads();
-
     // Calculate the tile elements.
     // Only threads in the first warp from this block are active here, other warps have to wait.
     if (threadIdx.x < warpsz)
     {
-        // Number of rows and columns in the tile (without its header row and column).
-        int rows = tileBy;
-        int cols = tileBx;
+        // Tile shematic:
+        //               |h  h  h  h  h  h  h  h  h  |.  .  .  .  .
+        //             . |h  .  .  .  .  x  x  o  .  |.  .  .  .
+        //          .  . |h  .  .  . |ul u| o  .  .  |.  .  .
+        //       .  .  . |h  .  .  x |l  c| .  .  .  |.  .
+        //    .  .  .  . |h  .  x  x  o  .  .  .  .  |.
+        // .  .  .  .  . |h  .  x  o  .  .  .  .  .  |
+        // Observe that we only need three elements from the previous two diagonals, to slide the calculation window to the right each iteration.
+        // Therefore each thread keeps them in its registers.
+        //
+        // Warp thread 0 will read from the tile header row each iteration, and share that value with the other threads.
+        // Warp thread 31 will write its current value to the last tile row (reusing tile header row for this purpose).
+        // Each warp thread, upon reaching the tile right boundary, will write its current value to the last tile column (reusing tile header column for this purpose).
 
-        // Cases:     1.                2.                3.
-        //  x x x x x x       x x x x x x       x x x x x x
-        //  x / / . . .       x . . / / /       x . . . . .|/ /
-        //  x / . . . .   +   x . / / / .   +   x . . . . /|/
-        //  x . . . . .       x / / / . .       x . . . / /|
+        // Save the up-left and left element before any calculation to simplify the algorithm.
+        // The thread now only needs to worry how it's going to get its 'up' element.
+        //
+        // Observe that we initialized the elements as if we slid once to the left (in the reverse direction).
+        // That's because the code below first slides to the right, and then calculates the current element.
+        int upleft = 0;
+        int left = 0;
+        int up = tileHcol[1 + (threadIdx.x - 1)];
+        int curr = tileHcol[1 + (threadIdx.x)];
 
-        // For all element (minor) diagonals in the tile.
-        // (s,p) -- element coordinates in the tile (when traversing in minor-diagonal order).
-        for (int s = 0; s < rows + cols - 1; s++)
+        // The current thread's position in the tile.
+        const int i = threadIdx.x;
+        int j = 0 - threadIdx.x;
+        // All threads have to calculate the same number of elements. Otherwise, warp sync would deadlock.
+        // "Artificial" elements outside the tile boundaries are of no concern for correctness.
+        int jend = j + (tileBx + (tileBy - 1));
+
+        // Zeroth warp thread should update the upper-left corner header elements.
+        // These will not be updated during the calculation, because none of the threads will map to them.
+        if (i == 0 && j == 0)
         {
-            int pbeg = max(0, s - (cols - 1));
-            int pend = min(s + 1, rows);
-            int p = pbeg + threadIdx.x;
+            tileHrow[0] = tileHcol[1 + (tileBy - 1)];
+            tileHcol[0] = tileHrow[1 + (tileBx - 1)];
+        }
 
-            // Only if the thread maps onto an element on the current tile diagonal (case 3.).
-            if (p < pend)
+        while (j < jend)
+        {
+            // Prevent losing the 'left' header element before the first "real" calculation.
+            if (j >= 0 && j < tileBx)
             {
-                // Element coordinates in the tile extended with header row and column (when traversing in minor-diagonal order).
-                int i = 1 + (p);
-                int j = 1 + (s - p);
-
-                // Calculate the current element's value.
-                // Subtract the insert delete cost from the result, since the kernel A added that value in all movement directions implicitly.
-                int temp1 = el(tile, 1 + tileBx, i - 1, j - 1) + el(tile, 1 + tileBx, i, j);
-                int temp2 = max(el(tile, 1 + tileBx, i - 1, j), el(tile, 1 + tileBx, i, j - 1));
-                el(tile, 1 + tileBx, i, j) = max(temp1, temp2) + indel;
+                upleft = up;
+                left = curr;
             }
 
-            // Warp should finish calculating the current element diagonal.
-            __syncwarp();
+            // Initialize 'up' elements for all warp threads except the zeroth.
+            // (Copies from a lane with lower thread id relative to the caller thread id.
+            // Also syncs the threads in the warp.)
+            up = __shfl_up_sync(/*mask*/ 0xffff, /*var*/ curr, /*delta*/ 1, /*width*/ warpsz);
+
+            // Initialize 'up' element for the zeroth thread.
+            // For "artificial" elements, initialize to 0 so that behavior is deterministic.
+            if (i == 0)
+            {
+                up = (j >= 0 && j < tileBx) ? tileHrow[1 + j] : 0;
+            }
+
+            if (i >= 0 && i < tileBy && j >= 0 && j < tileBx)
+            {
+                curr = upleft + el(subst, substsz, seqY[i], seqX[j]); // MOVE DOWN-RIGHT
+                curr = max(curr, up + indel);                         // MOVE DOWN
+                curr = max(curr, left + indel);                       // MOVE RIGHT
+
+                if (j == tileBx - 1)
+                {
+                    // When a warp thread reaches the right tile boundary, save that element to the next header column.
+                    tileHcol[1 + i] = curr;
+                }
+
+                if (i == tileBy - 1)
+                {
+                    // Last warp thread should save its current element to the next header row.
+                    tileHrow[1 + j] = curr;
+                }
+            }
+
+            j++;
         }
     }
 
@@ -251,7 +271,7 @@ __global__ static void Nw_Gpu8_KernelB(
             int j = threadIdx.x;
             while (j < 1 + tileBx)
             {
-                tileHrowMat_gpu[jbeg + j] = el(tile, 1 + tileBx, tileBy /*last row*/, j);
+                tileHrowMat_gpu[jbeg + j] = tileHrow[j];
                 j += blockDim.x;
             }
         }
@@ -271,7 +291,7 @@ __global__ static void Nw_Gpu8_KernelB(
             int i = threadIdx.x;
             while (i < 1 + tileBy)
             {
-                tileHcolMat_gpu[ibeg + i] = el(tile, 1 + tileBx, i, tileBx /*last column*/);
+                tileHcolMat_gpu[ibeg + i] = tileHcol[i];
                 i += blockDim.x;
             }
         }
@@ -440,8 +460,10 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
             + tileBx * sizeof(int)
             /*seqY[]*/
             + tileBy * sizeof(int)
-            /*tile[]*/
-            + (1 + tileBy) * (1 + tileBx) * sizeof(int));
+            /*tileHrow[]*/
+            + (1 + tileBx) * sizeof(int)
+            /*tileHcol[]*/
+            + (1 + tileBy) * sizeof(int));
 
         // The number of threads should be divisible by the warp size.
         // But for performance reasons, we don't need all those single-use warps, just half of them (or some other fraction).
