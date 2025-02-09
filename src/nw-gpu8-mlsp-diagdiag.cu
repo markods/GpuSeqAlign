@@ -222,7 +222,7 @@ __global__ static void Nw_Gpu8_KernelB(
             // Initialize 'up' elements for all warp threads except the zeroth.
             // (Copies from a lane with lower thread id relative to the caller thread id.
             // Also syncs the threads in the warp.)
-            up = __shfl_up_sync(/*mask*/ 0xffff, /*var*/ curr, /*delta*/ 1, /*width*/ warpsz);
+            up = __shfl_up_sync(/*mask*/ 0xffffffff, /*var*/ curr, /*delta*/ 1, /*width*/ warpsz);
 
             // Initialize 'up' element for the zeroth thread.
             // For "artificial" elements, initialize to 0 so that behavior is deterministic.
