@@ -67,12 +67,13 @@ __global__ static void Nw_Gpu9_KernelB(
     const int *const subst_gpu,
     const int substsz,
     const int indel,
-    const int warpsz,
     // params related to tile B
     const int trows,
     const int tcols,
     const unsigned tileBx,
     const unsigned tileBy,
+    const unsigned subtileBx,
+    const unsigned subtileBy,
     const int d)
 {
     extern __shared__ int shmem[/* substsz*substsz + tileBx + tileBy + (1+tileBx) + (1+tileBy) */];
@@ -168,8 +169,7 @@ __global__ static void Nw_Gpu9_KernelB(
     __syncthreads();
 
     // Calculate the tile elements.
-    // Only threads in the first warp from this block are active here, other warps have to wait.
-    if (threadIdx.x < warpsz)
+    if (threadIdx.x < tileBy)
     {
         // Tile shematic:
         //               |h  h  h  h  h  h  h  h  h  |.  .  .  .  .
@@ -222,11 +222,11 @@ __global__ static void Nw_Gpu9_KernelB(
             // Initialize 'up' elements for all warp threads except the zeroth.
             // (Copies from a lane with lower thread id relative to the caller thread id.
             // Also syncs the threads in the warp.)
-            up = __shfl_up_sync(/*mask*/ 0xffffffff, /*var*/ curr, /*delta*/ 1, /*width*/ warpsz);
+            up = __shfl_up_sync(/*mask*/ 0xffffffff, /*var*/ curr, /*delta*/ 1, /*width*/ warpSize);
 
             // Initialize 'up' element for the zeroth thread.
             // For "artificial" elements, initialize to 0 so that behavior is deterministic.
-            if (i == 0)
+            if (i & (warpSize - 1) == 0)
             {
                 up = (j >= 0 && j < tileBx) ? tileHrow[1 + j] : 0;
             }
@@ -499,12 +499,13 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
                 &subst_gpu,
                 &nw.substsz,
                 &nw.indel,
-                &nw.warpsz,
                 // params related to tile B
                 &trows,
                 &tcols,
                 &tileBx,
                 &tileBy,
+                &subtileBx,
+                &subtileBy,
                 &d};
 
             if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void *)Nw_Gpu9_KernelB, gridB, blockB, kargs, shmemsz, nullptr /*stream*/)))

@@ -67,7 +67,6 @@ __global__ static void Nw_Gpu7_KernelB(
     const int *const subst_gpu,
     const int substsz,
     const int indel,
-    const int warpsz,
     // params related to tile B
     const int trows,
     const int tcols,
@@ -195,7 +194,7 @@ __global__ static void Nw_Gpu7_KernelB(
 
     // Calculate the tile elements.
     // Only threads in the first warp from this block are active here, other warps have to wait.
-    if (threadIdx.x < warpsz)
+    if (threadIdx.x < warpSize)
     {
         // Number of rows and columns in the tile (without its header row and column).
         int rows = tileBy;
@@ -474,7 +473,6 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
                 &subst_gpu,
                 &nw.substsz,
                 &nw.indel,
-                &nw.warpsz,
                 // params related to tile B
                 &trows,
                 &tcols,

@@ -67,7 +67,6 @@ __global__ static void Nw_Gpu8_KernelB(
     const int *const subst_gpu,
     const int substsz,
     const int indel,
-    const int warpsz,
     // params related to tile B
     const int trows,
     const int tcols,
@@ -169,7 +168,7 @@ __global__ static void Nw_Gpu8_KernelB(
 
     // Calculate the tile elements.
     // Only threads in the first warp from this block are active here, other warps have to wait.
-    if (threadIdx.x < warpsz)
+    if (threadIdx.x < warpSize)
     {
         // Tile shematic:
         //               |h  h  h  h  h  h  h  h  h  |.  .  .  .  .
@@ -222,7 +221,7 @@ __global__ static void Nw_Gpu8_KernelB(
             // Initialize 'up' elements for all warp threads except the zeroth.
             // (Copies from a lane with lower thread id relative to the caller thread id.
             // Also syncs the threads in the warp.)
-            up = __shfl_up_sync(/*mask*/ 0xffffffff, /*var*/ curr, /*delta*/ 1, /*width*/ warpsz);
+            up = __shfl_up_sync(/*mask*/ 0xffffffff, /*var*/ curr, /*delta*/ 1, /*width*/ warpSize);
 
             // Initialize 'up' element for the zeroth thread.
             // For "artificial" elements, initialize to 0 so that behavior is deterministic.
@@ -496,7 +495,6 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
                 &subst_gpu,
                 &nw.substsz,
                 &nw.indel,
-                &nw.warpsz,
                 // params related to tile B
                 &trows,
                 &tcols,

@@ -33,7 +33,6 @@ __global__ static void Nw_Gpu3_KernelB(
     // const int adjcols,   // can be calculated as 1 + tcols*tileBx
     const int substsz,
     const int indel,
-    const int warpsz,
     // tile size
     const int trows,
     const int tcols,
@@ -203,7 +202,7 @@ __global__ static void Nw_Gpu3_KernelB(
 
         // calculate the tile elements
         // +   only threads in the first warp from this block are active here, other warps have to wait
-        if (threadIdx.x < warpsz)
+        if (threadIdx.x < warpSize)
         {
             // the number of rows and columns in the tile without its first row and column (the part of the tile to be calculated)
             int rows = tileBy;
@@ -467,7 +466,6 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
                 /*&adjcols,*/
                 &nw.substsz,
                 &nw.indel,
-                &nw.warpsz,
                 &trows,
                 &tcols,
                 &tileBx,

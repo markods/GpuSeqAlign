@@ -133,7 +133,6 @@ __global__ static void Nw_Gpu6_KernelA(
 __global__ static void Nw_Gpu6_KernelB(
     int *const score_gpu,
     const int indel,
-    const int warpsz,
     const int trows,
     const int tcols,
     const unsigned tileBx,
@@ -198,7 +197,7 @@ __global__ static void Nw_Gpu6_KernelB(
 
             // calculate the tile elements
             // +   only threads in the first warp from this block are active here, other warps have to wait
-            if (threadIdx.x < warpsz)
+            if (threadIdx.x < warpSize)
             {
                 // the number of rows and columns in the tile without its first row and column (the part of the tile to be calculated)
                 int rows = tileBy;
@@ -462,7 +461,6 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res)
         void *kargs[]{
             &score_gpu,
             &nw.indel,
-            &nw.warpsz,
             &trows,
             &tcols,
             &tileBx,
