@@ -470,7 +470,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
         // That way the thread block can be smaller while doing the same amount of work.
         dim3 blockB{};
         {
-            int warps = (int)ceil(float(max(tileBx, tileBx)) / nw.warpsz / warpDivFactorB);
+            int warps = (int)ceil(float(max(tileBx, tileBy)) / nw.warpsz / warpDivFactorB);
             blockB.x = nw.warpsz * warps;
         }
 
