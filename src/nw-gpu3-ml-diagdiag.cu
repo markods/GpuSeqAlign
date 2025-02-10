@@ -288,25 +288,18 @@ __global__ static void Nw_Gpu3_KernelB(
 NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // tile size for the kernel
-    // +   tile B must have one dimension fixed to the number of threads in a warp
-    int tileBx;
-    int tileBy;
+    int tileBx = {};
+    int tileBy = nw.warpsz;
     // number of threads per block for kernels A and B
-    int threadsPerBlockA;
+    int threadsPerBlockA = {};
 
     // get the parameter values
     try
     {
         threadsPerBlockA = pr["threadsPerBlockA"].curr();
         tileBx = pr["tileBx"].curr();
-        tileBy = pr["tileBy"].curr();
     }
     catch (const std::out_of_range &)
-    {
-        return NwStat::errorInvalidValue;
-    }
-
-    if (tileBx != nw.warpsz && tileBy != nw.warpsz)
     {
         return NwStat::errorInvalidValue;
     }

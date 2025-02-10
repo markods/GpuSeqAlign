@@ -290,26 +290,20 @@ __global__ static void Nw_Gpu7_KernelB(
 NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // Number of threads per block for kernel A.
-    int threadsPerBlockA;
+    int threadsPerBlockA = {};
     // Tile B must have one dimension fixed to the number of threads in a warp.
-    int tileBx;
-    int tileBy;
+    int tileBx = {};
+    int tileBy = nw.warpsz;
     // Reduce the number of warps in the thread block in kernel B.
-    int warpDivFactorB;
+    int warpDivFactorB = {};
 
     try
     {
         threadsPerBlockA = pr["threadsPerBlockA"].curr();
         tileBx = pr["tileBx"].curr();
-        tileBy = pr["tileBy"].curr();
         warpDivFactorB = pr["warpDivFactorB"].curr();
     }
     catch (const std::out_of_range &)
-    {
-        return NwStat::errorInvalidValue;
-    }
-
-    if (tileBx != nw.warpsz && tileBy != nw.warpsz)
     {
         return NwStat::errorInvalidValue;
     }

@@ -109,11 +109,11 @@ __global__ static void Nw_Gpu2_KernelB(
 NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // tile size for the kernel B
-    unsigned tileBx;
-    unsigned tileBy;
+    unsigned tileBx = {};
+    unsigned tileBy = {};
     // number of threads per block for kernels A and B
-    unsigned threadsPerBlockA;
-    unsigned threadsPerBlockB;
+    unsigned threadsPerBlockA = {};
+    unsigned threadsPerBlockB = {};
 
     // get the parameter values
     try

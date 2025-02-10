@@ -311,21 +311,15 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // tile size for the kernel
     // +   tile A must have one dimension fixed to the number of threads in a warp
-    int tileAx;
-    int tileAy;
+    int tileAx = {};
+    int tileAy = nw.warpsz;
 
     // get the parameter values
     try
     {
         tileAx = pr["tileAx"].curr();
-        tileAy = pr["tileAy"].curr();
     }
     catch (const std::out_of_range &)
-    {
-        return NwStat::errorInvalidValue;
-    }
-
-    if (tileAx != nw.warpsz && tileAy != nw.warpsz)
     {
         return NwStat::errorInvalidValue;
     }

@@ -289,10 +289,10 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res)
     // tile sizes for kernels A and B
     // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
     // +   tile B must have one dimension fixed to the number of threads in a warp
-    int tileAx;
-    int tileAy;
-    int tileBx;
-    int tileBy;
+    int tileAx = {};
+    int tileAy = {};
+    int tileBx = {};
+    int tileBy = nw.warpsz;
 
     // get the parameter values
     try
@@ -300,14 +300,13 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res)
         tileAx = pr["tileAx"].curr();
         tileAy = pr["tileAy"].curr();
         tileBx = pr["tileBx"].curr();
-        tileBy = pr["tileBy"].curr();
     }
     catch (const std::out_of_range &)
     {
         return NwStat::errorInvalidValue;
     }
 
-    if (tileBx != nw.warpsz && tileBy != nw.warpsz)
+    if (tileAx % nw.warpsz != 0)
     {
         return NwStat::errorInvalidValue;
     }

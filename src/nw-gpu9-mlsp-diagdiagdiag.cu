@@ -310,29 +310,30 @@ __global__ static void Nw_Gpu9_KernelB(
 NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // Number of threads per block for kernel A.
-    int threadsPerBlockA;
-    // Tile B must have one dimension fixed to the number of threads in a warp.
-    int tileBx;
-    int tileBy;
-    // Reduce the number of warps in the thread block in kernel B.
-    int warpDivFactorB;
+    int threadsPerBlockA = {};
+    // Tile B is a multiple of subtiles B in both dimensions.
+    int tileBx = {};
+    int tileBy = {};
+    int subtileRows = {};
+    int subtileCols = {};
+    // Subtile B must have one dimension be a multiple of the number of threads in a warp.
+    int subtileBx = {};
+    int subtileBy = nw.warpsz;
 
     try
     {
         threadsPerBlockA = pr["threadsPerBlockA"].curr();
-        tileBx = pr["tileBx"].curr();
-        tileBy = pr["tileBy"].curr();
-        warpDivFactorB = pr["warpDivFactorB"].curr();
+        subtileRows = pr["subtileRows"].curr();
+        subtileCols = pr["subtileCols"].curr();
+        subtileBx = pr["subtileBx"].curr();
     }
     catch (const std::out_of_range &)
     {
         return NwStat::errorInvalidValue;
     }
 
-    if (tileBx != nw.warpsz && tileBy != nw.warpsz)
-    {
-        return NwStat::errorInvalidValue;
-    }
+    tileBx = subtileCols * subtileBx;
+    tileBy = subtileRows * subtileBy;
 
     // Adjusted gpu score matrix dimensions.
     // The matrix dimensions are rounded up to 1 + <the nearest multiple of the tile B size>.
@@ -465,13 +466,9 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
             /*tileHcol[]*/
             + (1 + tileBy) * sizeof(int));
 
-        // The number of threads should be divisible by the warp size.
-        // But for performance reasons, we don't need all those single-use warps, just half of them (or some other fraction).
-        // That way the thread block can be smaller while doing the same amount of work.
         dim3 blockB{};
         {
-            int warps = (int)ceil(float(max(tileBx, tileBy)) / nw.warpsz / warpDivFactorB);
-            blockB.x = nw.warpsz * warps;
+            blockB.x = nw.warpsz * subtileRows;
         }
 
         // For all (minor) tile diagonals in the score matrix.

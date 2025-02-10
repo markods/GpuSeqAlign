@@ -1,9 +1,3 @@
-/*
-./build -2
-./build -3
-./build -4
-*/
-
 #include "json.hpp"
 #include <chrono>
 #include <cuda_runtime.h>
@@ -90,9 +84,9 @@ int main(int argc, char *argv[])
     }
 
     // number of streaming multiprocessors (sm-s) and threads in a warp
-    const int sm_count = deviceProps.multiProcessorCount;          // 28 on GTX 1080Ti
-    const int warpsz = deviceProps.warpSize;                       // 32 on GTX 1080Ti
-    const int maxThreadsPerBlock = deviceProps.maxThreadsPerBlock; // 1024 on GTX 1080Ti
+    const int sm_count = deviceProps.multiProcessorCount;
+    const int warpsz = deviceProps.warpSize;
+    const int maxThreadsPerBlock = deviceProps.maxThreadsPerBlock;
 
     NwInput nw{
         ////// host specific memory

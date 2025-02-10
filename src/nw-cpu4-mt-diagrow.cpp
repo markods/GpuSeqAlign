@@ -5,7 +5,7 @@ NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // size of square block that will be a unit of work
     // +   8*(16 ints) on standard architectures, or 8 cache lines
-    int blocksz;
+    int blocksz = {};
 
     // get the parameter values
     try

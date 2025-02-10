@@ -1,0 +1,64 @@
+{
+   "NwAlign_Cpu1_St_Row":
+   { },
+   "NwAlign_Cpu2_St_Diag":
+   { },
+   "NwAlign_Cpu3_St_DiagRow":
+   {
+      "blocksz": [ 1024 ]
+   },
+   "NwAlign_Cpu4_Mt_DiagRow":
+   {
+      "blocksz": [ 512 ]
+   },
+   "NwAlign_Gpu1_Ml_Diag":
+   {
+      "threadsPerBlock": [ 64 ]
+   },
+   "NwAlign_Gpu2_Ml_DiagRow2Pass":
+   {
+      "tileBx": [ 7 ],
+      "tileBy": [ 3 ],
+      "threadsPerBlock": [ 128 ]
+   },
+   "NwAlign_Gpu3_Ml_DiagDiag":
+   {
+      "threadsPerBlockA": [ 128 ],
+      "tileBx": [ 62 ]
+   },
+   "NwAlign_Gpu4_Ml_DiagDiag2Pass":
+   {
+      "tileAx": [ 384 ],
+      "tileAy": [ 20 ],
+      "tileBx": [ 66 ]
+   },
+   "NwAlign_Gpu5_Coop_DiagDiag":
+   {
+      "tileAx": [ 62 ]
+   },
+   "NwAlign_Gpu6_Coop_DiagDiag2Pass":
+   {
+      "tileAx": [ 384 ],
+      "tileAy": [ 20 ],
+      "tileBx": [ 66 ]
+   },
+   "NwAlign_Gpu7_Mlsp_DiagDiag":
+   {
+      "threadsPerBlockA": [ 128 ],
+      "tileBx": [ 62 ],
+      "warpDivFactorB": [ 2 ]
+   },
+   "NwAlign_Gpu8_Mlsp_DiagDiag":
+   {
+      "threadsPerBlockA": [ 128 ],
+      "tileBx": [ 62 ],
+      "warpDivFactorB": [ 2 ]
+   },
+   "NwAlign_Gpu9_Mlsp_DiagDiagDiag":
+   {
+      "threadsPerBlockA": [ 128 ],
+      "subtileRows": [ 1 ],
+      "subtileCols": [ 1 ],
+      "subtileBx": [ 62 ]
+   }
+}

@@ -1,0 +1,64 @@
+{
+   "NwAlign_Cpu1_St_Row":
+   { },
+   "NwAlign_Cpu2_St_Diag":
+   { },
+   "NwAlign_Cpu3_St_DiagRow":
+   {
+      "blocksz": [ 32, 64, 128, 192, 256, 384, 512, 1024, 1536, 2048, 4096, 8192 ]
+   },
+   "NwAlign_Cpu4_Mt_DiagRow":
+   {
+      "blocksz": [ 32, 64, 128, 192, 256, 384, 512, 1024, 1536, 2048, 4096, 8192 ]
+   },
+   "NwAlign_Gpu1_Ml_Diag":
+   {
+      "threadsPerBlock": [ 32, 64, 96, 128, 160, 192, 256, 384, 512 ]
+   },
+   "NwAlign_Gpu2_Ml_DiagRow2Pass":
+   {
+      "tileBx": [ 6, 7, 8, 9, 10 ],
+      "tileBy": [ 1, 2, 3, 4, 5, 6 ],
+      "threadsPerBlock": [ 32, 64, 96, 128, 160 ]
+   },
+   "NwAlign_Gpu3_Ml_DiagDiag":
+   {
+      "threadsPerBlockA": [ 32, 64, 96, 128, 160 ],
+      "tileBx": [ 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76 ]
+   },
+   "NwAlign_Gpu4_Ml_DiagDiag2Pass":
+   {
+      "tileAx": [ 32, 64, 96, 128, 160, 192, 256, 384, 512 ],
+      "tileAy": [ 16, 20, 32, 36, 40, 42, 46, 64, 128 ],
+      "tileBx": [ 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 76, 78, 80 ]
+   },
+   "NwAlign_Gpu5_Coop_DiagDiag":
+   {
+      "tileAx": [ 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76 ]
+   },
+   "NwAlign_Gpu6_Coop_DiagDiag2Pass":
+   {
+      "tileAx": [ 32, 64, 96, 128, 160, 192, 256, 384, 512 ],
+      "tileAy": [ 16, 20, 32, 36, 40, 42, 46, 64, 128 ],
+      "tileBx": [ 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 76, 78, 80 ]
+   },
+   "NwAlign_Gpu7_Mlsp_DiagDiag":
+   {
+      "threadsPerBlockA": [ 32, 64, 96, 128, 160 ],
+      "tileBx": [ 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76 ],
+      "warpDivFactorB": [ 1, 2, 3 ]
+   },
+   "NwAlign_Gpu8_Mlsp_DiagDiag":
+   {
+      "threadsPerBlockA": [ 32, 64, 96, 128, 160 ],
+      "tileBx": [ 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76 ],
+      "warpDivFactorB": [ 1, 2, 3 ]
+   },
+   "NwAlign_Gpu9_Mlsp_DiagDiagDiag":
+   {
+      "threadsPerBlockA": [ 32, 64, 96, 128, 160 ],
+      "subtileRows": [ 1, 2, 3, 4 ],
+      "subtileCols": [ 2, 4, 6, 8, 10 ],
+      "subtileBx": [ 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76 ]
+   }
+}
