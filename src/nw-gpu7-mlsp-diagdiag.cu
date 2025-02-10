@@ -275,9 +275,6 @@ __global__ static void Nw_Gpu7_KernelB(
             }
         }
     }
-
-    // Block should finish saving tile last row/column to tile header row/column matrix.
-    __syncthreads();
 }
 
 // Parallel gpu implementation of the Needleman-Wunsch algorithm.

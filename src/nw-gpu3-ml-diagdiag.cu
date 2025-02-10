@@ -277,9 +277,6 @@ __global__ static void Nw_Gpu3_KernelB(
                 }
             }
         }
-
-        // all threads in this block should finish saving this tile
-        __syncthreads();
     }
 }
 
