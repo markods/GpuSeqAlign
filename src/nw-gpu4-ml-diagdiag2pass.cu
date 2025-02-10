@@ -147,128 +147,125 @@ __global__ static void Nw_Gpu4_KernelB(
     //  / / / . .       . . . / /       . . . . .|/ /
     //  / / . . .   +   . . / / .   +   . . . . /|/
     //  / . . . .       . / / . .       . . . / /|
-
     // map a tile on the current tile diagonal to this thread block
+    // (s,t) -- tile coordinates in the grid of tiles (score matrix)
+    int tbeg = max(0, d - (tcols - 1));
+    int tend = min(d + 1, trows);
+
+    // map a tile on the current diagonal of tiles to this thread block
+    // +   then go to the next tile on the diagonal with stride equal to the number of thread blocks in the thread grid
+    int t = tbeg + blockIdx.x;
+    // initialize the score matrix tile
     {
-        // (s,t) -- tile coordinates in the grid of tiles (score matrix)
-        int tbeg = max(0, d - (tcols - 1));
-        int tend = min(d + 1, trows);
+        // position of the top left element of the current tile in the score matrix
+        int ibeg = (1 + (t)*tileBy) - 1;
+        int jbeg = (1 + (d - t) * tileBx) - 1;
+        // the number of columns in the score matrix
+        int adjcols = 1 + tcols * tileBx;
 
-        // map a tile on the current diagonal of tiles to this thread block
-        // +   then go to the next tile on the diagonal with stride equal to the number of thread blocks in the thread grid
-        int t = tbeg + blockIdx.x;
-        // initialize the score matrix tile
+        // current thread position in the tile
+        int i = threadIdx.x / (tileBx + 1);
+        int j = threadIdx.x % (tileBx + 1);
+        // stride on the current thread position in the tile, equal to the number of threads in this thread block
+        // +   it is split into row and column increments for the thread's position for performance reasons (avoids using division and modulo operator in the inner cycle)
+        int di = blockDim.x / (tileBx + 1);
+        int dj = blockDim.x % (tileBx + 1);
+
+        // while the current thread maps onto an element in the tile
+        while (i < (1 + tileBy))
         {
-            // position of the top left element of the current tile in the score matrix
-            int ibeg = (1 + (t)*tileBy) - 1;
-            int jbeg = (1 + (d - t) * tileBx) - 1;
-            // the number of columns in the score matrix
-            int adjcols = 1 + tcols * tileBx;
+            // copy the current element from the global score matrix to the tile
+            el(tile, 1 + tileBx, i, j) = el(score_gpu, adjcols, ibeg + i, jbeg + j);
 
-            // current thread position in the tile
-            int i = threadIdx.x / (tileBx + 1);
-            int j = threadIdx.x % (tileBx + 1);
-            // stride on the current thread position in the tile, equal to the number of threads in this thread block
-            // +   it is split into row and column increments for the thread's position for performance reasons (avoids using division and modulo operator in the inner cycle)
-            int di = blockDim.x / (tileBx + 1);
-            int dj = blockDim.x % (tileBx + 1);
-
-            // while the current thread maps onto an element in the tile
-            while (i < (1 + tileBy))
+            // map the current thread to the next tile element
+            i += di;
+            j += dj;
+            // if the column index is out of bounds, increase the row index by one and wrap around the column index
+            if (j >= (1 + tileBx))
             {
-                // copy the current element from the global score matrix to the tile
-                el(tile, 1 + tileBx, i, j) = el(score_gpu, adjcols, ibeg + i, jbeg + j);
-
-                // map the current thread to the next tile element
-                i += di;
-                j += dj;
-                // if the column index is out of bounds, increase the row index by one and wrap around the column index
-                if (j >= (1 + tileBx))
-                {
-                    i++;
-                    j -= (1 + tileBx);
-                }
+                i++;
+                j -= (1 + tileBx);
             }
         }
+    }
 
-        // all threads in this block should finish initializing this tile in shared memory
-        __syncthreads();
+    // all threads in this block should finish initializing this tile in shared memory
+    __syncthreads();
 
-        // calculate the tile elements
-        // +   only threads in the first warp from this block are active here, other warps have to wait
-        if (threadIdx.x < warpSize)
+    // calculate the tile elements
+    // +   only threads in the first warp from this block are active here, other warps have to wait
+    if (threadIdx.x < warpSize)
+    {
+        // the number of rows and columns in the tile without its first row and column (the part of the tile to be calculated)
+        int rows = tileBy;
+        int cols = tileBx;
+
+        //  x x x x x x       x x x x x x       x x x x x x
+        //  x / / / . .       x . . . / /       x . . . . .|/ /
+        //  x / / . . .   +   x . . / / .   +   x . . . . /|/
+        //  x / . . . .       x . / / . .       x . . . / /|
+
+        // for all diagonals in the tile without its first row and column
+        for (int d = 0; d < cols - 1 + rows; d++)
         {
-            // the number of rows and columns in the tile without its first row and column (the part of the tile to be calculated)
-            int rows = tileBy;
-            int cols = tileBx;
+            // (d,p) -- element coordinates in the tile
+            int pbeg = max(0, d - (cols - 1));
+            int pend = min(d + 1, rows);
+            // position of the current thread's element on the tile diagonal
+            int p = pbeg + threadIdx.x;
 
-            //  x x x x x x       x x x x x x       x x x x x x
-            //  x / / / . .       x . . . / /       x . . . . .|/ /
-            //  x / / . . .   +   x . . / / .   +   x . . . . /|/
-            //  x / . . . .       x . / / . .       x . . . / /|
-
-            // for all diagonals in the tile without its first row and column
-            for (int d = 0; d < cols - 1 + rows; d++)
+            // if the thread maps onto an element on the current tile diagonal
+            if (p < pend)
             {
-                // (d,p) -- element coordinates in the tile
-                int pbeg = max(0, d - (cols - 1));
-                int pend = min(d + 1, rows);
-                // position of the current thread's element on the tile diagonal
-                int p = pbeg + threadIdx.x;
+                // position of the current element
+                int i = 1 + (p);
+                int j = 1 + (d - p);
 
-                // if the thread maps onto an element on the current tile diagonal
-                if (p < pend)
-                {
-                    // position of the current element
-                    int i = 1 + (p);
-                    int j = 1 + (d - p);
-
-                    // calculate the current element's value
-                    // +   always subtract the insert delete cost from the result, since the kernel A added that value to each element of the score matrix
-                    int temp1 = el(tile, 1 + tileBx, i - 1, j - 1) + el(tile, 1 + tileBx, i, j);
-                    int temp2 = max(el(tile, 1 + tileBx, i - 1, j), el(tile, 1 + tileBx, i, j - 1));
-                    el(tile, 1 + tileBx, i, j) = max(temp1, temp2) + indel;
-                }
-
-                // all threads in this warp should finish calculating the tile's current diagonal
-                __syncwarp();
+                // calculate the current element's value
+                // +   always subtract the insert delete cost from the result, since the kernel A added that value to each element of the score matrix
+                int temp1 = el(tile, 1 + tileBx, i - 1, j - 1) + el(tile, 1 + tileBx, i, j);
+                int temp2 = max(el(tile, 1 + tileBx, i - 1, j), el(tile, 1 + tileBx, i, j - 1));
+                el(tile, 1 + tileBx, i, j) = max(temp1, temp2) + indel;
             }
+
+            // all threads in this warp should finish calculating the tile's current diagonal
+            __syncwarp();
         }
+    }
 
-        // all threads in this block should finish calculating this tile
-        __syncthreads();
+    // all threads in this block should finish calculating this tile
+    __syncthreads();
 
-        // save the score matrix tile
+    // save the score matrix tile
+    {
+        // position of the first (top left) calculated element of the current tile in the score matrix
+        int ibeg = (1 + (t)*tileBy);
+        int jbeg = (1 + (d - t) * tileBx);
+        // the number of columns in the score matrix
+        int adjcols = 1 + tcols * tileBx;
+
+        // current thread position in the tile
+        int i = threadIdx.x / tileBx;
+        int j = threadIdx.x % tileBx;
+        // stride on the current thread position in the tile, equal to the number of threads in this thread block
+        // +   it is split into row and column increments for the thread's position for performance reasons (avoids using division and modulo operator in the inner cycle)
+        int di = blockDim.x / tileBx;
+        int dj = blockDim.x % tileBx;
+
+        // while the current thread maps onto an element in the tile
+        while (i < tileBy)
         {
-            // position of the first (top left) calculated element of the current tile in the score matrix
-            int ibeg = (1 + (t)*tileBy);
-            int jbeg = (1 + (d - t) * tileBx);
-            // the number of columns in the score matrix
-            int adjcols = 1 + tcols * tileBx;
+            // copy the current element from the tile to the global score matrix
+            el(score_gpu, adjcols, ibeg + i, jbeg + j) = el(tile, 1 + tileBx, 1 + i, 1 + j);
 
-            // current thread position in the tile
-            int i = threadIdx.x / tileBx;
-            int j = threadIdx.x % tileBx;
-            // stride on the current thread position in the tile, equal to the number of threads in this thread block
-            // +   it is split into row and column increments for the thread's position for performance reasons (avoids using division and modulo operator in the inner cycle)
-            int di = blockDim.x / tileBx;
-            int dj = blockDim.x % tileBx;
-
-            // while the current thread maps onto an element in the tile
-            while (i < tileBy)
+            // map the current thread to the next tile element
+            i += di;
+            j += dj;
+            // if the column index is out of bounds, increase the row index by one and wrap around the column index
+            if (j >= tileBx)
             {
-                // copy the current element from the tile to the global score matrix
-                el(score_gpu, adjcols, ibeg + i, jbeg + j) = el(tile, 1 + tileBx, 1 + i, 1 + j);
-
-                // map the current thread to the next tile element
-                i += di;
-                j += dj;
-                // if the column index is out of bounds, increase the row index by one and wrap around the column index
-                if (j >= tileBx)
-                {
-                    i++;
-                    j -= tileBx;
-                }
+                i++;
+                j -= tileBx;
             }
         }
     }
