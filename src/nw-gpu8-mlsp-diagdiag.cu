@@ -9,8 +9,8 @@ __global__ static void Nw_Gpu8_KernelA(
     int *const tileHcolMat_gpu,
     const int trows,
     const int tcols,
-    const unsigned tileBx,
-    const unsigned tileBy,
+    const int tileBx,
+    const int tileBy,
     const int indel)
 {
     int tid = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -70,8 +70,8 @@ __global__ static void Nw_Gpu8_KernelB(
     // params related to tile B
     const int trows,
     const int tcols,
-    const unsigned tileBx,
-    const unsigned tileBy,
+    const int tileBx,
+    const int tileBy,
     const int d)
 {
     extern __shared__ int shmem[/* substsz*substsz + tileBx + tileBy + (1+tileBx) + (1+tileBy) */];

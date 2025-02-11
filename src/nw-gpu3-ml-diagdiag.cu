@@ -36,8 +36,8 @@ __global__ static void Nw_Gpu3_KernelB(
     // tile size
     const int trows,
     const int tcols,
-    const unsigned tileBx,
-    const unsigned tileBy,
+    const int tileBx,
+    const int tileBy,
     const int d // the current minor tile diagonal in the score matrix (exclude the header row and column)
 )
 {

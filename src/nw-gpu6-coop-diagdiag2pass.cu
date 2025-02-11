@@ -12,8 +12,8 @@ __global__ static void Nw_Gpu6_KernelA(
     const int adjcols,
     const int substsz,
     const int indel,
-    const unsigned tileAx,
-    const unsigned tileAy)
+    const int tileAx,
+    const int tileAy)
 {
     extern __shared__ int shmem[/* substsz*substsz + tileAx + tileAy */];
     // the substitution matrix and relevant parts of the two sequences
@@ -135,8 +135,8 @@ __global__ static void Nw_Gpu6_KernelB(
     const int indel,
     const int trows,
     const int tcols,
-    const unsigned tileBx,
-    const unsigned tileBy)
+    const int tileBx,
+    const int tileBy)
 {
     extern __shared__ int shmem[/* (1+tileBy)*(1+tileBx) */];
     // matrix tile which this thread block maps onto
@@ -374,8 +374,8 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res)
         gridA.y = (int)ceil(float(adjrows) / tileAy);
         gridA.x = (int)ceil(float(adjcols) / tileAx);
         // block dimensions for kernel A
-        unsigned threadsPerBlockA = min(nw.maxThreadsPerBlock, tileAy * tileAx);
-        dim3 blockA{threadsPerBlockA};
+        int threadsPerBlockA = min(nw.maxThreadsPerBlock, tileAy * tileAx);
+        dim3 blockA{(unsigned)threadsPerBlockA};
 
         // calculate size of shared memory per block in bytes
         int shmemsz = (

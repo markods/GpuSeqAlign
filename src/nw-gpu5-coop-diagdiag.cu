@@ -15,8 +15,8 @@ __global__ static void Nw_Gpu5_Kernel(
     // tile size
     const int trows,
     const int tcols,
-    const unsigned tileAx,
-    const unsigned tileAy)
+    const int tileAx,
+    const int tileAy)
 {
     extern __shared__ int shmem[/* substsz*substsz + tileAx + tileAy + (1+tileAy)*(1+tileAx) */];
     // the substitution matrix and relevant parts of the two sequences

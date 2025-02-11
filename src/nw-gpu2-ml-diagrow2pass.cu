@@ -35,8 +35,8 @@ __global__ static void Nw_Gpu2_KernelB(
     // tile size
     const int trows,
     const int tcols,
-    const unsigned tileBx,
-    const unsigned tileBy,
+    const int tileBx,
+    const int tileBy,
     const int d // the current minor tile diagonal in the score matrix (exclude the header row and column)
 )
 {
@@ -109,11 +109,11 @@ __global__ static void Nw_Gpu2_KernelB(
 NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // tile size for the kernel B
-    unsigned tileBx = {};
-    unsigned tileBy = {};
+    int tileBx = {};
+    int tileBy = {};
     // number of threads per block for kernels A and B
-    unsigned threadsPerBlockA = {};
-    unsigned threadsPerBlockB = {};
+    int threadsPerBlockA = {};
+    int threadsPerBlockB = {};
 
     // get the parameter values
     try

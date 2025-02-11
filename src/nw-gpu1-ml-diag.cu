@@ -70,7 +70,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(NwParams &pr, NwInput &nw, NwResult &res)
 {
     // number of threads per block
     // +   the tile is one-dimensional
-    unsigned threadsPerBlock = {};
+    int threadsPerBlock = {};
 
     // get the parameter values
     try
