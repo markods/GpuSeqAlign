@@ -61,7 +61,7 @@ template <typename T>
 class HostArray
 {
 public:
-    HostArray() : _arr{nullptr, [](T *ptr) {}},
+    HostArray() : _arr{nullptr, [](T *) {}},
                   _size{}
     {
     }
@@ -113,7 +113,7 @@ template <typename T>
 class DeviceArray
 {
 public:
-    DeviceArray() : _arr{nullptr, [](T *ptr) {}},
+    DeviceArray() : _arr{nullptr, [](T *) {}},
                     _size{}
     {
     }

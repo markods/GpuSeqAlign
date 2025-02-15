@@ -345,9 +345,13 @@ std::string IsoTime()
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
 
+    std::tm tm_struct{};
+    if (localtime_s(&tm_struct, &time) != 0) {
+        throw std::runtime_error("Failed to get local time.");
+    }
+
     std::stringstream strs;
-    // https://en.cppreference.com/w/cpp/io/manip/put_time
-    strs << std::put_time(std::localtime(&time), "%Y%m%d_%H%M%S");
+    strs << std::put_time(&tm_struct, "%Y%m%d_%H%M%S");
     return strs.str();
 }
 
