@@ -230,7 +230,7 @@ __global__ static void Nw_Gpu8_KernelB(
                 up = (j >= 0 && j < tileBx) ? tileHrow[1 + j] : 0;
             }
 
-            if (i >= 0 && i < tileBy && j >= 0 && j < tileBx)
+            if (/*i >= 0 && i < tileBy && */j >= 0 && j < tileBx)
             {
                 curr = upleft + el(subst, substsz, seqY[i], seqX[j]); // MOVE DOWN-RIGHT
                 curr = max(curr, up + indel);                         // MOVE DOWN
