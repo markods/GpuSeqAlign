@@ -1,7 +1,7 @@
 #include "common.hpp"
 
 // parallel cpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams &pr, NwInput &nw, NwResult &res)
+NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams& pr, NwInput& nw, NwResult& res)
 {
     // size of square block that will be a unit of work
     // +   8*(16 ints) on standard architectures, or 8 cache lines
@@ -12,7 +12,7 @@ NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams &pr, NwInput &nw, NwResult &res)
     {
         blocksz = pr["blocksz"].curr();
     }
-    catch (const std::out_of_range &)
+    catch (const std::out_of_range&)
     {
         return NwStat::errorInvalidValue;
     }
@@ -26,7 +26,7 @@ NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams &pr, NwInput &nw, NwResult &res)
     const int colblocks = (int)ceil(float(cols) / blocksz);
 
     // start the timer
-    Stopwatch &sw = res.sw_align;
+    Stopwatch& sw = res.sw_align;
     sw.start();
 
     // reserve space in the ram
@@ -34,7 +34,7 @@ NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams &pr, NwInput &nw, NwResult &res)
     {
         nw.score.init(nw.adjrows * nw.adjcols);
     }
-    catch (const std::exception &)
+    catch (const std::exception&)
     {
         return NwStat::errorMemoryAllocation;
     }

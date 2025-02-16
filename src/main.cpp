@@ -1,4 +1,6 @@
+#include "common.hpp"
 #include "json.hpp"
+#include "nw-algorithm.hpp"
 #include <chrono>
 #include <cuda_runtime.h>
 #include <filesystem>
@@ -7,14 +9,11 @@
 #include <map>
 #include <sstream>
 #include <string>
-
-#include "common.hpp"
-#include "nw-algorithm.hpp"
 using json = nlohmann::ordered_json;
 using namespace std::string_literals;
 
 // main program
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     // check if the arguments are valid
     if (argc != 4)
@@ -88,7 +87,7 @@ int main(int argc, char *argv[])
     const int warpsz = deviceProps.warpSize;
     const int maxThreadsPerBlock = deviceProps.maxThreadsPerBlock;
 
-    NwInput nw{
+    NwInput nw {
         ////// host specific memory
         // subst;   <-- once
         // seqX;    <-- loop-inited
@@ -136,7 +135,7 @@ int main(int argc, char *argv[])
         {
             nw.subst_gpu.init(nw.substsz * nw.substsz);
         }
-        catch (const std::exception &)
+        catch (const std::exception&)
         {
             std::cerr << "ERR - could not reserve space for the substitution matrix in the gpu";
             exit(-1);
@@ -156,25 +155,25 @@ int main(int argc, char *argv[])
     std::map<std::string, int> letterMap = substData.letterMap;
 
     // initialize the sequence map
-    std::vector<std::vector<int>> seqList{};
-    for (auto &charSeq : seqData.seqList)
+    std::vector<std::vector<int>> seqList {};
+    for (auto& charSeq : seqData.seqList)
     {
         auto seq = seqStrToVect(charSeq, letterMap, true /*addHeader*/);
         seqList.push_back(seq);
     }
 
     // initialize the gold result map (as calculated by the first algorithm)
-    NwCompareData compareData{};
+    NwCompareData compareData {};
 
     // write the csv file's header
     resHeaderToCsv(ofsRes, resData);
     ofsRes.flush();
 
     // for all algorithms which have parameters in the param map
-    for (auto &paramTuple : paramData.paramMap)
+    for (auto& paramTuple : paramData.paramMap)
     {
         // if the current algorithm doesn't exist, skip it
-        const std::string &algName = paramTuple.first;
+        const std::string& algName = paramTuple.first;
         if (algData.algMap.find(algName) == algData.algMap.end())
         {
             continue;
@@ -183,7 +182,7 @@ int main(int argc, char *argv[])
         std::cout << algName << ":";
 
         // get the current algorithm and initialize its parameters
-        NwAlgorithm &alg = algData.algMap[algName];
+        NwAlgorithm& alg = algData.algMap[algName];
         alg.init(paramTuple.second /*algParams*/);
 
         // for all Y sequences + for all X sequences (also compare every sequence with itself)
@@ -215,13 +214,13 @@ int main(int argc, char *argv[])
                 for (; alg.alignPr().hasCurr(); alg.alignPr().next())
                 {
                     // results from multiple repetitions
-                    std::vector<NwResult> resList{};
+                    std::vector<NwResult> resList {};
 
                     // for all requested repeats
                     for (int iR = 0; iR < seqData.repeat; iR++)
                     {
                         // initialize the result in the result list
-                        resList.push_back(NwResult{
+                        resList.push_back(NwResult {
                             algName,                  // algName;
                             alg.alignPr().snapshot(), // algParams;
 
@@ -244,7 +243,7 @@ int main(int argc, char *argv[])
                             {}, // cudaerr;   // 0 for success
                         });
                         // get the result from the list
-                        NwResult &res = resList.back();
+                        NwResult& res = resList.back();
 
                         // compare the sequences, hash and trace the score matrices, and verify the soundness of the results
                         if (!res.errstep && NwStat::success != (res.stat = alg.align(nw, res)))
@@ -293,7 +292,7 @@ int main(int argc, char *argv[])
 
                     // add the result to the results list
                     resData.resList.push_back(combineResults(resList));
-                    NwResult &res = resData.resList.back();
+                    NwResult& res = resData.resList.back();
                     // reset the multiple repetition list
                     resList.clear();
 

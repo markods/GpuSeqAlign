@@ -4,10 +4,10 @@
 // cuda kernel for the parallel implementation
 __global__ static void Nw_Gpu5_Kernel(
     // nw input
-    const int *const seqX_gpu,
-    const int *const seqY_gpu,
-    int *const score_gpu,
-    const int *const subst_gpu,
+    const int* const seqX_gpu,
+    const int* const seqY_gpu,
+    int* const score_gpu,
+    const int* const subst_gpu,
     // const int adjrows,   // can be calculated as 1 + trows*tileAy
     // const int adjcols,   // can be calculated as 1 + tcols*tileAx
     const int substsz,
@@ -21,10 +21,10 @@ __global__ static void Nw_Gpu5_Kernel(
     extern __shared__ int shmem[/* substsz*substsz + tileAx + tileAy + (1+tileAy)*(1+tileAx) */];
     // the substitution matrix and relevant parts of the two sequences
     // NOTE: should we align allocations to 0-th shared memory bank?
-    int *const subst /*[substsz*substsz]*/ = shmem + 0;
-    int *const seqX /*[tileAx]*/ = subst + substsz * substsz;
-    int *const seqY /*[tileAy]*/ = seqX + tileAx;
-    int *const tile /*[(1+tileAy)*(1+tileAx)]*/ = seqY + tileAy;
+    int* const subst /*[substsz*substsz]*/ = shmem + 0;
+    int* const seqX /*[tileAx]*/ = subst + substsz * substsz;
+    int* const seqY /*[tileAy]*/ = seqX + tileAx;
+    int* const tile /*[(1+tileAy)*(1+tileAx)]*/ = seqY + tileAy;
 
     // initialize the substitution shared memory copy
     {
@@ -95,7 +95,6 @@ __global__ static void Nw_Gpu5_Kernel(
         // +   then go to the next tile on the diagonal with stride equal to the number of thread blocks in the thread grid
         for (int t = tbeg + blockIdx.x; t < tend; t += gridDim.x)
         {
-
             // initialize the tile's window into the global X and Y sequences
             {
                 //       x x x x x
@@ -306,7 +305,7 @@ __global__ static void Nw_Gpu5_Kernel(
 }
 
 // parallel gpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
+NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
 {
     // tile size for the kernel
     // +   tile A must have one dimension fixed to the number of threads in a warp
@@ -318,7 +317,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
     {
         tileAx = pr["tileAx"].curr();
     }
-    catch (const std::out_of_range &)
+    catch (const std::out_of_range&)
     {
         return NwStat::errorInvalidValue;
     }
@@ -338,7 +337,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
     }
 
     // start the timer
-    Stopwatch &sw = res.sw_align;
+    Stopwatch& sw = res.sw_align;
     sw.start();
 
     // reserve space in the ram and gpu global memory
@@ -350,7 +349,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
 
         nw.score.init(nw.adjrows * nw.adjcols);
     }
-    catch (const std::exception &)
+    catch (const std::exception&)
     {
         return NwStat::errorMemoryAllocation;
     }
@@ -383,8 +382,8 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
     // launch kernel
     {
         // grid and block dimensions for kernel
-        dim3 gridA{};
-        dim3 blockA{};
+        dim3 gridA {};
+        dim3 blockA {};
         // the number of tiles per row and column of the score matrix
         int trows = (int)ceil(float(adjrows - 1) / tileAy);
         int tcols = (int)ceil(float(adjcols - 1) / tileAx);
@@ -421,13 +420,13 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
         }
 
         // create variables for gpu arrays in order to be able to take their addresses
-        int *seqX_gpu = nw.seqX_gpu.data();
-        int *seqY_gpu = nw.seqY_gpu.data();
-        int *score_gpu = nw.score_gpu.data();
-        int *subst_gpu = nw.subst_gpu.data();
+        int* seqX_gpu = nw.seqX_gpu.data();
+        int* seqY_gpu = nw.seqY_gpu.data();
+        int* score_gpu = nw.score_gpu.data();
+        int* subst_gpu = nw.subst_gpu.data();
 
         // group arguments to be passed to kernel
-        void *kargs[]{
+        void* kargs[] {
             &seqX_gpu,
             &seqY_gpu,
             &score_gpu,
@@ -442,7 +441,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
             &tileAy};
 
         // launch the kernel in the given stream (don't statically allocate shared memory)
-        if (cudaSuccess != (cudaStatus = cudaLaunchCooperativeKernel((void *)Nw_Gpu5_Kernel, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
+        if (cudaSuccess != (cudaStatus = cudaLaunchCooperativeKernel((void*)Nw_Gpu5_Kernel, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
         {
             return NwStat::errorKernelFailure;
         }

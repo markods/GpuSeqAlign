@@ -1,7 +1,7 @@
 #include "common.hpp"
 
 // sequential cpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Cpu1_St_Row(NwParams &pr, NwInput &nw, NwResult &res)
+NwStat NwAlign_Cpu1_St_Row(NwParams& pr, NwInput& nw, NwResult& res)
 {
     (void)pr;
 
@@ -10,7 +10,7 @@ NwStat NwAlign_Cpu1_St_Row(NwParams &pr, NwInput &nw, NwResult &res)
     const int cols = -1 + nw.adjcols;
 
     // start the timer
-    Stopwatch &sw = res.sw_align;
+    Stopwatch& sw = res.sw_align;
     sw.start();
 
     // reserve space in the ram
@@ -18,7 +18,7 @@ NwStat NwAlign_Cpu1_St_Row(NwParams &pr, NwInput &nw, NwResult &res)
     {
         nw.score.init(nw.adjrows * nw.adjcols);
     }
-    catch (const std::exception &)
+    catch (const std::exception&)
     {
         return NwStat::errorMemoryAllocation;
     }

@@ -9,10 +9,10 @@
 #include <vector>
 using json = nlohmann::ordered_json;
 
-using NwAlignFn = NwStat (*)(NwParams &pr, NwInput &nw, NwResult &res);
-using NwTraceFn = NwStat (*)(const NwInput &nw, NwResult &res);
-using NwHashFn = NwStat (*)(const NwInput &nw, NwResult &res);
-using NwPrintFn = NwStat (*)(std::ostream &os, const NwInput &nw, NwResult &res);
+using NwAlignFn = NwStat (*)(NwParams& pr, NwInput& nw, NwResult& res);
+using NwTraceFn = NwStat (*)(const NwInput& nw, NwResult& res);
+using NwHashFn = NwStat (*)(const NwInput& nw, NwResult& res);
+using NwPrintFn = NwStat (*)(std::ostream& os, const NwInput& nw, NwResult& res);
 
 // the Needleman-Wunsch algorithm implementations
 class NwAlgorithm
@@ -42,17 +42,32 @@ public:
         _alignPr = {};
     }
 
-    void init(NwParams &alignPr)
+    void init(NwParams& alignPr)
     {
         _alignPr = alignPr;
     }
 
-    NwParams &alignPr() { return _alignPr; }
+    NwParams& alignPr()
+    {
+        return _alignPr;
+    }
 
-    NwStat align(NwInput &nw, NwResult &res) { return _alignFn(_alignPr, nw, res); }
-    NwStat trace(const NwInput &nw, NwResult &res) { return _traceFn(nw, res); }
-    NwStat hash(const NwInput &nw, NwResult &res) { return _hashFn(nw, res); }
-    NwStat print(std::ostream &os, const NwInput &nw, NwResult &res) { return _printFn(os, nw, res); }
+    NwStat align(NwInput& nw, NwResult& res)
+    {
+        return _alignFn(_alignPr, nw, res);
+    }
+    NwStat trace(const NwInput& nw, NwResult& res)
+    {
+        return _traceFn(nw, res);
+    }
+    NwStat hash(const NwInput& nw, NwResult& res)
+    {
+        return _hashFn(nw, res);
+    }
+    NwStat print(std::ostream& os, const NwInput& nw, NwResult& res)
+    {
+        return _printFn(os, nw, res);
+    }
 
 private:
     NwAlignFn _alignFn;
@@ -111,29 +126,29 @@ struct NwResData
 };
 
 // conversion to object from json
-void from_json(const json &j, NwSubstData &substData);
-void from_json(const json &j, NwParamData &paramData);
-void from_json(const json &j, NwParams &params);
-void from_json(const json &j, NwParam &param);
-void from_json(const json &j, NwSeqData &seqData);
+void from_json(const json& j, NwSubstData& substData);
+void from_json(const json& j, NwParamData& paramData);
+void from_json(const json& j, NwParams& params);
+void from_json(const json& j, NwParam& param);
+void from_json(const json& j, NwSeqData& seqData);
 
 // conversion to json from object
-void to_json(json &j, const NwSubstData &substData);
-void to_json(json &j, const NwParamData &paramData);
-void to_json(json &j, const NwParams &params);
-void to_json(json &j, const NwParam &param);
-void to_json(json &j, const NwSeqData &seqData);
+void to_json(json& j, const NwSubstData& substData);
+void to_json(json& j, const NwParamData& paramData);
+void to_json(json& j, const NwParams& params);
+void to_json(json& j, const NwParam& param);
+void to_json(json& j, const NwSeqData& seqData);
 
 // conversion to csv from object
-void resHeaderToCsv(std::ostream &os, const NwResData &resData);
-void to_csv(std::ostream &os, const NwResult &res);
-void to_csv(std::ostream &os, const Stopwatch &sw);
-void paramsToCsv(std::ostream &os, const std::map<std::string, int> &paramMap);
-void lapTimeToCsv(std::ostream &os, float lapTime);
+void resHeaderToCsv(std::ostream& os, const NwResData& resData);
+void to_csv(std::ostream& os, const NwResult& res);
+void to_csv(std::ostream& os, const Stopwatch& sw);
+void paramsToCsv(std::ostream& os, const std::map<std::string, int>& paramMap);
+void lapTimeToCsv(std::ostream& os, float lapTime);
 
 // convert the sequence string to a vector using a character map
 // + NOTE: add the header (zeroth) element if requested
-std::vector<int> seqStrToVect(const std::string &str, const std::map<std::string, int> &map, const bool addHeader);
+std::vector<int> seqStrToVect(const std::string& str, const std::map<std::string, int>& map, const bool addHeader);
 
 // structs used to verify that the algorithms' results are correct
 struct NwCompareKey
@@ -141,15 +156,15 @@ struct NwCompareKey
     int iY;
     int iX;
 
-    friend bool operator<(const NwCompareKey &l, const NwCompareKey &r);
+    friend bool operator<(const NwCompareKey& l, const NwCompareKey& r);
 };
 struct NwCompareRes
 {
     unsigned score_hash;
     unsigned trace_hash;
 
-    friend bool operator==(const NwCompareRes &l, const NwCompareRes &r);
-    friend bool operator!=(const NwCompareRes &l, const NwCompareRes &r);
+    friend bool operator==(const NwCompareRes& l, const NwCompareRes& r);
+    friend bool operator!=(const NwCompareRes& l, const NwCompareRes& r);
 };
 struct NwCompareData
 {
@@ -158,19 +173,19 @@ struct NwCompareData
 };
 
 // check that the result hashes match the hashes calculated by the first algorithm (the gold standard)
-NwStat setOrVerifyResult(const NwResult &res, NwCompareData &compareData);
+NwStat setOrVerifyResult(const NwResult& res, NwCompareData& compareData);
 // combine results from many repetitions into one
-NwResult combineResults(std::vector<NwResult> &resList);
+NwResult combineResults(std::vector<NwResult>& resList);
 
 // get the current time as an ISO string
 std::string IsoTime();
 
 // open output file stream
-NwStat openOutFile(const std::string &path, std::ofstream &ofs);
+NwStat openOutFile(const std::string& path, std::ofstream& ofs);
 
 // read a json file into a variable
 template <typename T>
-NwStat readFromJson(const std::string &path, T &var)
+NwStat readFromJson(const std::string& path, T& var)
 {
     std::ifstream ifs;
 
@@ -182,7 +197,7 @@ NwStat readFromJson(const std::string &path, T &var)
             return NwStat::errorIoStream;
         }
     }
-    catch (const std::exception &)
+    catch (const std::exception&)
     {
         return NwStat::errorIoStream;
     }
@@ -196,7 +211,7 @@ NwStat readFromJson(const std::string &path, T &var)
             /*allow_exceptions*/ true,
             /*ignore_comments*/ true);
     }
-    catch (const std::exception &)
+    catch (const std::exception&)
     {
         NwStat::errorInvalidFormat;
     }

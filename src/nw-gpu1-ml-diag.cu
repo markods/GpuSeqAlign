@@ -2,10 +2,10 @@
 
 // cuda kernel for the parallel implementation
 __global__ static void Nw_Gpu1_Kernel(
-    const int *const seqX_gpu,
-    const int *const seqY_gpu,
-    int *const score_gpu,
-    const int *const subst_gpu,
+    const int* const seqX_gpu,
+    const int* const seqY_gpu,
+    int* const score_gpu,
+    const int* const subst_gpu,
     const int adjrows,
     const int adjcols,
     const int substsz,
@@ -66,7 +66,7 @@ __global__ static void Nw_Gpu1_Kernel(
 }
 
 // parallel gpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Gpu1_Ml_Diag(NwParams &pr, NwInput &nw, NwResult &res)
+NwStat NwAlign_Gpu1_Ml_Diag(NwParams& pr, NwInput& nw, NwResult& res)
 {
     // number of threads per block
     // +   the tile is one-dimensional
@@ -77,7 +77,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(NwParams &pr, NwInput &nw, NwResult &res)
     {
         threadsPerBlock = pr["threadsPerBlock"].curr();
     }
-    catch (const std::out_of_range &)
+    catch (const std::out_of_range&)
     {
         return NwStat::errorInvalidValue;
     }
@@ -100,7 +100,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(NwParams &pr, NwInput &nw, NwResult &res)
     int cols = -1 + adjcols;
 
     // start the timer
-    Stopwatch &sw = res.sw_align;
+    Stopwatch& sw = res.sw_align;
     sw.start();
 
     // reserve space in the ram and gpu global memory
@@ -112,7 +112,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(NwParams &pr, NwInput &nw, NwResult &res)
 
         nw.score.init(nw.adjrows * nw.adjcols);
     }
-    catch (const std::exception &)
+    catch (const std::exception&)
     {
         return NwStat::errorMemoryAllocation;
     }
@@ -149,8 +149,8 @@ NwStat NwAlign_Gpu1_Ml_Diag(NwParams &pr, NwInput &nw, NwResult &res)
     // launch kernel for each minor diagonal of the score matrix
     {
         // grid and block dimensions for kernel
-        dim3 gridA{};
-        dim3 blockA{};
+        dim3 gridA {};
+        dim3 blockA {};
 
         // calculate size of shared memory per block in bytes
         int shmemsz = (0);
@@ -174,13 +174,13 @@ NwStat NwAlign_Gpu1_Ml_Diag(NwParams &pr, NwInput &nw, NwResult &res)
             }
 
             // create variables for gpu arrays in order to be able to take their addresses
-            int *seqX_gpu = nw.seqX_gpu.data();
-            int *seqY_gpu = nw.seqY_gpu.data();
-            int *score_gpu = nw.score_gpu.data();
-            int *subst_gpu = nw.subst_gpu.data();
+            int* seqX_gpu = nw.seqX_gpu.data();
+            int* seqY_gpu = nw.seqY_gpu.data();
+            int* score_gpu = nw.score_gpu.data();
+            int* subst_gpu = nw.subst_gpu.data();
 
             // group arguments to be passed to kernel
-            void *kargs[]{
+            void* kargs[] {
                 &seqX_gpu,
                 &seqY_gpu,
                 &score_gpu,
@@ -192,7 +192,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(NwParams &pr, NwInput &nw, NwResult &res)
                 &d};
 
             // launch the kernel in the given stream (don't statically allocate shared memory)
-            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void *)Nw_Gpu1_Kernel, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
+            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu1_Kernel, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
             {
                 return NwStat::errorKernelFailure;
             }

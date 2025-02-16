@@ -3,7 +3,7 @@
 // cuda kernel A for the parallel implementation
 // +   initializes the score matrix's header row and column in the gpu
 __global__ static void Nw_Gpu3_KernelA(
-    int *const score_gpu,
+    int* const score_gpu,
     const int adjrows,
     const int adjcols,
     const int indel)
@@ -25,10 +25,10 @@ __global__ static void Nw_Gpu3_KernelA(
 // cuda kernel for the parallel implementation
 __global__ static void Nw_Gpu3_KernelB(
     // nw input
-    const int *const seqX_gpu,
-    const int *const seqY_gpu,
-    int *const score_gpu,
-    const int *const subst_gpu,
+    const int* const seqX_gpu,
+    const int* const seqY_gpu,
+    int* const score_gpu,
+    const int* const subst_gpu,
     // const int adjrows,   // can be calculated as 1 + trows*tileBy
     // const int adjcols,   // can be calculated as 1 + tcols*tileBx
     const int substsz,
@@ -44,10 +44,10 @@ __global__ static void Nw_Gpu3_KernelB(
     extern __shared__ int shmem[/* substsz*substsz + tileBx + tileBy + (1+tileBy)*(1+tileBx) */];
     // the substitution matrix and relevant parts of the two sequences
     // NOTE: should we align allocations to 0-th shared memory bank?
-    int *const subst /*[substsz*substsz]*/ = shmem + 0;
-    int *const seqX /*[tileBx]*/ = subst + substsz * substsz;
-    int *const seqY /*[tileBy]*/ = seqX + tileBx;
-    int *const tile /*[(1+tileBy)*(1+tileBx)]*/ = seqY + tileBy;
+    int* const subst /*[substsz*substsz]*/ = shmem + 0;
+    int* const seqX /*[tileBx]*/ = subst + substsz * substsz;
+    int* const seqY /*[tileBy]*/ = seqX + tileBx;
+    int* const tile /*[(1+tileBy)*(1+tileBx)]*/ = seqY + tileBy;
 
     // initialize the substitution shared memory copy
     {
@@ -279,7 +279,7 @@ __global__ static void Nw_Gpu3_KernelB(
 }
 
 // parallel gpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
+NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
 {
     // tile size for the kernel
     int tileBx = {};
@@ -293,7 +293,7 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
         threadsPerBlockA = pr["threadsPerBlockA"].curr();
         tileBx = pr["tileBx"].curr();
     }
-    catch (const std::out_of_range &)
+    catch (const std::out_of_range&)
     {
         return NwStat::errorInvalidValue;
     }
@@ -313,7 +313,7 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
     }
 
     // start the timer
-    Stopwatch &sw = res.sw_align;
+    Stopwatch& sw = res.sw_align;
     sw.start();
 
     // reserve space in the ram and gpu global memory
@@ -325,7 +325,7 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
 
         nw.score.init(nw.adjrows * nw.adjcols);
     }
-    catch (const std::exception &)
+    catch (const std::exception&)
     {
         return NwStat::errorMemoryAllocation;
     }
@@ -362,8 +362,8 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
     // launch kernel A to initialize the score matrix's header row and column
     {
         // grid and block dimensions for kernel A
-        dim3 gridA{};
-        dim3 blockA{};
+        dim3 gridA {};
+        dim3 blockA {};
 
         // calculate size of shared memory per block in bytes
         int shmemsz = (0);
@@ -377,17 +377,17 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
         }
 
         // create variables for gpu arrays in order to be able to take their addresses
-        int *score_gpu = nw.score_gpu.data();
+        int* score_gpu = nw.score_gpu.data();
 
         // group arguments to be passed to kernel A
-        void *kargs[]{
+        void* kargs[] {
             &score_gpu,
             &adjrows,
             &adjcols,
             &nw.indel};
 
         // launch the kernel A in the given stream (don't statically allocate shared memory)
-        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void *)Nw_Gpu3_KernelA, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
+        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu3_KernelA, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
         {
             return NwStat::errorKernelFailure;
         }
@@ -409,8 +409,8 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
     // launch kernel B for each minor tile diagonal of the score matrix
     {
         // grid and block dimensions for kernel B
-        dim3 gridB{};
-        dim3 blockB{};
+        dim3 gridB {};
+        dim3 blockB {};
         // the number of tiles per row and column of the score matrix
         int trows = (int)ceil(float(adjrows - 1) / tileBy);
         int tcols = (int)ceil(float(adjcols - 1) / tileBx);
@@ -446,13 +446,13 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
             }
 
             // create variables for gpu arrays in order to be able to take their addresses
-            int *seqX_gpu = nw.seqX_gpu.data();
-            int *seqY_gpu = nw.seqY_gpu.data();
-            int *score_gpu = nw.score_gpu.data();
-            int *subst_gpu = nw.subst_gpu.data();
+            int* seqX_gpu = nw.seqX_gpu.data();
+            int* seqY_gpu = nw.seqY_gpu.data();
+            int* score_gpu = nw.score_gpu.data();
+            int* subst_gpu = nw.subst_gpu.data();
 
             // group arguments to be passed to kernel B
-            void *kargs[]{
+            void* kargs[] {
                 &seqX_gpu,
                 &seqY_gpu,
                 &score_gpu,
@@ -468,7 +468,7 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
                 &d};
 
             // launch the kernel B in the given stream (don't statically allocate shared memory)
-            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void *)Nw_Gpu3_KernelB, gridB, blockB, kargs, shmemsz, nullptr /*stream*/)))
+            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu3_KernelB, gridB, blockB, kargs, shmemsz, nullptr /*stream*/)))
             {
                 return NwStat::errorKernelFailure;
             }

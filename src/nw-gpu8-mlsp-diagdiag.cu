@@ -5,8 +5,8 @@
 // + tile header row matrix,
 // + tile header column matrix.
 __global__ static void Nw_Gpu8_KernelA(
-    int *const tileHrowMat_gpu,
-    int *const tileHcolMat_gpu,
+    int* const tileHrowMat_gpu,
+    int* const tileHcolMat_gpu,
     const int trows,
     const int tcols,
     const int tileBx,
@@ -60,11 +60,11 @@ __global__ static void Nw_Gpu8_KernelA(
 // + tile header column matrix.
 __global__ static void Nw_Gpu8_KernelB(
     // standard params
-    const int *const seqX_gpu,
-    const int *const seqY_gpu,
-    int *const tileHrowMat_gpu,
-    int *const tileHcolMat_gpu,
-    const int *const subst_gpu,
+    const int* const seqX_gpu,
+    const int* const seqY_gpu,
+    int* const tileHrowMat_gpu,
+    int* const tileHcolMat_gpu,
+    const int* const subst_gpu,
     const int substsz,
     const int indel,
     // params related to tile B
@@ -75,11 +75,11 @@ __global__ static void Nw_Gpu8_KernelB(
     const int d)
 {
     extern __shared__ int shmem[/* substsz*substsz + tileBx + tileBy + (1+tileBx) + (1+tileBy) */];
-    int *const subst /*[substsz*substsz]*/ = shmem + 0;
-    int *const seqX /*[tileBx]*/ = subst + substsz * substsz;
-    int *const seqY /*[tileBy]*/ = seqX + tileBx;
-    int *const tileHrow /*[(1+tileBx)]*/ = seqY + tileBy;
-    int *const tileHcol /*[(1+tileBy)]*/ = tileHrow + (1 + tileBx);
+    int* const subst /*[substsz*substsz]*/ = shmem + 0;
+    int* const seqX /*[tileBx]*/ = subst + substsz * substsz;
+    int* const seqY /*[tileBy]*/ = seqX + tileBx;
+    int* const tileHrow /*[(1+tileBx)]*/ = seqY + tileBy;
+    int* const tileHcol /*[(1+tileBy)]*/ = tileHrow + (1 + tileBx);
 
     // Initialize the substitution matrix in shared memory.
     {
@@ -230,7 +230,7 @@ __global__ static void Nw_Gpu8_KernelB(
                 up = (j >= 0 && j < tileBx) ? tileHrow[1 + j] : 0;
             }
 
-            if (/*i >= 0 && i < tileBy && */j >= 0 && j < tileBx)
+            if (/*i >= 0 && i < tileBy && */ j >= 0 && j < tileBx)
             {
                 curr = upleft + el(subst, substsz, seqY[i], seqX[j]); // MOVE DOWN-RIGHT
                 curr = max(curr, up + indel);                         // MOVE DOWN
@@ -303,7 +303,7 @@ __global__ static void Nw_Gpu8_KernelB(
 // + tile header column matrix.
 //
 // Assumes that the row sequence (X) is longer or equal in length to the column sequence (Y).
-NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
+NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
 {
     // Number of threads per block for kernel A.
     int threadsPerBlockA = {};
@@ -319,7 +319,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
         tileBx = pr["tileBx"].curr();
         warpDivFactorB = pr["warpDivFactorB"].curr();
     }
-    catch (const std::out_of_range &)
+    catch (const std::out_of_range&)
     {
         return NwStat::errorInvalidValue;
     }
@@ -342,7 +342,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
     int tcols = (int)ceil(float(adjcols - 1) / tileBx);
 
     // Start the timer.
-    Stopwatch &sw = res.sw_align;
+    Stopwatch& sw = res.sw_align;
     sw.start();
 
     // Allocate space in the ram and gpu global memory.
@@ -356,7 +356,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
         nw.tileHrowMat.init(trows * tcols * (1 + tileBx));
         nw.tileHcolMat.init(trows * tcols * (1 + tileBy));
     }
-    catch (const std::exception &)
+    catch (const std::exception&)
     {
         return NwStat::errorMemoryAllocation;
     }
@@ -398,11 +398,11 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
         // Size of shared memory per block in bytes.
         int shmemByteSize = (0);
 
-        dim3 blockDim{};
+        dim3 blockDim {};
         blockDim.x = threadsPerBlockA;
 
         // Calculate the necessary number of blocks to cover the larger score matrix dimension.
-        dim3 gridDim{};
+        dim3 gridDim {};
         {
             int tileHrowMat_RowElemCount = tcols * (1 + tileBx);
             int tileHcolMat_ColElemCount = trows * (1 + tileBy);
@@ -410,10 +410,10 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
             gridDim.x = (int)ceil(float(largerDimElemCount) / threadsPerBlockA);
         }
 
-        int *tileHrowMat_gpu = nw.tileHrowMat_gpu.data();
-        int *tileHcolMat_gpu = nw.tileHcolMat_gpu.data();
+        int* tileHrowMat_gpu = nw.tileHrowMat_gpu.data();
+        int* tileHcolMat_gpu = nw.tileHcolMat_gpu.data();
 
-        void *kargs[]{
+        void* kargs[] {
             &tileHrowMat_gpu,
             &tileHcolMat_gpu,
             &trows,
@@ -422,7 +422,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
             &tileBy,
             &nw.indel};
 
-        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void *)Nw_Gpu8_KernelA, gridDim, blockDim, kargs, shmemByteSize, nullptr /*stream*/)))
+        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu8_KernelA, gridDim, blockDim, kargs, shmemByteSize, nullptr /*stream*/)))
         {
             return NwStat::errorKernelFailure;
         }
@@ -458,7 +458,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
         // The number of threads should be divisible by the warp size.
         // But for performance reasons, we don't need all those single-use warps, just half of them (or some other fraction).
         // That way the thread block can be smaller while doing the same amount of work.
-        dim3 blockB{};
+        dim3 blockB {};
         {
             int warps = (int)ceil(float(max(tileBx, tileBy)) / nw.warpsz / warpDivFactorB);
             blockB.x = nw.warpsz * warps;
@@ -467,7 +467,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
         // For all (minor) tile diagonals in the score matrix.
         for (int d = 0; d < tcols - 1 + trows; d++)
         {
-            dim3 gridB{};
+            dim3 gridB {};
             {
                 int tbeg = max(0, d - (tcols - 1));
                 int tend = min(d + 1, trows);
@@ -477,13 +477,13 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
                 gridB.x = dsize;
             }
 
-            int *seqX_gpu = nw.seqX_gpu.data();
-            int *seqY_gpu = nw.seqY_gpu.data();
-            int *tileHrowMat_gpu = nw.tileHrowMat_gpu.data();
-            int *tileHcolMat_gpu = nw.tileHcolMat_gpu.data();
-            int *subst_gpu = nw.subst_gpu.data();
+            int* seqX_gpu = nw.seqX_gpu.data();
+            int* seqY_gpu = nw.seqY_gpu.data();
+            int* tileHrowMat_gpu = nw.tileHrowMat_gpu.data();
+            int* tileHcolMat_gpu = nw.tileHcolMat_gpu.data();
+            int* subst_gpu = nw.subst_gpu.data();
 
-            void *kargs[]{
+            void* kargs[] {
                 // standard params
                 &seqX_gpu,
                 &seqY_gpu,
@@ -499,7 +499,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
                 &tileBy,
                 &d};
 
-            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void *)Nw_Gpu8_KernelB, gridB, blockB, kargs, shmemsz, nullptr /*stream*/)))
+            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu8_KernelB, gridB, blockB, kargs, shmemsz, nullptr /*stream*/)))
             {
                 return NwStat::errorKernelFailure;
             }

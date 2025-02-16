@@ -16,30 +16,30 @@ using namespace std::string_literals;
 #define el(mat, cols, i, j) (mat[(cols) * (i) + (j)])
 
 // calculate the minimum of two numbers
-inline const int &min2(const int &a, const int &b) noexcept
+inline const int& min2(const int& a, const int& b) noexcept
 {
     return (a <= b) ? a : b;
 }
 // calculate the maximum of two numbers
-inline const int &max2(const int &a, const int &b) noexcept
+inline const int& max2(const int& a, const int& b) noexcept
 {
     return (a >= b) ? a : b;
 }
 // calculate the minimum of three numbers
-inline const int &min3(const int &a, const int &b, const int &c) noexcept
+inline const int& min3(const int& a, const int& b, const int& c) noexcept
 {
     return (a <= b) ? ((a <= c) ? a : c) : ((b <= c) ? b : c);
 }
 // calculate the maximum of three numbers
-inline const int &max3(const int &a, const int &b, const int &c) noexcept
+inline const int& max3(const int& a, const int& b, const int& c) noexcept
 {
     return (a >= b) ? ((a >= c) ? a : c) : ((b >= c) ? b : c);
 }
 
-void NwPrintVect(std::ostream &os, const int *const vect, const int len);
-void NwPrintMat(std::ostream &os, const int *const mat, const int rows, const int cols);
-void NwPrintTiledMat(std::ostream &os, const int *const mat, const int rows, const int cols, const int tileWid /*without header column*/, const int tileHei /*without header row*/);
-void NwPrintHdrMat(std::ostream &os, const int *const tileHdrMat, const int rows, const int cols, const int hdrLen);
+void NwPrintVect(std::ostream& os, const int* const vect, const int len);
+void NwPrintMat(std::ostream& os, const int* const mat, const int rows, const int cols);
+void NwPrintTiledMat(std::ostream& os, const int* const mat, const int rows, const int cols, const int tileWid /*without header column*/, const int tileHei /*without header row*/);
+void NwPrintHdrMat(std::ostream& os, const int* const tileHdrMat, const int rows, const int cols, const int hdrLen);
 
 // Needleman-Wunsch status
 enum class NwStat : int
@@ -61,30 +61,35 @@ template <typename T>
 class HostArray
 {
 public:
-    HostArray() : _arr{nullptr, [](T *) {}},
-                  _size{}
-    {
-    }
+    HostArray()
+        : _arr {nullptr, [](T*) {}},
+          _size {}
+    { }
 
     void init(size_t size)
     {
         if (_size == size)
+        {
             return;
+        }
 
-        T *pAlloc = nullptr;
+        T* pAlloc = nullptr;
         if (size > 0)
         {
-            pAlloc = (T *)malloc(size * sizeof(T));
+            pAlloc = (T*)malloc(size * sizeof(T));
             if (pAlloc == nullptr)
             {
                 throw std::bad_alloc();
             }
         }
 
-        pointer arr{
-            pAlloc,
-            [](T *ptr)
-            { if( ptr != nullptr ) free( ptr ); }};
+        pointer arr {pAlloc, [](T* ptr)
+        {
+            if (ptr != nullptr)
+            {
+                free(ptr);
+            }
+        }};
 
         std::swap(_arr, arr);
         _size = size;
@@ -94,16 +99,31 @@ public:
         init(0);
     }
 
-    T &operator[](size_t pos) { return data()[pos]; }
-    const T &operator[](size_t pos) const { return data()[pos]; }
+    T& operator[](size_t pos)
+    {
+        return data()[pos];
+    }
+    const T& operator[](size_t pos) const
+    {
+        return data()[pos];
+    }
 
-    T *data() { return _arr.get(); }
-    const T *data() const { return _arr.get(); }
+    T* data()
+    {
+        return _arr.get();
+    }
+    const T* data() const
+    {
+        return _arr.get();
+    }
 
-    size_t size() const { return _size; }
+    size_t size() const
+    {
+        return _size;
+    }
 
 private:
-    using pointer = std::unique_ptr<T, void (*)(T *)>;
+    using pointer = std::unique_ptr<T, void (*)(T*)>;
     pointer _arr;
     size_t _size;
 };
@@ -113,17 +133,19 @@ template <typename T>
 class DeviceArray
 {
 public:
-    DeviceArray() : _arr{nullptr, [](T *) {}},
-                    _size{}
-    {
-    }
+    DeviceArray()
+        : _arr {nullptr, [](T*) {}},
+          _size {}
+    { }
 
     void init(size_t size)
     {
         if (_size == size)
+        {
             return;
+        }
 
-        T *pAlloc = nullptr;
+        T* pAlloc = nullptr;
         if (size > 0)
         {
             if (cudaSuccess != (cudaStatus = cudaMalloc(&pAlloc, size * sizeof(T))))
@@ -132,10 +154,13 @@ public:
             }
         }
 
-        pointer arr{
-            pAlloc,
-            [](T *ptr)
-            { if( ptr != nullptr ) cudaFree( ptr ); }};
+        pointer arr {pAlloc, [](T* ptr)
+        {
+            if (ptr != nullptr)
+            {
+                cudaFree(ptr);
+            }
+        }};
 
         std::swap(_arr, arr);
         _size = size;
@@ -145,13 +170,22 @@ public:
         init(0);
     }
 
-    T *data() { return _arr.get(); }
-    const T *data() const { return _arr.get(); }
+    T* data()
+    {
+        return _arr.get();
+    }
+    const T* data() const
+    {
+        return _arr.get();
+    }
 
-    size_t size() const { return _size; }
+    size_t size() const
+    {
+        return _size;
+    }
 
 private:
-    using pointer = std::unique_ptr<T, void (*)(T *)>;
+    using pointer = std::unique_ptr<T, void (*)(T*)>;
     pointer _arr;
     size_t _size;
 };
@@ -161,26 +195,26 @@ class Stopwatch
 {
 public:
     // combine many stopwatches into one
-    static Stopwatch combineStopwatches(std::vector<Stopwatch> &swList)
+    static Stopwatch combineStopwatches(std::vector<Stopwatch>& swList)
     {
         // if the stopwatch list is empty, return a default initialized stopwatch
         if (swList.empty())
         {
-            return Stopwatch{};
+            return Stopwatch {};
         }
 
         // copy on purpose here -- don't modify the given stopwatch list
-        Stopwatch res{};
+        Stopwatch res {};
         // the number of times the lap was found in the stopwatches
-        std::map<std::string, int> lapCount{};
+        std::map<std::string, int> lapCount {};
 
         // for all stopwatches + for all laps in a stopwatch, get the average lap time
         // +   for the average, don't count non-existent values in the denominator
-        for (auto &sw : swList)
+        for (auto& sw : swList)
         {
-            for (auto &lapTuple : sw._laps)
+            for (auto& lapTuple : sw._laps)
             {
-                const std::string &lapName = lapTuple.first;
+                const std::string& lapName = lapTuple.first;
                 float lapTime = lapTuple.second;
 
                 // insert or set default value! -- no initialization necessary before addition
@@ -190,10 +224,10 @@ public:
         }
 
         // for all laps in the result; divide them by the number of their occurences
-        for (auto &lapTuple : res._laps)
+        for (auto& lapTuple : res._laps)
         {
             // divide the total lap time by the number of lap occurences
-            const std::string &lapName = lapTuple.first;
+            const std::string& lapName = lapTuple.first;
             res._laps[lapName] /= lapCount[lapName];
         }
 
@@ -222,25 +256,28 @@ public:
     float total() const
     {
         float sum = 0;
-        for (auto &lap : _laps)
+        for (auto& lap : _laps)
         {
             sum += lap.second;
         }
         return sum;
     }
 
-    float get_or_default(const std::string &lap_name) const
+    float get_or_default(const std::string& lap_name) const
     {
         try
         {
             return _laps.at(lap_name);
         }
-        catch (const std::exception &)
+        catch (const std::exception&)
         {
             return 0;
         }
     }
-    const std::map<std::string, float> &laps() const { return _laps; }
+    const std::map<std::string, float>& laps() const
+    {
+        return _laps;
+    }
 
 private:
     using Clock = std::chrono::steady_clock;
@@ -262,10 +299,22 @@ public:
         _currIdx = 0;
     }
 
-    int curr() const { return _values[_currIdx]; }
-    bool hasCurr() const { return _currIdx < _values.size(); }
-    void next() { _currIdx++; }
-    void reset() { _currIdx = 0; }
+    int curr() const
+    {
+        return _values[_currIdx];
+    }
+    bool hasCurr() const
+    {
+        return _currIdx < _values.size();
+    }
+    void next()
+    {
+        _currIdx++;
+    }
+    void reset()
+    {
+        _currIdx = 0;
+    }
 
     std::vector<int> _values;
     int _currIdx = 0;
@@ -286,18 +335,26 @@ struct NwParams
         _isEnd = false;
     }
 
-    NwParam &operator[](const std::string name) { return _params.at(name); }
+    NwParam& operator[](const std::string name)
+    {
+        return _params.at(name);
+    }
 
-    bool hasCurr() const { return !_isEnd; }
+    bool hasCurr() const
+    {
+        return !_isEnd;
+    }
     void next() // updates starting from the last parameter and so on
     {
         for (auto iter = _params.rbegin(); iter != _params.rend(); iter++)
         {
-            auto &param = iter->second;
+            auto& param = iter->second;
             param.next();
 
             if (param.hasCurr())
+            {
                 return;
+            }
             param.reset();
         }
         _isEnd = true;
@@ -306,7 +363,7 @@ struct NwParams
     {
         for (auto iter = _params.rbegin(); iter != _params.rend(); iter++)
         {
-            auto &param = iter->second;
+            auto& param = iter->second;
             param.reset();
         }
         _isEnd = false;
@@ -315,9 +372,9 @@ struct NwParams
     std::map<std::string, int> snapshot() const
     {
         std::map<std::string, int> res;
-        for (const auto &paramTuple : _params)
+        for (const auto& paramTuple : _params)
         {
-            const std::string &paramName = paramTuple.first;
+            const std::string& paramName = paramTuple.first;
             int paramValue = paramTuple.second.curr();
 
             res[paramName] = paramValue;
@@ -436,7 +493,7 @@ struct NwResult
 
 // update the score given the current score matrix and position
 // NOTE: indel and most elements in the substitution matrix are negative, therefore find the maximum of them (instead of the minimum)
-inline void UpdateScore(NwInput &nw, int i, int j) noexcept
+inline void UpdateScore(NwInput& nw, int i, int j) noexcept
 {
     int p1 = el(nw.score, nw.adjcols, i - 1, j - 1) + el(nw.subst, nw.substsz, nw.seqY[i], nw.seqX[j]); // MOVE DOWN-RIGHT
     int p2 = el(nw.score, nw.adjcols, i - 1, j) + nw.indel;                                             // MOVE DOWN
@@ -447,7 +504,7 @@ inline void UpdateScore(NwInput &nw, int i, int j) noexcept
 // initialize memory on the device starting from the given element
 template <typename T>
 cudaError_t memSet(
-    T *const arr,
+    T* const arr,
     int idx,
     size_t count,
     int value)
@@ -462,7 +519,7 @@ cudaError_t memSet(
 }
 template <typename T>
 cudaError_t memSet(
-    DeviceArray<T> &arr,
+    DeviceArray<T>& arr,
     int idx,
     int value)
 {
@@ -472,8 +529,8 @@ cudaError_t memSet(
 // transfer data between the host and the device
 template <typename T>
 cudaError_t memTransfer(
-    T *const dst,
-    const T *const src,
+    T* const dst,
+    const T* const src,
     int elemcnt,
     cudaMemcpyKind kind)
 {
@@ -488,16 +545,16 @@ cudaError_t memTransfer(
 }
 template <typename T>
 cudaError_t memTransfer(
-    DeviceArray<T> &dst,
-    const std::vector<T> &src,
+    DeviceArray<T>& dst,
+    const std::vector<T>& src,
     int elemcnt)
 {
     return memTransfer(dst.data(), src.data(), elemcnt, cudaMemcpyHostToDevice);
 }
 template <typename T>
 cudaError_t memTransfer(
-    HostArray<T> &dst,
-    const DeviceArray<T> &src,
+    HostArray<T>& dst,
+    const DeviceArray<T>& src,
     int elemcnt)
 {
     return memTransfer(dst.data(), src.data(), elemcnt, cudaMemcpyDeviceToHost);
@@ -507,8 +564,8 @@ cudaError_t memTransfer(
 // + NOTE: dst and src cannot overlap
 template <typename T>
 cudaError_t memTransfer(
-    T *const dst,
-    const T *const src,
+    T* const dst,
+    const T* const src,
     int dst_rows,
     int dst_cols,
     int src_cols,
@@ -529,8 +586,8 @@ cudaError_t memTransfer(
 }
 template <typename T>
 cudaError_t memTransfer(
-    HostArray<T> &dst,
-    const DeviceArray<T> &src,
+    HostArray<T>& dst,
+    const DeviceArray<T>& src,
     int dst_rows,
     int dst_cols,
     int src_cols)
@@ -543,8 +600,8 @@ template <typename T>
 class FormatFlagsGuard
 {
 public:
-    FormatFlagsGuard(T &stream, int fwidth = 1, char ffill = ' ')
-        : _stream{stream}
+    FormatFlagsGuard(T& stream, int fwidth = 1, char ffill = ' ')
+        : _stream {stream}
     {
         // backup format flags and set the fill character and width
         _fflags = _stream.flags();
@@ -566,7 +623,7 @@ public:
     }
 
 private:
-    T &_stream;
+    T& _stream;
     std::ios_base::fmtflags _fflags;
     std::streamsize _fwidth;
     char _ffill;

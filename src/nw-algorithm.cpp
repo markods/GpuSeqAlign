@@ -1,36 +1,36 @@
 #include "nw-algorithm.hpp"
 #include <ctime>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <sstream>
 #include <vector>
 
 // align functions implemented in other files
-NwStat NwAlign_Cpu1_St_Row(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Cpu2_St_Diag(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Cpu3_St_DiagRow(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Gpu1_Ml_Diag(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams &pr, NwInput &nw, NwResult &res);
-NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams &pr, NwInput &nw, NwResult &res);
+NwStat NwAlign_Cpu1_St_Row(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Cpu2_St_Diag(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Cpu3_St_DiagRow(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu1_Ml_Diag(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res);
 
 // traceback, hash and print functions implemented in other files
-NwStat NwTrace1_Plain(const NwInput &nw, NwResult &res);
-NwStat NwTrace2_Sparse(const NwInput &nw, NwResult &res);
-NwStat NwHash1_Plain(const NwInput &nw, NwResult &res);
-NwStat NwHash2_Sparse(const NwInput &nw, NwResult &res);
-NwStat NwPrint1_Plain(std::ostream &os, const NwInput &nw, NwResult &res);
-NwStat NwPrint2_Sparse(std::ostream &os, const NwInput &nw, NwResult &res);
+NwStat NwTrace1_Plain(const NwInput& nw, NwResult& res);
+NwStat NwTrace2_Sparse(const NwInput& nw, NwResult& res);
+NwStat NwHash1_Plain(const NwInput& nw, NwResult& res);
+NwStat NwHash2_Sparse(const NwInput& nw, NwResult& res);
+NwStat NwPrint1_Plain(std::ostream& os, const NwInput& nw, NwResult& res);
+NwStat NwPrint2_Sparse(std::ostream& os, const NwInput& nw, NwResult& res);
 
 // all algorithms
-NwAlgorithmData algData{
+NwAlgorithmData algData {
     /*algMap:*/ {
         {"NwAlign_Cpu1_St_Row", {NwAlign_Cpu1_St_Row, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
         {"NwAlign_Cpu2_St_Diag", {NwAlign_Cpu2_St_Diag, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
@@ -49,24 +49,24 @@ NwAlgorithmData algData{
 };
 
 // conversion to object from json
-void from_json(const json &j, NwSubstData &substData)
+void from_json(const json& j, NwSubstData& substData)
 {
     j.at("letterMap").get_to(substData.letterMap);
     j.at("substMap").get_to(substData.substMap);
 }
-void from_json(const json &j, NwParamData &paramData)
+void from_json(const json& j, NwParamData& paramData)
 {
     j.get_to(paramData.paramMap);
 }
-void from_json(const json &j, NwParams &params)
+void from_json(const json& j, NwParams& params)
 {
     j.get_to(params._params);
 }
-void from_json(const json &j, NwParam &param)
+void from_json(const json& j, NwParam& param)
 {
     j.get_to(param._values);
 }
-void from_json(const json &j, NwSeqData &seqData)
+void from_json(const json& j, NwSeqData& seqData)
 {
     j.at("substName").get_to(seqData.substName);
     j.at("indel").get_to(seqData.indel);
@@ -75,39 +75,41 @@ void from_json(const json &j, NwSeqData &seqData)
 }
 
 // conversion to json from object
-void to_json(json &j, const NwSubstData &substData)
+void to_json(json& j, const NwSubstData& substData)
 {
-    j = json{
+    j = json {
         {"letterMap", substData.letterMap},
-        {"substMap", substData.substMap}};
+        {"substMap",  substData.substMap }
+    };
 }
-void to_json(json &j, const NwParamData &paramData)
+void to_json(json& j, const NwParamData& paramData)
 {
-    j = json{
+    j = json {
         {"paramMap", paramData.paramMap},
     };
 }
-void to_json(json &j, const NwParams &params)
+void to_json(json& j, const NwParams& params)
 {
     j = params._params;
 }
-void to_json(json &j, const NwParam &param)
+void to_json(json& j, const NwParam& param)
 {
     j = param._values;
 }
-void to_json(json &j, const NwSeqData &seqData)
+void to_json(json& j, const NwSeqData& seqData)
 {
-    j = json{
+    j = json {
         {"substName", seqData.substName},
-        {"indel", seqData.indel},
-        {"repeat", seqData.repeat},
-        {"seqList", seqData.seqList}};
+        {"indel",     seqData.indel    },
+        {"repeat",    seqData.repeat   },
+        {"seqList",   seqData.seqList  }
+    };
 }
 
 // conversion to csv from object
-void resHeaderToCsv(std::ostream &os, const NwResData &resData)
+void resHeaderToCsv(std::ostream& os, const NwResData& resData)
 {
-    FormatFlagsGuard fg{os};
+    FormatFlagsGuard fg {os};
     os.fill(' ');
 
     os << "# " << std::setw(1) << std::left << "substFname: \"" << resData.substFname << "\"" << '\n';
@@ -134,9 +136,9 @@ void resHeaderToCsv(std::ostream &os, const NwResData &resData)
 
     os << std::setw(1) << std::left << "       alloc,        cpy-dev,       init-hdr,         calc-1,       calc-2,       calc-3,       cpy-host,          total,     calc-sum" << '\n';
 }
-void to_csv(std::ostream &os, const NwResult &res)
+void to_csv(std::ostream& os, const NwResult& res)
 {
-    FormatFlagsGuard fg{os};
+    FormatFlagsGuard fg {os};
     {
         os.fill(' ');
 
@@ -163,7 +165,7 @@ void to_csv(std::ostream &os, const NwResult &res)
     fg.restore();
     to_csv(os, res.sw_align);
 }
-void paramsToCsv(std::ostream &os, const std::map<std::string, int> &paramMap)
+void paramsToCsv(std::ostream& os, const std::map<std::string, int>& paramMap)
 {
     std::stringstream strs;
     {
@@ -182,8 +184,8 @@ void paramsToCsv(std::ostream &os, const std::map<std::string, int> &paramMap)
                 firstIter = false;
             }
 
-            auto &paramName = iter->first;
-            auto &paramValue = iter->second;
+            auto& paramName = iter->first;
+            auto& paramValue = iter->second;
             strs << paramName << ":" << std::setw(2) << std::right << paramValue;
         }
         strs << "\"";
@@ -191,7 +193,7 @@ void paramsToCsv(std::ostream &os, const std::map<std::string, int> &paramMap)
 
     os << strs.str();
 }
-void to_csv(std::ostream &os, const Stopwatch &sw)
+void to_csv(std::ostream& os, const Stopwatch& sw)
 {
     lapTimeToCsv(os, sw.get_or_default("alloc"));
     os << ",   ";
@@ -218,19 +220,19 @@ void to_csv(std::ostream &os, const Stopwatch &sw)
     os << ", ";
     lapTimeToCsv(os, calc_total);
 }
-void lapTimeToCsv(std::ostream &os, float lapTime)
+void lapTimeToCsv(std::ostream& os, float lapTime)
 {
-    FormatFlagsGuard fg{os};
+    FormatFlagsGuard fg {os};
 
     os << std::fixed << std::setw(12) << std::setprecision(3) << std::setfill(' ') << lapTime;
 }
 
 // convert the sequence string to a vector using a character map
 // + NOTE: add the header (zeroth) element if requested
-std::vector<int> seqStrToVect(const std::string &str, const std::map<std::string, int> &map, const bool addHeader)
+std::vector<int> seqStrToVect(const std::string& str, const std::map<std::string, int>& map, const bool addHeader)
 {
     // preallocate the requred amount of elements
-    std::vector<int> vect{};
+    std::vector<int> vect {};
 
     // initialize the zeroth element if requested
     if (addHeader)
@@ -242,7 +244,7 @@ std::vector<int> seqStrToVect(const std::string &str, const std::map<std::string
     for (char c : str)
     {
         // add them to the vector
-        std::string cs{c};
+        std::string cs {c};
         int val = map.at(cs);
         vect.push_back(val);
     }
@@ -251,7 +253,7 @@ std::vector<int> seqStrToVect(const std::string &str, const std::map<std::string
 }
 
 // structs used to verify that the algorithms' results are correct
-bool operator<(const NwCompareKey &l, const NwCompareKey &r)
+bool operator<(const NwCompareKey& l, const NwCompareKey& r)
 {
     bool res =
         (l.iY < r.iY) ||
@@ -259,14 +261,14 @@ bool operator<(const NwCompareKey &l, const NwCompareKey &r)
     return res;
 }
 
-bool operator==(const NwCompareRes &l, const NwCompareRes &r)
+bool operator==(const NwCompareRes& l, const NwCompareRes& r)
 {
     bool res =
         l.score_hash == r.score_hash &&
         l.trace_hash == r.trace_hash;
     return res;
 }
-bool operator!=(const NwCompareRes &l, const NwCompareRes &r)
+bool operator!=(const NwCompareRes& l, const NwCompareRes& r)
 {
     bool res =
         l.score_hash != r.score_hash ||
@@ -275,14 +277,14 @@ bool operator!=(const NwCompareRes &l, const NwCompareRes &r)
 }
 
 // check that the result hashes match the hashes calculated by the first algorithm (the gold standard)
-NwStat setOrVerifyResult(const NwResult &res, NwCompareData &compareData)
+NwStat setOrVerifyResult(const NwResult& res, NwCompareData& compareData)
 {
-    std::map<NwCompareKey, NwCompareRes> &compareMap = compareData.compareMap;
-    NwCompareKey key{
+    std::map<NwCompareKey, NwCompareRes>& compareMap = compareData.compareMap;
+    NwCompareKey key {
         res.iY, // iY;
         res.iX  // iX;
     };
-    NwCompareRes calcVal{
+    NwCompareRes calcVal {
         res.score_hash, // score_hash;
         res.trace_hash  // trace_hash;
     };
@@ -297,7 +299,7 @@ NwStat setOrVerifyResult(const NwResult &res, NwCompareData &compareData)
     }
 
     // if the calculated value is not the same as the expected value
-    NwCompareRes &expVal = compareMap[key];
+    NwCompareRes& expVal = compareMap[key];
     if (calcVal != expVal)
     {
         // the current algorithm probably made a mistake during calculation
@@ -309,19 +311,19 @@ NwStat setOrVerifyResult(const NwResult &res, NwCompareData &compareData)
 }
 
 // combine results from many repetitions into one
-NwResult combineResults(std::vector<NwResult> &resList)
+NwResult combineResults(std::vector<NwResult>& resList)
 {
     // if the result list is empty, return a default initialized result
     if (resList.empty())
     {
-        return NwResult{};
+        return NwResult {};
     }
 
     // get the stopwatches from multiple repeats as lists
-    std::vector<Stopwatch> swAlignList{};
-    std::vector<Stopwatch> swHashList{};
-    std::vector<Stopwatch> swTraceList{};
-    for (auto &curr : resList)
+    std::vector<Stopwatch> swAlignList {};
+    std::vector<Stopwatch> swHashList {};
+    std::vector<Stopwatch> swTraceList {};
+    for (auto& curr : resList)
     {
         swAlignList.push_back(curr.sw_align);
         swHashList.push_back(curr.sw_hash);
@@ -345,8 +347,9 @@ std::string IsoTime()
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
 
-    std::tm tm_struct{};
-    if (localtime_s(&tm_struct, &time) != 0) {
+    std::tm tm_struct {};
+    if (localtime_s(&tm_struct, &time) != 0)
+    {
         throw std::runtime_error("Failed to get local time.");
     }
 
@@ -356,7 +359,7 @@ std::string IsoTime()
 }
 
 // open output file stream
-NwStat openOutFile(const std::string &path, std::ofstream &ofs)
+NwStat openOutFile(const std::string& path, std::ofstream& ofs)
 {
     try
     {
@@ -369,7 +372,7 @@ NwStat openOutFile(const std::string &path, std::ofstream &ofs)
             return NwStat::errorIoStream;
         }
     }
-    catch (const std::exception &)
+    catch (const std::exception&)
     {
         return NwStat::errorIoStream;
     }

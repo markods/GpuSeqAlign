@@ -2,7 +2,7 @@
 #include <limits>
 
 // get one of the optimal matching paths to a file
-NwStat NwTrace1_Plain(const NwInput &nw, NwResult &res)
+NwStat NwTrace1_Plain(const NwInput& nw, NwResult& res)
 {
     // variable used to calculate the hash function
     // http://www.cse.yorku.ca/~oz/hash.html
@@ -12,7 +12,7 @@ NwStat NwTrace1_Plain(const NwInput &nw, NwResult &res)
     std::vector<int> trace;
 
     // start the timer
-    Stopwatch &sw = res.sw_trace;
+    Stopwatch& sw = res.sw_trace;
     sw.start();
 
     // reserve space in the ram
@@ -20,7 +20,7 @@ NwStat NwTrace1_Plain(const NwInput &nw, NwResult &res)
     {
         trace.reserve(nw.adjrows - 1 + nw.adjcols);
     }
-    catch (const std::exception &)
+    catch (const std::exception&)
     {
         return NwStat::errorMemoryAllocation;
     }
@@ -81,7 +81,7 @@ NwStat NwTrace1_Plain(const NwInput &nw, NwResult &res)
     sw.lap("calc-1");
 
     // calculate the hash value
-    for (auto &curr : trace)
+    for (auto& curr : trace)
     {
         hash = ((hash << 5) + hash) ^ curr;
     }
@@ -96,7 +96,7 @@ NwStat NwTrace1_Plain(const NwInput &nw, NwResult &res)
 }
 
 // hash the score matrix
-NwStat NwHash1_Plain(const NwInput &nw, NwResult &res)
+NwStat NwHash1_Plain(const NwInput& nw, NwResult& res)
 {
     // variable used to calculate the hash function
     // http://www.cse.yorku.ca/~oz/hash.html
@@ -120,7 +120,7 @@ NwStat NwHash1_Plain(const NwInput &nw, NwResult &res)
 }
 
 // print the score matrix
-NwStat NwPrint1_Plain(std::ostream &os, const NwInput &nw, NwResult &res)
+NwStat NwPrint1_Plain(std::ostream& os, const NwInput& nw, NwResult& res)
 {
     (void)res;
     NwPrintMat(os, nw.score.data(), nw.adjrows, nw.adjcols);

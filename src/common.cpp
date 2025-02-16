@@ -5,11 +5,11 @@
 thread_local cudaError_t cudaStatus = cudaSuccess;
 
 void NwPrintVect(
-    std::ostream &os,
-    const int *const vect,
+    std::ostream& os,
+    const int* const vect,
     const int len)
 {
-    FormatFlagsGuard fg{os, 4};
+    FormatFlagsGuard fg {os, 4};
 
     for (int i = 0; i < len; i++)
     {
@@ -19,12 +19,12 @@ void NwPrintVect(
 }
 
 void NwPrintMat(
-    std::ostream &os,
-    const int *const mat,
+    std::ostream& os,
+    const int* const mat,
     const int rows,
     const int cols)
 {
-    FormatFlagsGuard fg{os, 4};
+    FormatFlagsGuard fg {os, 4};
 
     for (int i = 0; i < rows; i++)
     {
@@ -37,14 +37,14 @@ void NwPrintMat(
 }
 
 void NwPrintTiledMat(
-    std::ostream &os,
-    const int *const mat,
+    std::ostream& os,
+    const int* const mat,
     const int rows,
     const int cols,
     const int tileWid /*without header column*/,
     const int tileHei /*without header row*/)
 {
-    FormatFlagsGuard fg{os, 4};
+    FormatFlagsGuard fg {os, 4};
 
     for (int i = 0; i < rows; i++)
     {
@@ -66,13 +66,13 @@ void NwPrintTiledMat(
 }
 
 void NwPrintHdrMat(
-    std::ostream &os,
-    const int *const tileHdrMat,
+    std::ostream& os,
+    const int* const tileHdrMat,
     const int rows,
     const int cols,
     const int hdrLen)
 {
-    FormatFlagsGuard fg{os, 4};
+    FormatFlagsGuard fg {os, 4};
 
     for (int i = 0; i < rows; i++)
     {

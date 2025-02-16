@@ -1,7 +1,7 @@
 #include "common.hpp"
 #include <limits>
 
-static void NwLoadHeaderAndAlignTile(std::vector<int> &tile, const NwInput &nw, int iTile, int jTile)
+static void NwLoadHeaderAndAlignTile(std::vector<int>& tile, const NwInput& nw, int iTile, int jTile)
 {
     //  x x x x x x
     //  x / / / / /
@@ -59,13 +59,13 @@ static void NwLoadHeaderAndAlignTile(std::vector<int> &tile, const NwInput &nw, 
 // The score matrix is represented as two matrices (row-major order):
 // + tile header row matrix,
 // + tile header column matrix.
-NwStat NwTrace2_Sparse(const NwInput &nw, NwResult &res)
+NwStat NwTrace2_Sparse(const NwInput& nw, NwResult& res)
 {
     std::vector<int> trace;
     std::vector<int> tile;
 
     // Start the timer.
-    Stopwatch &sw = res.sw_trace;
+    Stopwatch& sw = res.sw_trace;
     sw.start();
 
     // Allocate memory.
@@ -75,7 +75,7 @@ NwStat NwTrace2_Sparse(const NwInput &nw, NwResult &res)
         std::vector<int> tmpTile(nw.tileHcolLen * nw.tileHrowLen, 0);
         std::swap(tile, tmpTile);
     }
-    catch (const std::exception &)
+    catch (const std::exception&)
     {
         return NwStat::errorMemoryAllocation;
     }
@@ -185,7 +185,7 @@ NwStat NwTrace2_Sparse(const NwInput &nw, NwResult &res)
     // Calculate the trace hash.
     // http://www.cse.yorku.ca/~oz/hash.html
     unsigned hash = 5381;
-    for (auto &curr : trace)
+    for (auto& curr : trace)
     {
         hash = ((hash << 5) + hash) ^ curr;
     }
@@ -200,7 +200,7 @@ NwStat NwTrace2_Sparse(const NwInput &nw, NwResult &res)
 // The score matrix is represented as two matrices (row-major order):
 // + tile header row matrix,
 // + tile header column matrix.
-NwStat NwHash2_Sparse(const NwInput &nw, NwResult &res)
+NwStat NwHash2_Sparse(const NwInput& nw, NwResult& res)
 {
     // http://www.cse.yorku.ca/~oz/hash.html
     unsigned hash = 5381;
@@ -208,7 +208,7 @@ NwStat NwHash2_Sparse(const NwInput &nw, NwResult &res)
     std::vector<int> prevRow;
 
     // Start the timer.
-    Stopwatch &sw = res.sw_hash;
+    Stopwatch& sw = res.sw_hash;
     sw.start();
 
     // Allocate memory.
@@ -219,7 +219,7 @@ NwStat NwHash2_Sparse(const NwInput &nw, NwResult &res)
         std::swap(currRow, tmpCurrRow);
         std::swap(prevRow, tmpPrevRow);
     }
-    catch (const std::exception &)
+    catch (const std::exception&)
     {
         return NwStat::errorMemoryAllocation;
     }
@@ -314,11 +314,11 @@ NwStat NwHash2_Sparse(const NwInput &nw, NwResult &res)
 // The score matrix is represented as two matrices (row-major order):
 // + tile header row matrix,
 // + tile header column matrix.
-NwStat NwPrint2_Sparse(std::ostream &os, const NwInput &nw, NwResult &res)
+NwStat NwPrint2_Sparse(std::ostream& os, const NwInput& nw, NwResult& res)
 {
     (void)res;
 
-    FormatFlagsGuard fg{os, 4};
+    FormatFlagsGuard fg {os, 4};
 
     std::vector<int> currRow;
     std::vector<int> prevRow;
@@ -331,7 +331,7 @@ NwStat NwPrint2_Sparse(std::ostream &os, const NwInput &nw, NwResult &res)
         std::swap(currRow, tmpCurrRow);
         std::swap(prevRow, tmpPrevRow);
     }
-    catch (const std::exception &)
+    catch (const std::exception&)
     {
         return NwStat::errorMemoryAllocation;
     }
