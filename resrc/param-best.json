@@ -57,8 +57,8 @@
    "NwAlign_Gpu9_Mlsp_DiagDiagDiag":
    {
       "threadsPerBlockA": [ 128 ],
-      "subtileRows": [ 1 ],
-      "subtileCols": [ 1 ],
+      "subtileRows": [ 2 ],
+      "subtileCols": [ 4 ],
       "subtileBx": [ 62 ]
    }
 }

@@ -9,8 +9,8 @@ __global__ static void Nw_Gpu9_KernelA(
     int *const tileHcolMat_gpu,
     const int trows,
     const int tcols,
-    const unsigned tileBx,
-    const unsigned tileBy,
+    const int tileBx,
+    const int tileBy,
     const int indel)
 {
     int tid = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -70,10 +70,11 @@ __global__ static void Nw_Gpu9_KernelB(
     // params related to tile B
     const int trows,
     const int tcols,
-    const unsigned tileBx,
-    const unsigned tileBy,
-    const unsigned subtileBx,
-    const unsigned subtileBy,
+    const int tileBx,
+    const int tileBy,
+    const int subtileCntX,
+    const int subtileCntY,
+    const int subtileBx,
     const int d)
 {
     extern __shared__ int shmem[/* substsz*substsz + tileBx + tileBy + (1+tileBx) + (1+tileBy) */];
@@ -168,89 +169,141 @@ __global__ static void Nw_Gpu9_KernelB(
     // Block should finish initializing the tile's windows into the X and Y sequences and its header row and column.
     __syncthreads();
 
-    // Calculate the tile elements.
-    if (threadIdx.x < tileBy)
+    // Calculate the subtile elements.
+    // Subtile shematic:
+    //               |h  h  h  h  h  h  h  h  h  |.  .  .  .  .
+    //             . |h  .  .  .  .  x  x  o  .  |.  .  .  .
+    //          .  . |h  .  .  . |ul u| o  .  .  |.  .  .
+    //       .  .  . |h  .  .  x |l  c| .  .  .  |.  .
+    //    .  .  .  . |h  .  x  x  o  .  .  .  .  |.
+    // .  .  .  .  . |h  .  x  o  .  .  .  .  .  |
+    // Observe that we only need three elements from the previous two diagonals, to slide the calculation window to the right each iteration.
+    // Therefore each thread keeps them in its registers.
+    //
+    // Warp thread 0 will read from the subtile header row each iteration, and share that value with the other threads.
+    // Warp thread 31 will write its current value to the last subtile row (reusing subtile header row for this purpose).
+    // Each warp thread, upon reaching the subtile right boundary, will write its current value to the last subtile column (reusing subtile header column for this purpose).
+
+    // Save the up-left and left element before any calculation to simplify the algorithm.
+    // The thread now only needs to worry how it's going to get its 'up' element.
+    //
+    // Observe that we initialized the elements as if we slid once to the left (in the reverse direction).
+    // That's because the code below first slides to the right, and then calculates the current element.
+    int upleft = 0;
+    int left = 0;
+    int up = tileHcol[1 + (threadIdx.x - 1)];
+    int curr = tileHcol[1 + (threadIdx.x)];
+
+    int warpIdxX = threadIdx.x % warpSize;
+    // The current thread's position in the tile.
+    // Append artificial tiles on the left, so that we have a jagged pattern.
+    // These tiles will be only used for thread block synchronization, not calculated.
+    int i = threadIdx.x;
+    int jbeg = 0 - threadIdx.x - (threadIdx.x / warpSize) * subtileBx;
+    // All subtile threads have to calculate the same number of elements. Otherwise, warp sync would deadlock.
+    // "Artificial" elements outside the tile boundaries are of no concern for correctness.
+    int jend = jbeg + subtileCntX * subtileBx;
+    int j = jbeg;
+    // De-skew the subtile diagonals so it's a rectangle. These variables see the tile as such.
+    int jInSubtile = 0;
+    int jInSubtileEnd = subtileBx;
+
+    // Zeroth block thread should update the upper-left corner header elements.
+    // These will not be updated during the calculation, because none of the threads will map to them.
+    // Syncronization is unnecessary, since only the zeroth block thread can access tileHcol[0].
+    if (i == 0 && j == 0)
     {
-        // Tile shematic:
-        //               |h  h  h  h  h  h  h  h  h  |.  .  .  .  .
-        //             . |h  .  .  .  .  x  x  o  .  |.  .  .  .
-        //          .  . |h  .  .  . |ul u| o  .  .  |.  .  .
-        //       .  .  . |h  .  .  x |l  c| .  .  .  |.  .
-        //    .  .  .  . |h  .  x  x  o  .  .  .  .  |.
-        // .  .  .  .  . |h  .  x  o  .  .  .  .  .  |
-        // Observe that we only need three elements from the previous two diagonals, to slide the calculation window to the right each iteration.
-        // Therefore each thread keeps them in its registers.
-        //
-        // Warp thread 0 will read from the tile header row each iteration, and share that value with the other threads.
-        // Warp thread 31 will write its current value to the last tile row (reusing tile header row for this purpose).
-        // Each warp thread, upon reaching the tile right boundary, will write its current value to the last tile column (reusing tile header column for this purpose).
+        tileHrow[0] = tileHcol[1 + (tileBy - 1)];
+        tileHcol[0] = tileHrow[1 + (tileBx - 1)];
+    }
 
-        // Save the up-left and left element before any calculation to simplify the algorithm.
-        // The thread now only needs to worry how it's going to get its 'up' element.
-        //
-        // Observe that we initialized the elements as if we slid once to the left (in the reverse direction).
-        // That's because the code below first slides to the right, and then calculates the current element.
-        int upleft = 0;
-        int left = 0;
-        int up = tileHcol[1 + (threadIdx.x - 1)];
-        int curr = tileHcol[1 + (threadIdx.x)];
-
-        // The current thread's position in the tile.
-        const int i = threadIdx.x;
-        int j = 0 - threadIdx.x;
-        // All threads have to calculate the same number of elements. Otherwise, warp sync would deadlock.
-        // "Artificial" elements outside the tile boundaries are of no concern for correctness.
-        int jend = j + (tileBx + (tileBy - 1));
-
-        // Zeroth warp thread should update the upper-left corner header elements.
-        // These will not be updated during the calculation, because none of the threads will map to them.
-        if (i == 0 && j == 0)
+    while (j < jend)
+    {
+        // Synchronize thread block on the start of every subsequent subtile diagonal.
+        if (jInSubtile == 0)
         {
-            tileHrow[0] = tileHcol[1 + (tileBy - 1)];
-            tileHcol[0] = tileHrow[1 + (tileBx - 1)];
+            // Synchronize thread block on the start of every subsequent! subtile diagonal.
+            if (j != jbeg)
+            {
+                __syncthreads();
+            }
+
+            // All bounds are inclusive.
+            int jSubtileUpLeft = j + warpIdxX;
+            int jSubtileDownLeft = j - (warpSize - 1 - warpIdxX);
+            int jSubtileUpRight = jSubtileUpLeft + subtileBx - (1 /*inclusive*/);
+            int jSubtileDownRight = jSubtileDownLeft + subtileBx - (1 /*inclusive*/);
+
+            // Skip calculating subtiles made up of only artificial elements.
+            if (jSubtileUpRight < 0 || jSubtileDownLeft >= tileBx)
+            {
+                j += subtileBx;
+                continue;
+            }
+            // From this point on we must be in a "real" subtile (contains real elements to be calculated).
+
+            // Correctness: offset the warp diagonal to the right until we touch the first "real" element with the zeroth warp thread.
+            // Otherwise we would lose the 'up' element (and the 'up left' element one warp sync later)
+            // in the __shfl_up_sync call below before we even start the first "real" calculation.
+            if (jSubtileUpLeft < 0)
+            {
+                int delta = -jSubtileUpLeft;
+                j += delta;
+                jInSubtile += delta;
+            }
+
+            // Optimization - limit the subtile to the right, so as to not unnecessarily calculate completely artificial subtile diagonals.
+            if (jSubtileDownRight >= tileBx)
+            {
+                int delta = jSubtileDownRight - tileBx;
+                jInSubtile -= delta;
+            }
         }
 
-        while (j < jend)
+        // Prevent losing the 'left' header element before the first "real" calculation.
+        if (j >= 0 && j < tileBx)
         {
-            // Prevent losing the 'left' header element before the first "real" calculation.
-            if (j >= 0 && j < tileBx)
+            upleft = up;
+            left = curr;
+        }
+
+        // Initialize 'up' elements for all warp threads except the zeroth.
+        // (Copies from a lane with lower thread id relative to the caller thread id.
+        // Also syncs the threads in the warp.)
+        up = __shfl_up_sync(/*mask*/ 0xffffffff, /*var*/ curr, /*delta*/ 1, /*width*/ warpSize);
+
+        // Initialize 'up' element for the zeroth thread.
+        // For "artificial" elements, initialize to 0 so that behavior is deterministic.
+        if (i % warpSize == 0)
+        {
+            up = (j >= 0 && j < tileBx) ? tileHrow[1 + j] : 0;
+        }
+
+        if (/*i >= 0 && i < tileBy && */ j >= 0 && j < tileBx)
+        {
+            curr = upleft + el(subst, substsz, seqY[i], seqX[j]); // MOVE DOWN-RIGHT
+            curr = max(curr, up + indel);                         // MOVE DOWN
+            curr = max(curr, left + indel);                       // MOVE RIGHT
+
+            if (j == tileBx - 1)
             {
-                upleft = up;
-                left = curr;
+                // When a block thread reaches the right tile boundary, save that element to the next header column.
+                tileHcol[1 + i] = curr;
             }
 
-            // Initialize 'up' elements for all warp threads except the zeroth.
-            // (Copies from a lane with lower thread id relative to the caller thread id.
-            // Also syncs the threads in the warp.)
-            up = __shfl_up_sync(/*mask*/ 0xffffffff, /*var*/ curr, /*delta*/ 1, /*width*/ warpSize);
-
-            // Initialize 'up' element for the zeroth thread.
-            // For "artificial" elements, initialize to 0 so that behavior is deterministic.
-            if (i & (warpSize - 1) == 0)
+            if (i % warpSize == warpSize - 1)
             {
-                up = (j >= 0 && j < tileBx) ? tileHrow[1 + j] : 0;
+                // Last subtile thread should save its current element to the next header row.
+                tileHrow[1 + j] = curr;
             }
+        }
 
-            if (i >= 0 && i < tileBy && j >= 0 && j < tileBx)
-            {
-                curr = upleft + el(subst, substsz, seqY[i], seqX[j]); // MOVE DOWN-RIGHT
-                curr = max(curr, up + indel);                         // MOVE DOWN
-                curr = max(curr, left + indel);                       // MOVE RIGHT
-
-                if (j == tileBx - 1)
-                {
-                    // When a warp thread reaches the right tile boundary, save that element to the next header column.
-                    tileHcol[1 + i] = curr;
-                }
-
-                if (i == tileBy - 1)
-                {
-                    // Last warp thread should save its current element to the next header row.
-                    tileHrow[1 + j] = curr;
-                }
-            }
-
-            j++;
+        j++;
+        jInSubtile++;
+        if (jInSubtile >= jInSubtileEnd)
+        {
+            jInSubtile = 0;
+            jInSubtileEnd = subtileBx;
         }
     }
 
@@ -296,9 +349,6 @@ __global__ static void Nw_Gpu9_KernelB(
             }
         }
     }
-
-    // Block should finish saving tile last row/column to tile header row/column matrix.
-    __syncthreads();
 }
 
 // Parallel gpu implementation of the Needleman-Wunsch algorithm.
@@ -314,8 +364,8 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
     // Tile B is a multiple of subtiles B in both dimensions.
     int tileBx = {};
     int tileBy = {};
-    int subtileRows = {};
-    int subtileCols = {};
+    int subtileCntX = {};
+    int subtileCntY = {};
     // Subtile B must have one dimension be a multiple of the number of threads in a warp.
     int subtileBx = {};
     int subtileBy = nw.warpsz;
@@ -323,17 +373,30 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
     try
     {
         threadsPerBlockA = pr["threadsPerBlockA"].curr();
-        subtileRows = pr["subtileRows"].curr();
-        subtileCols = pr["subtileCols"].curr();
+        int subtileRows = pr["subtileRows"].curr();
+        int subtileCols = pr["subtileCols"].curr();
         subtileBx = pr["subtileBx"].curr();
+
+        // TileB is square, but the subtile is a parallelogram with a 45 degree bottom-left angle.
+        tileBx = subtileCols * subtileBx;
+        tileBy = subtileRows * subtileBy;
+        // Extend tileB width, so that the subtile tiles perfectly the parallelogram 45 degree version of tileB.
+        // This maximizes the number of calculations for the same number of whole block synchronizations (equal to subtileCntX).
+        int k = (int)ceil(float(tileBx + tileBy - 1) / subtileBx);
+        tileBx = k * subtileBx - (tileBy - 1);
+        // Now we have a jagged subtiling.
+        subtileCntX = k + (subtileRows - 1);
+        subtileCntY = subtileRows;
+
+        if (subtileBx < subtileBy || tileBx < tileBy)
+        {
+            return NwStat::errorInvalidValue;
+        }
     }
     catch (const std::out_of_range &)
     {
         return NwStat::errorInvalidValue;
     }
-
-    tileBx = subtileCols * subtileBx;
-    tileBy = subtileRows * subtileBy;
 
     // Adjusted gpu score matrix dimensions.
     // The matrix dimensions are rounded up to 1 + <the nearest multiple of the tile B size>.
@@ -468,7 +531,7 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
 
         dim3 blockB{};
         {
-            blockB.x = nw.warpsz * subtileRows;
+            blockB.x = nw.warpsz * subtileCntY;
         }
 
         // For all (minor) tile diagonals in the score matrix.
@@ -504,8 +567,10 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams &pr, NwInput &nw, NwResult &res)
                 &tcols,
                 &tileBx,
                 &tileBy,
+                &subtileCntX,
+                &subtileCntY,
                 &subtileBx,
-                &subtileBy,
+                //&subtileBy,
                 &d};
 
             if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void *)Nw_Gpu9_KernelB, gridB, blockB, kargs, shmemsz, nullptr /*stream*/)))
