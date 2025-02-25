@@ -125,7 +125,7 @@ void resHeaderToCsv(std::ostream& os, const NwResData& resData)
     os << std::setw(5) << std::right << "lenY" << ", ";
     os << std::setw(5) << std::right << "lenX" << ",   ";
 
-    os << std::setw(64) << std::left << "algParams" << ",   ";
+    os << std::setw(66) << std::left << "algParams" << ",   ";
 
     os << std::setw(1) << std::right << "step" << ",";
     os << std::setw(1) << std::right << "stat" << ",";
@@ -150,7 +150,7 @@ void to_csv(std::ostream& os, const NwResult& res)
         os << std::setw(5) << std::right << res.seqY_len << ", ";
         os << std::setw(5) << std::right << res.seqX_len << ",   ";
 
-        os << std::setw(64) << std::left;
+        os << std::setw(66) << std::left;
         paramsToCsv(os, res.algParams);
         os << ",   ";
 
