@@ -1,7 +1,6 @@
-// very short length sequences -- ~0.01K base pairs
 {
    "substName": "blosum62",
-   "indel": -6,
+   "indel": -10,
    "repeat": 1,
    "seqList": [
       /*   0*/ "",

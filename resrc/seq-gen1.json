@@ -1,7 +1,6 @@
-// short length sequences -- ~0.1K base pairs
 {
    "substName": "blosum62",
-   "indel": -100,
+   "indel": -10,
    "repeat": 5,
    "seqList": [
       /*  64*/ "MKQESYAMSDIITLGGSCRKDSKTSRPQYRAEGRKRAEQVSGPEAGKIEKISHVSPNVDGLMVN",
