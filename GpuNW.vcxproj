@@ -109,7 +109,7 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_61,sm_61</CodeGeneration>
+      <CodeGeneration>compute_86,sm_86</CodeGeneration>
       <MaxRegCount>32</MaxRegCount>
       <CompileOut>$(SolutionDir)build\vs-$(Configuration)-$(Platform)\%(Filename)%(Extension).obj</CompileOut>
     </CudaCompile>
@@ -141,7 +141,7 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_61,sm_61</CodeGeneration>
+      <CodeGeneration>compute_86,sm_86</CodeGeneration>
       <MaxRegCount>32</MaxRegCount>
       <Optimization>O2</Optimization>
       <CompileOut>$(SolutionDir)build\vs-$(Configuration)-$(Platform)\%(Filename)%(Extension).obj</CompileOut>
