@@ -1,3 +1,4 @@
+// AMD Ryzen 9 7950X3D + Gigabyte RTX3090
 {
    "NwAlign_Cpu1_St_Row":
    { },
@@ -9,7 +10,7 @@
    },
    "NwAlign_Cpu4_Mt_DiagRow":
    {
-      "blocksz": [ 512 ]
+      "blocksz": [ 256 ]
    },
    "NwAlign_Gpu1_Ml_Diag":
    {
@@ -17,48 +18,48 @@
    },
    "NwAlign_Gpu2_Ml_DiagRow2Pass":
    {
-      "tileBx": [ 7 ],
-      "tileBy": [ 3 ],
-      "threadsPerBlock": [ 128 ]
+      "tileBx": [ 8 ],
+      "tileBy": [ 4 ],
+      "threadsPerBlock": [ 64 ]
    },
    "NwAlign_Gpu3_Ml_DiagDiag":
    {
-      "threadsPerBlockA": [ 128 ],
-      "tileBx": [ 62 ]
+      "threadsPerBlockA": [ 96 ],
+      "tileBx": [ 54 ]
    },
    "NwAlign_Gpu4_Ml_DiagDiag2Pass":
    {
       "tileAx": [ 384 ],
-      "tileAy": [ 20 ],
-      "tileBx": [ 66 ]
+      "tileAy": [ 32 ],
+      "tileBx": [ 52 ]
    },
    "NwAlign_Gpu5_Coop_DiagDiag":
    {
-      "tileAx": [ 62 ]
+      "tileAx": [ 52 ]
    },
    "NwAlign_Gpu6_Coop_DiagDiag2Pass":
    {
-      "tileAx": [ 384 ],
-      "tileAy": [ 20 ],
+      "tileAx": [ 192 ],
+      "tileAy": [ 128 ],
       "tileBx": [ 66 ]
    },
    "NwAlign_Gpu7_Mlsp_DiagDiag":
    {
-      "threadsPerBlockA": [ 128 ],
-      "tileBx": [ 62 ],
-      "warpDivFactorB": [ 2 ]
+      "threadsPerBlockA": [ 96 ],
+      "tileBx": [ 70 ],
+      "warpDivFactorB": [ 1 ]
    },
    "NwAlign_Gpu8_Mlsp_DiagDiag":
    {
-      "threadsPerBlockA": [ 128 ],
-      "tileBx": [ 62 ],
-      "warpDivFactorB": [ 2 ]
+      "threadsPerBlockA": [ 160 ],
+      "tileBx": [ 76 ],
+      "warpDivFactorB": [ 1 ]
    },
    "NwAlign_Gpu9_Mlsp_DiagDiagDiag":
    {
       "threadsPerBlockA": [ 128 ],
-      "subtileRows": [ 2 ],
+      "subtileRows": [ 4 ],
       "subtileCols": [ 4 ],
-      "subtileBx": [ 62 ]
+      "subtileBx": [ 48 ]
    }
 }
