@@ -248,22 +248,29 @@ int main(int argc, char* argv[])
                         // compare the sequences, hash and trace the score matrices, and verify the soundness of the results
                         if (!res.errstep && NwStat::success != (res.stat = alg.align(nw, res)))
                         {
-                            res.errstep = 1;
+                            if (res.stat == NwStat::errorInvalidValue)
+                            {
+                                res.errstep = 1;
+                            }
+                            else
+                            {
+                                res.errstep = 2;
+                            }
                             res.cudaerr = cudaStatus;
                         }
                         if (!res.errstep && NwStat::success != (res.stat = alg.hash(nw, res)))
                         {
-                            res.errstep = 2;
+                            res.errstep = 3;
                             res.cudaerr = cudaStatus;
                         }
                         if (!res.errstep && NwStat::success != (res.stat = alg.trace(nw, res)))
                         {
-                            res.errstep = 3;
+                            res.errstep = 4;
                             res.cudaerr = cudaStatus;
                         }
                         if (!res.errstep && NwStat::success != (res.stat = setOrVerifyResult(res, compareData)))
                         {
-                            res.errstep = 4;
+                            res.errstep = 5;
                             compareData.calcErrors++;
                         }
 

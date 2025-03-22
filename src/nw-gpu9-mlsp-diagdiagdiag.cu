@@ -219,14 +219,10 @@ __global__ static void Nw_Gpu9_KernelB(
 
     while (j < jend)
     {
-        // Synchronize thread block on the start of every subsequent subtile diagonal.
+        // Synchronize thread block on the start of every subtile diagonal.
         if (jInSubtile == 0)
         {
-            // Synchronize thread block on the start of every subsequent! subtile diagonal.
-            if (j != jbeg)
-            {
-                __syncthreads();
-            }
+            __syncthreads();
 
             // All bounds are inclusive.
             int jSubtileUpLeft = j + warpIdxX;
@@ -235,7 +231,7 @@ __global__ static void Nw_Gpu9_KernelB(
             int jSubtileDownRight = jSubtileDownLeft + subtileBx - (1 /*inclusive*/);
 
             // Skip calculating subtiles made up of only artificial elements.
-            if (jSubtileUpRight < 0 || jSubtileDownLeft >= tileBx)
+            if (jSubtileUpRight < 0 || jSubtileDownLeft > tileBx - 1)
             {
                 j += subtileBx;
                 continue;
@@ -253,10 +249,10 @@ __global__ static void Nw_Gpu9_KernelB(
             }
 
             // Optimization - limit the subtile to the right, so as to not unnecessarily calculate completely artificial subtile diagonals.
-            if (jSubtileDownRight >= tileBx)
+            if (jSubtileDownRight > tileBx - 1)
             {
-                int delta = jSubtileDownRight - tileBx;
-                jInSubtile -= delta;
+                int delta = jSubtileDownRight - (tileBx - 1);
+                jInSubtileEnd -= delta;
             }
         }
 
@@ -267,16 +263,20 @@ __global__ static void Nw_Gpu9_KernelB(
             left = curr;
         }
 
+        // Syncs thread memory accesses in the warp.
         // Initialize 'up' elements for all warp threads except the zeroth.
-        // (Copies from a lane with lower thread id relative to the caller thread id.
-        // Also syncs the threads in the warp.)
+        // + Copies from a lane with lower thread id relative to the caller thread id.
         up = __shfl_up_sync(/*mask*/ 0xffffffff, /*var*/ curr, /*delta*/ 1, /*width*/ warpSize);
 
         // Initialize 'up' element for the zeroth thread.
         // For "artificial" elements, initialize to 0 so that behavior is deterministic.
-        if (i % warpSize == 0)
+        if (warpIdxX == 0)
         {
-            up = (j >= 0 && j < tileBx) ? tileHrow[1 + j] : 0;
+            up = 0;
+            if (j >= 0 && j < tileBx)
+            {
+                up = tileHrow[1 + j];
+            }
         }
 
         if (/*i >= 0 && i < tileBy && */ j >= 0 && j < tileBx)
@@ -291,7 +291,7 @@ __global__ static void Nw_Gpu9_KernelB(
                 tileHcol[1 + i] = curr;
             }
 
-            if (i % warpSize == warpSize - 1)
+            if (warpIdxX == warpSize - 1)
             {
                 // Last subtile thread should save its current element to the next header row.
                 tileHrow[1 + j] = curr;
