@@ -39,7 +39,9 @@ using namespace System.Text.Json;
 # Framework
 
 [string] $script:ProjectRoot = Split-Path -Path $MyInvocation.MyCommand.Path -Parent;
-[string] $script:Target = 'nw.exe';   # compilation target
+[string] $script:OSAndArch = [System.Runtime.InteropServices.RuntimeInformation]::RuntimeIdentifier;
+[string] $script:BuildSubfolder = "${script:OSAndArch}_pwsh_release";
+[string] $script:ProgramName = "nw";
 [int] $script:LastStatusCode = 0;
 
 [string] $script:StageSep = "------------------------------------------------------------------------------------------------------ <<< {0}";
@@ -48,7 +50,8 @@ using namespace System.Text.Json;
 # NOTE: leave powershell array constructor ( @() ) if there is only one argument (otherwise it won't be a powershell array due to unpacking)
 [string[][]] $script:DefaultArgs =
     ( "=run", "subst-blosum.json", "param-optimize.json", "seq-optimize.json" ),
-    ( "=run", "subst-blosum.json", "param-best.json", "seq-gen0.json" ),
+    ( "=run", "subst-blosum.json", "param-best.json", "seq-debug.json" ),
+    ( "=run", "subst-blosum.json", "param-best.json", "seq-profile.json" ),
     ( "=run", "subst-blosum.json", "param-best.json", "seq-gen1.json" ),
     ( "=run", "subst-blosum.json", "param-best.json", "seq-gen2.json" ),
     ( "=run", "subst-blosum.json", "param-best.json", "seq-gen3.json" );
@@ -58,23 +61,22 @@ build   [[-]-help]   [=clean ...] [=build ...]   [=run fsubsts fparams fseqs ...
 
 Default:             build   --help
 
-Switches:
+Shortcuts:
     -help            show the help menu
-    -0               use the default parameters 0:   build-v2 $( $script:DefaultArgs[ 0 ] -Join ' ')
 
-    -1               use the default parameters 1:   build-v2 $( $script:DefaultArgs[ 1 ] -Join ' ')
-    -2               use the default parameters 2:   build-v2 $( $script:DefaultArgs[ 2 ] -Join ' ')
-    -3               use the default parameters 3:   build-v2 $( $script:DefaultArgs[ 3 ] -Join ' ')
-    -4               use the default parameters 4:   build-v2 $( $script:DefaultArgs[ 4 ] -Join ' ')
+    -0               optimize params:       $( $script:DefaultArgs[ 0 ] -Join ' ')
+    -1               use debug sequences:   $( $script:DefaultArgs[ 1 ] -Join ' ')
+    -2               use profile sequences: $( $script:DefaultArgs[ 2 ] -Join ' ')
 
-Switches:
-    --help           shows the help menu
-    -help            same as --help
+    -3               use gen1 sequences:    $( $script:DefaultArgs[ 3 ] -Join ' ')
+    -4               use gen2 sequences:    $( $script:DefaultArgs[ 4 ] -Join ' ')
+    -5               use gen3 sequences:    $( $script:DefaultArgs[ 5 ] -Join ' ')
 
+Commands:
     =clean           clean project
-       -all          +   clean logs as well
+       -logs         +   clean logs as well
+
     =build           build project
-       -debug        +   don't optimise and define the DEBUG symbol
 
     =run             run the compiled program
        fsubsts       +   specify the "substitution matrices" json file (relative to /resrc)
@@ -543,15 +545,15 @@ class Pipeline
         $StageCommandArr = $Stage.CmdArgArr;
 
         # clean command parameters
-        [bool] $ShouldCleanMisc = $false;
+        [bool] $ShouldCleanLogs = $false;
 
 
         # switch the clean command parameters
         switch( $StageCommandArr )
         {
-            "-all"
+            "-logs"
             {
-                $ShouldCleanMisc = $true;
+                $ShouldCleanLogs = $true;
                 continue;
             }
             default
@@ -565,20 +567,16 @@ class Pipeline
         # clean the build items (and logs if necessary)
         $BuildItems = @(
             # remove the build directory
-            [PSCustomObject]@{ Path="./build"; Filter=""; }
-            # # remove the .vs directory
-            # [PSCustomObject]@{ Path ="./.vs"; Filter=""; }
-            # remove the VS's temp folder
-            [PSCustomObject]@{ Path ="./enc_temp_folder"; Filter=""; }
+            [PSCustomObject]@{ Path="./build/${script:BuildSubfolder}"; Filter=""; }
         );
-        $MiscItems = @(
+        $LogItems = @(
             # remove the logs in the log directory
             [PSCustomObject]@{ Path ="./log"; Filter=""; }
         );
 
         $ItemsToRemove = @();
         if( $true            ) { $ItemsToRemove = $ItemsToRemove + $BuildItems; }
-        if( $ShouldCleanMisc ) { $ItemsToRemove = $ItemsToRemove + $MiscItems;  }
+        if( $ShouldCleanLogs ) { $ItemsToRemove = $ItemsToRemove + $LogItems;  }
 
         foreach( $Item in $ItemsToRemove )
         {
@@ -615,11 +613,11 @@ class Pipeline
         # switch the build command parameters
         switch( $StageCommandArr )
         {
-            "-debug"
-            {
-                $Optimization = '-DDEBUG';
-                continue;
-            }
+            # "-debug"
+            # {
+            #     $Optimization = '-DDEBUG';
+            #     continue;
+            # }
             default
             {
                 "Unknown parameter: {0}" -f $_ | Write-Output;
@@ -663,16 +661,18 @@ class Pipeline
                 "-warn-spills",          # 
                #"-v",                    # show verbose cuda kernel compilation info
             '"',                         # 
-            "--std=c++17",               # set the c++ standard (currently nvcc doesn't support c++20)
+            "--std=c++17",               # currently nvcc doesn't support c++20
             '-arch=sm_86',               # architecture, lowest is 61
-          # "-use_fast_math",            # use fast math
             '-maxrregcount 32',          # maximum registers available per thread
-            "$Optimization",             # define the debug symbol, or optimise code, depending on what is requested
-            "   -o `"../build/pwsh/${script:Target}`"", # add the output file name to the build command
+            "$Optimization",             #
+            "   -o `"../build/${script:BuildSubfolder}/${script:ProgramName}.exe`"", #
             $SourceFiles;                # source files
 
         # create the output directory if it doesn't exist
-        if( !( Test-Path "../build/pwsh" -PathType "Container" ) ) { New-Item -Path "../build/pwsh" -ItemType "Directory" | Out-Null; }
+        if( !( Test-Path "../build/${script:BuildSubfolder}" -PathType "Container" ) )
+        {
+            New-Item -Path "../build/${script:BuildSubfolder}" -ItemType "Directory" | Out-Null;
+        }
 
         # invoke the default stage script on this stage
         Stage_ExecuteScript $script:StageScript_Default $Stage $false | Write-Output;
@@ -684,10 +684,10 @@ class Pipeline
 [Stage] $script:NwRunStg = [Stage]::new(
     "NW RUN",
     @(
-        # NOTE: command paths should be relative to the project 'build/pwsh' folder
-        "./${script:Target}"
+        # NOTE: paths passed as parameters should be relative to the project build/pwsh folder
+        "./${script:ProgramName}.exe"
     ),
-    "${script:ProjectRoot}/build/pwsh",
+    "${script:ProjectRoot}/build/${script:BuildSubfolder}",
     $true
 );
 
