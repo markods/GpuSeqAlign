@@ -387,7 +387,7 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
             &nw.indel};
 
         // launch the kernel A in the given stream (don't statically allocate shared memory)
-        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu3_KernelA, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
+        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu3_KernelA, gridA, blockA, kargs, shmemsz, cudaStreamDefault)))
         {
             return NwStat::errorKernelFailure;
         }
@@ -468,7 +468,7 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
                 &d};
 
             // launch the kernel B in the given stream (don't statically allocate shared memory)
-            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu3_KernelB, gridB, blockB, kargs, shmemsz, nullptr /*stream*/)))
+            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu3_KernelB, gridB, blockB, kargs, shmemsz, cudaStreamDefault)))
             {
                 return NwStat::errorKernelFailure;
             }

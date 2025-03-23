@@ -441,7 +441,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
             &tileAy};
 
         // launch the kernel in the given stream (don't statically allocate shared memory)
-        if (cudaSuccess != (cudaStatus = cudaLaunchCooperativeKernel((void*)Nw_Gpu5_Kernel, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
+        if (cudaSuccess != (cudaStatus = cudaLaunchCooperativeKernel((void*)Nw_Gpu5_Kernel, gridA, blockA, kargs, shmemsz, cudaStreamDefault)))
         {
             return NwStat::errorKernelFailure;
         }

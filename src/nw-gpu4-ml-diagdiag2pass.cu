@@ -394,7 +394,7 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res)
             &tileAy};
 
         // launch the kernel in the given stream (don't statically allocate shared memory)
-        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu4_KernelA, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
+        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu4_KernelA, gridA, blockA, kargs, shmemsz, cudaStreamDefault)))
         {
             return NwStat::errorKernelFailure;
         }
@@ -460,7 +460,7 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res)
                 &d};
 
             // launch the kernel B in the given stream (don't statically allocate shared memory)
-            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu4_KernelB, gridB, blockB, kargs, shmemsz, nullptr /*stream*/)))
+            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu4_KernelB, gridB, blockB, kargs, shmemsz, cudaStreamDefault)))
             {
                 return NwStat::errorKernelFailure;
             }

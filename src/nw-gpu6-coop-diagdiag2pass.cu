@@ -405,7 +405,7 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res)
             &tileAy};
 
         // launch the kernel in the given stream (don't statically allocate shared memory)
-        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu6_KernelA, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
+        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu6_KernelA, gridA, blockA, kargs, shmemsz, cudaStreamDefault)))
         {
             return NwStat::errorKernelFailure;
         }
@@ -467,7 +467,7 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res)
             &tileBy};
 
         // launch the kernel in the given stream (don't statically allocate shared memory)
-        if (cudaSuccess != (cudaStatus = cudaLaunchCooperativeKernel((void*)Nw_Gpu6_KernelB, gridB, blockB, kargs, shmemsz, nullptr /*stream*/)))
+        if (cudaSuccess != (cudaStatus = cudaLaunchCooperativeKernel((void*)Nw_Gpu6_KernelB, gridB, blockB, kargs, shmemsz, cudaStreamDefault)))
         {
             return NwStat::errorKernelFailure;
         }

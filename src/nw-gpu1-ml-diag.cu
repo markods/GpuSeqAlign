@@ -192,7 +192,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(NwParams& pr, NwInput& nw, NwResult& res)
                 &d};
 
             // launch the kernel in the given stream (don't statically allocate shared memory)
-            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu1_Kernel, gridA, blockA, kargs, shmemsz, nullptr /*stream*/)))
+            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu1_Kernel, gridA, blockA, kargs, shmemsz, cudaStreamDefault)))
             {
                 return NwStat::errorKernelFailure;
             }

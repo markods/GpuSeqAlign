@@ -402,7 +402,7 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
             &tileBy,
             &nw.indel};
 
-        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu7_KernelA, gridDim, blockDim, kargs, shmemByteSize, nullptr /*stream*/)))
+        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu7_KernelA, gridDim, blockDim, kargs, shmemByteSize, cudaStreamDefault)))
         {
             return NwStat::errorKernelFailure;
         }
@@ -477,7 +477,7 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
                 &tileBy,
                 &d};
 
-            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu7_KernelB, gridB, blockB, kargs, shmemsz, nullptr /*stream*/)))
+            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu7_KernelB, gridB, blockB, kargs, shmemsz, cudaStreamDefault)))
             {
                 return NwStat::errorKernelFailure;
             }
