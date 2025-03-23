@@ -408,6 +408,32 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
     //  x / . . . .       x . / / . .       x . . . / /|
     // launch kernel B for each minor tile diagonal of the score matrix
     {
+        cudaStream_t stream;
+        if (cudaSuccess != (cudaStatus = cudaStreamCreate(&stream)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+        auto defer1 = make_defer([&]() noexcept
+        {
+            cudaStreamDestroy(stream);
+        });
+
+        cudaGraph_t graph;
+        if (cudaSuccess != (cudaStatus = cudaGraphCreate(&graph, 0)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+        auto defer2 = make_defer([&]() noexcept
+        {
+            cudaGraphDestroy(graph);
+        });
+
+        // start capturing kernel launches by this thread
+        if (cudaSuccess != (cudaStatus = cudaStreamBeginCapture(stream, cudaStreamCaptureModeThreadLocal)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+
         // grid and block dimensions for kernel B
         dim3 gridB {};
         dim3 blockB {};
@@ -468,10 +494,32 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
                 &d};
 
             // launch the kernel B in the given stream (don't statically allocate shared memory)
-            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu3_KernelB, gridB, blockB, kargs, shmemsz, cudaStreamDefault)))
+            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu3_KernelB, gridB, blockB, kargs, shmemsz, stream)))
             {
                 return NwStat::errorKernelFailure;
             }
+        }
+
+        // collect kernel launches from this thread
+        if (cudaSuccess != (cudaStatus = cudaStreamEndCapture(stream, &graph)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+
+        cudaGraphExec_t graphExec;
+        if (cudaSuccess != (cudaStatus = cudaGraphInstantiate(&graphExec, graph, nullptr /*pErrorNode*/, nullptr /*pLogBuffer*/, 0 /*bufferSize*/)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+        auto defer3 = make_defer([&]() noexcept
+        {
+            cudaGraphExecDestroy(graphExec);
+        });
+
+        // actually execute the kernels
+        if (cudaSuccess != (cudaStatus = cudaGraphLaunch(graphExec, cudaStreamDefault)))
+        {
+            return NwStat::errorKernelFailure;
         }
     }
 
