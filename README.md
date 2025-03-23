@@ -4,24 +4,24 @@ This project compares different CPU and GPU implementations of the Needleman-Wun
 For the GPU algorithms, the bulk of the work is calculating the dynamic-programming score matrix (not necessarily square). Another concern is its transfer to main memory. Most optimizations apply to the score matrix calculation.
 
 Present algorithms:
-| Algorithm                     | NW_LG | NW_AG         | SW_LG | SW_AG | Description                                                                                                                                                     |
-| ----------------------------- | ----- | ------------- | ----- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| cpu1-st-row                   | ✅     | 🔍             | 🔍     | 🔍     | Row-major calculation of score matrix.                                                                                                                          |
-| cpu2-st-diag                  | ✅     | 🔍             | 🔍     | 🔍     | Minor diagonal calculation of score matrix.                                                                                                                     |
-| cpu3-st-diagrow               | ✅     | 🔍             | 🔍     | 🔍     | Divide matrix into tiles. Tiles are visited in minor diagonal order, inside the tile visit elements in row-major order.                                         |
-| cpu4-mt-diagrow               | ✅     | 🔍             | 🔍     | 🔍     | Multi-threaded variant of cpu3-st-diagrow. One thread per rectangular tile. Static visitation schedule for tile diagonal.                                       |
-| ---                           | ---   | ---           | ---   | ---   | ---                                                                                                                                                             |
-| gpu1-ml-diag                  | ✅     | 🔍             | 🔍     | 🔍     | Launch kernel per each minor diagonal. One thread per element.                                                                                                  |
-| gpu2-ml-diagrow2pass          | ✅     | 🔍             | 🔍     | 🔍     | Like gpu1-ml-diag, but one thread per tile. Two-pass, first does neighbour-independent work.                                                                    |
-| gpu3-ml-diagdiag              | ✅     | 🔍             | 🔍     | 🔍     | Kernel per each minor tile diagonal. Multiple threads per tile - one per tile row. Threads sync on each minor diagonal in tile.                                 |
-| gpu4-ml-diagdiag2pass         | ✅     | 🔍             | 🔍     | 🔍     | Like gpu3-ml-diagdiag, but two-pass like in gpu2-ml-diagrow2pass.                                                                                               |
-| gpu5-coop-diagdiag            | ✅     | ❌<sup>1</sup> | 🔍     | 🔍     | Like gpu3-ml-diagdiag, but use grid sync instead of multi-launching kernels.                                                                                    |
-| gpu6-coop-diagdiag2pass       | ✅     | ❌<sup>1</sup> | 🔍     | 🔍     | Like gpu4-ml-diagdiag2pass, but use grid sync instead of multi-launching kernels.                                                                               |
-| ---                           | ---   | ---           | ---   | ---   | ---                                                                                                                                                             |
-| gpu7-mlsp-diagdiag            | ✅     | 🔍             | 🔍     | 🔍     | Like gpu3-ml-diagdiag, but represents the score matrix as a tile header row matrix and tile header column. Transfers back only those.                           |
-| gpu8-mlsp-diagdiag            | ✅     | 🔍             | 🔍     | 🔍     | Like gpu7-mlsp-diagdiag, but stores the tile completely in registers, instead of in shared memory.                                                              |
-| gpu9-mlsp-diagdiagdiagskew    | ✅     | 🔍             | 🔍     | 🔍     | Like gpu8-mlsp-diagdiag, but divides the rectangular tile into parallelogram-shaped subtiles (skewed). Diagonal of subtiles is visited in minor-diagonal order. |
-| gpu10-mlsppt-diagdiagdiagskew | 🔍     | 🔍             | 🔍     | 🔍     | Like gpu9-mlsp-diagdiagdiagskew, but does tile diagonal transfer parallel to score matrix calculation.                                                          |
+| Algorithm                     | NW_LG | NW_AG         | SW_LG | SW_AG         | Description                                                                                                                                                     |
+| ----------------------------- | ----- | ------------- | ----- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| cpu1-st-row                   | ✅     | 🔍             | 🔍     | 🔍             | Row-major calculation of score matrix.                                                                                                                          |
+| cpu2-st-diag                  | ✅     | 🔍             | 🔍     | 🔍             | Minor diagonal calculation of score matrix.                                                                                                                     |
+| cpu3-st-diagrow               | ✅     | 🔍             | 🔍     | 🔍             | Divide matrix into tiles. Tiles are visited in minor diagonal order, inside the tile visit elements in row-major order.                                         |
+| cpu4-mt-diagrow               | ✅     | 🔍             | 🔍     | 🔍             | Multi-threaded variant of cpu3-st-diagrow. One thread per rectangular tile. Static visitation schedule for tile diagonal.                                       |
+| ---                           | ---   | ---           | ---   | ---           | ---                                                                                                                                                             |
+| gpu1-ml-diag                  | ✅     | 🔍             | 🔍     | 🔍             | Launch kernel per each minor diagonal. One thread per element.                                                                                                  |
+| gpu2-ml-diagrow2pass          | ✅     | 🔍             | 🔍     | 🔍             | Like gpu1-ml-diag, but one thread per tile. Two-pass, first does neighbour-independent work.                                                                    |
+| gpu3-ml-diagdiag              | ✅     | 🔍             | 🔍     | 🔍             | Kernel per each minor tile diagonal. Multiple threads per tile - one per tile row. Threads sync on each minor diagonal in tile.                                 |
+| gpu4-ml-diagdiag2pass         | ✅     | 🔍             | 🔍     | 🔍             | Like gpu3-ml-diagdiag, but two-pass like in gpu2-ml-diagrow2pass.                                                                                               |
+| gpu5-coop-diagdiag            | ✅     | ❌<sup>1</sup> | 🔍     | ❌<sup>1</sup> | Like gpu3-ml-diagdiag, but use grid sync instead of multi-launching kernels.                                                                                    |
+| gpu6-coop-diagdiag2pass       | ✅     | ❌<sup>1</sup> | 🔍     | ❌<sup>1</sup> | Like gpu4-ml-diagdiag2pass, but use grid sync instead of multi-launching kernels.                                                                               |
+| ---                           | ---   | ---           | ---   | ---           | ---                                                                                                                                                             |
+| gpu7-mlsp-diagdiag            | ✅     | 🔍             | 🔍     | 🔍             | Like gpu3-ml-diagdiag, but represents the score matrix as a tile header row matrix and tile header column. Transfers back only those.                           |
+| gpu8-mlsp-diagdiag            | ✅     | 🔍             | 🔍     | 🔍             | Like gpu7-mlsp-diagdiag, but stores the tile completely in registers, instead of in shared memory.                                                              |
+| gpu9-mlsp-diagdiagdiagskew    | ✅     | 🔍             | 🔍     | 🔍             | Like gpu8-mlsp-diagdiag, but divides the rectangular tile into parallelogram-shaped subtiles (skewed). Diagonal of subtiles is visited in minor-diagonal order. |
+| gpu10-mlsppt-diagdiagdiagskew | 🔍     | 🔍             | 🔍     | 🔍             | Like gpu9-mlsp-diagdiagdiagskew, but does tile diagonal transfer parallel to score matrix calculation.                                                          |
 
 Table terms:
 - 🔍 - means that the combination may be implemented in the future.  
@@ -56,12 +56,14 @@ This work is part of my master's thesis (todo link). The idea is to start with t
 3. Focus on pairwise alignment, and use linear/affine gap penalty functions.
 
 ## Prerequisites
-The project is run on Windows and Ubuntu WSL. It should work out-of-the-box on more platforms, but it's not been tested. The algorithms themselves are platform-agnostic.  
-Minimum Cuda supported version is `sm8_6`<sup>1</sup>.
+The project is run on Windows and Ubuntu WSL<sup>2</sup>. It should work out-of-the-box on more platforms, but it's not been tested. The algorithms themselves are platform-agnostic.  
+Minimum Cuda supported version is `sm6_1`<sup>1</sup>.
 
 1. Install Cuda by following the tutorial for [Windows](https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/) or [Ubuntu](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/)/[Ubuntu WSL](https://docs.nvidia.com/cuda/wsl-user-guide/index.html#getting-started-with-cuda-on-wsl-2).
 
 2. The build script is written in PowerShell Core - install it by following the tutorial for [Windows](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.4) or [Ubuntu/Ubuntu WSL](https://learn.microsoft.com/en-us/powershell/scripting/install/install-ubuntu?view=powershell-7.4).
+
+<sup>2</sup> Currently untested.
 
 ## Build
 See below commands:
@@ -87,13 +89,13 @@ To run existing benchmarks, use one of the following commands:
 ./build.ps1 -1
 
 # Small test - sequences up to 0.1k base pairs. Uses best parameters.
-./build.ps1 -2
-
-# Medium test - sequences up to 1k base pairs. Uses best parameters.
 ./build.ps1 -3
 
-# Large benchmark - sequences up to 10k base pairs. Uses best parameters.
+# Medium test - sequences up to 1k base pairs. Uses best parameters.
 ./build.ps1 -4
+
+# Large benchmark - sequences up to 10k base pairs. Uses best parameters.
+./build.ps1 -5
 ```
 
 ## Results
