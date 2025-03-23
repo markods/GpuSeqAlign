@@ -367,6 +367,7 @@ NwStat openOutFile(const std::string& path, std::ofstream& ofs)
         std::filesystem::create_directories(std::filesystem::path(path).parent_path());
 
         ofs.open(path, std::ios_base::out);
+        ofs.exceptions(std::ios_base::goodbit);
         if (!ofs)
         {
             return NwStat::errorIoStream;

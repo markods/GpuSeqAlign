@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
                      "   fparams    json file with nw parameters\n"
                      "   fseqs      json file with sequences to be compared\n";
 
-        exit(-1);
+        return -1;
     }
 
     extern NwAlgorithmData algData;
@@ -55,31 +55,35 @@ int main(int argc, char* argv[])
         if (NwStat::success != readFromJson(substPath, substData))
         {
             std::cerr << "ERR - could not open/read json from substs file";
-            exit(-1);
+            return -1;
         }
         if (NwStat::success != readFromJson(paramPath, paramData))
         {
             std::cerr << "ERR - could not open/read json from params file";
-            exit(-1);
+            return -1;
         }
         if (NwStat::success != readFromJson(seqPath, seqData))
         {
             std::cerr << "ERR - could not open/read json from seqs file";
-            exit(-1);
+            return -1;
         }
         if (NwStat::success != openOutFile(resPath, ofsRes))
         {
             std::cerr << "ERR - could not open csv results file";
-            exit(-1);
+            return -1;
         }
     }
+    auto defer1 = make_defer([&]() noexcept
+    {
+        ofsRes.close();
+    });
 
     // get the device properties
     cudaDeviceProp deviceProps;
     if (cudaSuccess != (cudaStatus = cudaGetDeviceProperties(&deviceProps, 0 /*deviceId*/)))
     {
         std::cerr << "ERR - could not get device properties";
-        exit(-1);
+        return -1;
     }
 
     // number of streaming multiprocessors (sm-s) and threads in a warp
@@ -125,6 +129,11 @@ int main(int argc, char* argv[])
     nw.warpsz = warpsz;
     nw.maxThreadsPerBlock = maxThreadsPerBlock;
 
+    auto defer3 = make_defer([&]() noexcept
+    {
+        nw.resetAllocsBenchmarkEnd();
+    });
+
     // initialize the substitution matrix on the cpu and gpu
     {
         nw.subst = substData.substMap[seqData.substName];
@@ -138,14 +147,14 @@ int main(int argc, char* argv[])
         catch (const std::exception&)
         {
             std::cerr << "ERR - could not reserve space for the substitution matrix in the gpu";
-            exit(-1);
+            return -1;
         }
 
         // transfer the substitution matrix to the gpu global memory
         if (cudaSuccess != (cudaStatus = memTransfer(nw.subst_gpu, nw.subst, nw.substsz * nw.substsz)))
         {
             std::cerr << "ERR - could not transfer substitution matrix to the gpu";
-            exit(-1);
+            return -1;
         }
     }
 
@@ -245,6 +254,11 @@ int main(int argc, char* argv[])
                         // get the result from the list
                         NwResult& res = resList.back();
 
+                        auto defer4 = make_defer([&]() noexcept
+                        {
+                            nw.resetAllocsBenchmarkCycle();
+                        });
+
                         // compare the sequences, hash and trace the score matrices, and verify the soundness of the results
                         if (!res.errstep && NwStat::success != (res.stat = alg.align(nw, res)))
                         {
@@ -291,10 +305,8 @@ int main(int argc, char* argv[])
                         if (cudaStatus != cudaSuccess)
                         {
                             std::cerr << "ERR - corrupted cuda context";
-                            exit(-1);
+                            return -1;
                         }
-
-                        nw.resetAllocsBenchmarkCycle();
                     }
 
                     // add the result to the results list
@@ -322,14 +334,10 @@ int main(int argc, char* argv[])
                   << std::endl;
     }
 
-    nw.resetAllocsBenchmarkEnd();
-
     // print the number of calculation errors
     if (compareData.calcErrors > 0)
     {
         std::cerr << "ERR - " << compareData.calcErrors << " calculation error(s)";
-        exit(-1);
+        return -1;
     }
-
-    exit(0);
 }

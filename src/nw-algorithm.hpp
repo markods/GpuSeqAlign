@@ -189,18 +189,17 @@ NwStat readFromJson(const std::string& path, T& var)
 {
     std::ifstream ifs;
 
-    try
-    {
-        ifs.open(path, std::ios_base::in);
-        if (!ifs)
-        {
-            return NwStat::errorIoStream;
-        }
-    }
-    catch (const std::exception&)
+    ifs.open(path, std::ios_base::in);
+    ifs.exceptions(std::ios_base::goodbit);
+    if (!ifs)
     {
         return NwStat::errorIoStream;
     }
+
+    auto defer1 = make_defer([&]() noexcept
+    {
+        ifs.close();
+    });
 
     try
     {
