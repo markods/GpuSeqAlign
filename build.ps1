@@ -92,17 +92,17 @@ Commands:
     if( $Stage.CmdPartArr.Count -eq 0 ) { $script:LastStatusCode = -1; return; }
 
     # print the stage name if requested
-    if( $PrintStageName ) { $script:StageSep -f $Stage.Name | Write-Output; }
+    if( $PrintStageName ) { $script:StageSep -f $Stage.Name; }
     # print the stage command
     $Command = $Stage.GetCommand();
-    $Command | Write-Output;
+    $Command;
 
     # if the subcommand doesn't accept arguments but they were given anyway (if the subcommand is simple)
     # IMPORTANT: && and || are pipeline chain operators!, not logical operators (-and and -or)
     $CmdArgArr = $Stage.CmdArgArr;
     if( !$Stage.AcceptsArgs   -and   $CmdArgArr.Count -gt 0 )
     {
-        "Subcommand does not accept arguments" | Write-Output;
+        "Subcommand does not accept arguments";
         $script:LastStatusCode = 400; return;
     }
 
@@ -111,13 +111,13 @@ Commands:
     # if the command invocation failed, return
     if( $? -ne $true )
     {
-        "Subcommand invocation failure" | Write-Output;
+        "Subcommand invocation failure";
         $script:LastStatusCode = 400; return;
     }
     # if an error occured in the command, return
     if( $LASTEXITCODE -ne 0 )
     {
-        "Subcommand invocation failure" | Write-Output;
+        "Subcommand invocation failure";
         $script:LastStatusCode = $LASTEXITCODE; return;
     }
     
@@ -150,7 +150,7 @@ Commands:
             }
             catch
             {
-                "Could not find all items with the extension '{0}' recursively on the path '{1}'" -f $Extension, $Path | Write-Output;
+                "Could not find all items with the extension '{0}' recursively on the path '{1}'" -f $Extension, $Path;
                 $script:LastStatusCode = -1;
             }
             finally
@@ -169,7 +169,7 @@ Commands:
         [bool] $PathExists = Test-Path $Path -PathType "Any";
         if( $? -ne $true )
         {
-            "Could not test if item exists: '{0}'" -f $Path | Write-Output;
+            "Could not test if item exists: '{0}'" -f $Path;
             $script:LastStatusCode = -1; return;
         }
         if( !$PathExists ) { $script:LastStatusCode = 0; return; }
@@ -177,7 +177,7 @@ Commands:
         Move-Item -Path $Path -Destination $Destination *>&1 | Out-Null;
         if( $? -ne $true )
         {
-            "Could not move item: '{0}'" -f $Path | Write-Output;
+            "Could not move item: '{0}'" -f $Path;
             $script:LastStatusCode = -1; return ;
         }
 
@@ -191,7 +191,7 @@ Commands:
         [bool] $PathExists = Test-Path $Path -PathType "Container";
         if( $? -ne $true )
         {
-            "Could not test if folder exists: '{0}'" -f $Path | Write-Output;
+            "Could not test if folder exists: '{0}'" -f $Path;
             $script:LastStatusCode = -1; return;
         }
         if( !$PathExists ) { $script:LastStatusCode = 0; return; }
@@ -199,7 +199,7 @@ Commands:
         Remove-Item $Path -Recurse *>&1 | Out-Null;
         if( $? -ne $true )
         {
-            "Could not remove folder: '{0}'" -f $Path | Write-Output;
+            "Could not remove folder: '{0}'" -f $Path;
             $script:LastStatusCode = -1; return;
         }
 
@@ -212,7 +212,7 @@ Commands:
         [bool] $PathExists = Test-Path $Path -PathType "Container";
         if( $? -ne $true )
         {
-            "Could not test if folder exists: '{0}'" -f $Path | Write-Output;
+            "Could not test if folder exists: '{0}'" -f $Path;
             $script:LastStatusCode = -1; return;
         }
         if( !$PathExists ) { $script:LastStatusCode = 0; return; }
@@ -222,7 +222,7 @@ Commands:
         $Files = Get-ChildItem -Path $Path -Include $Pattern -File -Recurse;
         if( $? -ne $true )
         {
-            "Could not get list of files to remove" | Write-Output;
+            "Could not get list of files to remove";
             $script:LastStatusCode = -1; return;
         }
 
@@ -235,7 +235,7 @@ Commands:
 
         if( $CouldNotRemoveList.Count -ne 0 )
         {
-            "Could not remove files:`n{0}" -f $CouldNotRemoveList | Write-Output;
+            "Could not remove files:`n{0}" -f $CouldNotRemoveList;
             $script:LastStatusCode = -1; return;
         }
 
@@ -324,7 +324,7 @@ class Stage
 
       # IMPORTANT: this doesn't work as a class method because the class method's output doesn't go to the output pipeline (only the return statement's output goes to the output pipeline)
       # +   https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_classes?view=powershell-7.2#output-in-class-methods
-      # $OutputStream | Write-Output;
+      # $OutputStream;
       # $ErrorStream | Write-Error;
         
         Invoke-Command -ScriptBlock $Script -ArgumentList $Stage, $PrintStageName;
@@ -383,7 +383,7 @@ class Pipeline
                 Push-Location $Stage.WorkDir *>&1 | Out-Null;
                 if( $? -ne $true )
                 {
-                    "Could not set the pipeline stage's working directory!" | Write-Output;
+                    "Could not set the pipeline stage's working directory!";
                     $script:LastStatusCode = 400; return;
                 }
             }
@@ -391,7 +391,7 @@ class Pipeline
             try
             {
                 # execute the pipeline stage
-                Stage_ExecuteScript $Stage.StageScript $Stage | Write-Output;
+                Stage_ExecuteScript $Stage.StageScript $Stage;
                 if( $script:LastStatusCode -ne 0 ) { return; }
             }
             finally
@@ -403,7 +403,7 @@ class Pipeline
                     # if an error occured while restoring the previous woking directory, return
                     if( $? -ne $true )
                     {
-                        "Could not restore the previous working directory!" | Write-Output;
+                        "Could not restore the previous working directory!";
                         $script:LastStatusCode = 400;
                     }
                 }
@@ -434,21 +434,21 @@ class Pipeline
             {
                 if( $DefaultArgs_Idx -ge 0 )
                 {
-                    "No subcommands allowed after specifying '{0}'" -f '-def' | Write-Output;
+                    "No subcommands allowed after specifying '{0}'" -f '-def';
                     $script:LastStatusCode = 400; return;
                 }
 
                 $CurrStage = $Pipeline.Stage( $_ );
                 if( $null -eq $CurrStage )
                 {
-                    "Unknown subcommand: '{0}'" -f $_ | Write-Output;
+                    "Unknown subcommand: '{0}'" -f $_;
                     $script:LastStatusCode = 400; return;
                 }
 
                 $CurrStageIdx = $Pipeline.StageIdx( $_ );
                 if( $CurrStageIdx -le $PrevStageIdx )
                 {
-                    "Invalid placement for subcommand '{0}'; view help for subcommand ordering." -f $_ | Write-Output;
+                    "Invalid placement for subcommand '{0}'; view help for subcommand ordering." -f $_;
                     $script:LastStatusCode = 400; return;
                 }
 
@@ -463,14 +463,14 @@ class Pipeline
                     {
                         if( $DefaultArgs_Idx -ge 0 )
                         {
-                            "Cannot specify more than one default parameter list: '{0}'" -f $_ | Write-Output;
+                            "Cannot specify more than one default parameter list: '{0}'" -f $_;
                             $script:LastStatusCode = 400; return;
                         }
 
                         $DefaultArgs_Idx = -( $_ -as [int] );
                         if( $DefaultArgs_Idx -lt 0   -or  $DefaultArgs_Idx -ge $script:DefaultArgs.Count )
                         {
-                            "Unknown parameter: '{0}'" -f $_ | Write-Output;
+                            "Unknown parameter: '{0}'" -f $_;
                             $script:LastStatusCode = 400; return;
                         }
 
@@ -487,7 +487,7 @@ class Pipeline
 
         if( $DefaultArgs_Idx -ge 0 )
         {
-            Parser_Parse $Pipeline $script:DefaultArgs[ $DefaultArgs_Idx ] | Write-Output;
+            Parser_Parse $Pipeline $script:DefaultArgs[ $DefaultArgs_Idx ];
             return;
         }
         
@@ -512,17 +512,17 @@ class Pipeline
         {
             "--help"
             {
-                $script:HelpMessage | Write-Output;
+                $script:HelpMessage;
                 continue;
             }
             "-help"
             {
-                $script:HelpMessage | Write-Output;
+                $script:HelpMessage;
                 continue;
             }
             default
             {
-                "Unknown parameter: {0}" -f $_ | Write-Output;
+                "Unknown parameter: {0}" -f $_;
                 $script:LastStatusCode = -1; return;
             }
         }
@@ -539,7 +539,7 @@ class Pipeline
         param( [Stage] $Stage )
 
         # print the stage name
-        $script:StageSep -f $Stage.Name | Write-Output;
+        $script:StageSep -f $Stage.Name;
 
         # get the command arguments from the stage
         $StageCommandArr = $Stage.CmdArgArr;
@@ -558,7 +558,7 @@ class Pipeline
             }
             default
             {
-                "Unknown parameter: {0}" -f $_ | Write-Output;
+                "Unknown parameter: {0}" -f $_;
                 $script:LastStatusCode = -1; return;
             }
         }
@@ -580,10 +580,10 @@ class Pipeline
 
         foreach( $Item in $ItemsToRemove )
         {
-            '[clean] Path: "{0}" Filter: "{1}"' -f $Item.Path, $Item.Filter | Write-Output;
+            '[clean] Path: "{0}" Filter: "{1}"' -f $Item.Path, $Item.Filter;
             
-            if( "" -eq $Item.Filter ) { FileUtil_RemoveFolder $Item.Path | Write-Output; }
-            else                      { FileUtil_RemoveFiles $Item.Path $Item.Filter | Write-Output; }
+            if( "" -eq $Item.Filter ) { FileUtil_RemoveFolder $Item.Path; }
+            else                      { FileUtil_RemoveFiles $Item.Path $Item.Filter; }
 
             if( $script:LastStatusCode -ne 0 ) { return; }
         }
@@ -601,7 +601,7 @@ class Pipeline
         param( [Stage] $Stage )
 
         # print the stage name
-        $script:StageSep -f $Stage.Name | Write-Output;
+        $script:StageSep -f $Stage.Name;
 
         # get the command arguments from the stage
         $StageCommandArr = $Stage.CmdArgArr;
@@ -620,7 +620,7 @@ class Pipeline
             # }
             default
             {
-                "Unknown parameter: {0}" -f $_ | Write-Output;
+                "Unknown parameter: {0}" -f $_;
                 $script:LastStatusCode = -1; return;
             }
         }
@@ -634,7 +634,7 @@ class Pipeline
         # if there aren't any source files, exit
         if( $SourceFiles.Count -eq 0   -and   $script:LastStatusCode -eq 0 )
         {
-            "No source files given" | Write-Output;
+            "No source files given";
             $script:LastStatusCode = -1; return;
         }
 
@@ -675,7 +675,7 @@ class Pipeline
         }
 
         # invoke the default stage script on this stage
-        Stage_ExecuteScript $script:StageScript_Default $Stage $false | Write-Output;
+        Stage_ExecuteScript $script:StageScript_Default $Stage $false;
     },
     "${script:ProjectRoot}/src",
     $true
@@ -708,10 +708,10 @@ class Pipeline
 # Script
 
 # main function
-function Build-V2
+function Build-Script
 {
     $ScriptArgs = $args.Count -ne 0 ? $args : $( "--help" );
-    "build $ScriptArgs" | Write-Output;
+    "build $ScriptArgs";
 
     Parser_Parse $script:Pipeline $ScriptArgs;
     if( $script:LastStatusCode -ne 0 ) { return; }
@@ -720,10 +720,7 @@ function Build-V2
     if( $script:LastStatusCode -ne 0 ) { return; }
 }
 
-# call the build script
-# +   @ - array splatting operator; used here to pass script arguments to the build function
-Build-V2 @args *>&1 | Tee-Object -FilePath "${script:ProjectRoot}/build.log" -Append;
-# exit with the last exit code
+Build-Script @args;
 exit $script:LastStatusCode;
 
 
