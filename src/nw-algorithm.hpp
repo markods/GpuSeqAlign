@@ -139,12 +139,9 @@ void to_json(json& j, const NwParams& params);
 void to_json(json& j, const NwParam& param);
 void to_json(json& j, const NwSeqData& seqData);
 
-// conversion to csv from object
-void resHeaderToCsv(std::ostream& os);
-void to_csv(std::ostream& os, const NwResult& res);
-void to_csv(std::ostream& os, const Stopwatch& sw);
-void paramsToCsv(std::ostream& os, const std::map<std::string, int>& paramMap);
-void lapTimeToCsv(std::ostream& os, float lapTime);
+// conversion to tsv from object
+void resHeaderToTsv(std::ostream& os);
+void nwResultToTsv(std::ostream& os, const NwResult& res);
 
 // convert the sequence string to a vector using a character map
 // + NOTE: add the header (zeroth) element if requested

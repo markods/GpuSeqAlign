@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
     resData.substFname = argv[1];
     resData.paramFname = argv[2];
     resData.seqFname = argv[3];
-    resData.resFname = resData.isoTime + ".csv";
+    resData.resFname = resData.isoTime + ".tsv";
 
     // read data from input .json files
     // +   also open the output file
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
         }
         if (NwStat::success != openOutFile(resPath, ofsRes))
         {
-            std::cerr << "ERR - could not open csv results file";
+            std::cerr << "ERR - could not open tsv results file";
             return -1;
         }
     }
@@ -174,8 +174,8 @@ int main(int argc, char* argv[])
     // initialize the gold result map (as calculated by the first algorithm)
     NwCompareData compareData {};
 
-    // write the csv file's header
-    resHeaderToCsv(ofsRes);
+    // write the tsv file's header
+    resHeaderToTsv(ofsRes);
     ofsRes.flush();
 
     // for all algorithms which have parameters in the param map
@@ -315,8 +315,8 @@ int main(int argc, char* argv[])
                     // reset the multiple repetition list
                     resList.clear();
 
-                    // print the result as a csv line to the csv output file
-                    to_csv(ofsRes, res);
+                    // print the result as a tsv line to the tsv output file
+                    nwResultToTsv(ofsRes, res);
                     ofsRes << '\n';
                     ofsRes.flush();
                 }

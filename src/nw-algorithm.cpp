@@ -106,106 +106,93 @@ void to_json(json& j, const NwSeqData& seqData)
     };
 }
 
-// conversion to csv from object
-void resHeaderToCsv(std::ostream& os)
+static void lapTimeToTsv(std::ostream& os, float lapTime)
+{
+    FormatFlagsGuard fg {os};
+
+    os << std::fixed << std::setprecision(3) << lapTime;
+}
+
+// conversion to tsv from object
+void resHeaderToTsv(std::ostream& os)
 {
     FormatFlagsGuard fg {os};
     os.fill(' ');
 
-    os << "algName" << ", ";
-    os << "iY" << ", ";
-    os << "iX" << ", ";
-    os << "reps" << ", ";
+    os << "algName" << "\t";
+    os << "iY" << "\t";
+    os << "iX" << "\t";
+    os << "reps" << "\t";
 
-    os << "lenY" << ", ";
-    os << "lenX" << ", ";
+    os << "lenY" << "\t";
+    os << "lenX" << "\t";
 
-    os << "algParams" << ", ";
+    os << "algParams" << "\t";
 
-    os << "step" << ",";
-    os << "stat" << ",";
-    os << "cuda" << ", ";
+    os << "step" << "\t";
+    os << "stat" << "\t";
+    os << "cuda" << "\t";
 
-    os << "score_hash" << ", ";
-    os << "trace_hash" << ", ";
+    os << "score_hash" << "\t";
+    os << "trace_hash" << "\t";
 
-    os << "alloc, cpy-dev, init-hdr, calc-init, calc, cpy-host" << '\n';
+    os << "alloc" << "\t";
+    os << "cpy-dev" << "\t";
+    os << "init-hdr" << "\t";
+    os << "calc-init" << "\t";
+    os << "calc" << "\t";
+    os << "cpy-host" << "\t";
+
+    os << "trace-alloc" << "\t";
+    os << "trace-calc" << "\t";
+
+    os << '\n';
 }
-void to_csv(std::ostream& os, const NwResult& res)
+void nwResultToTsv(std::ostream& os, const NwResult& res)
 {
     FormatFlagsGuard fg {os};
     {
         os.fill(' ');
 
-        os << ("\"" + res.algName + "\"") << ", ";
-        os << res.iY << ", ";
-        os << res.iX << ", ";
-        os << res.reps << ", ";
+        os << res.algName << "\t";
+        os << res.iY << "\t";
+        os << res.iX << "\t";
+        os << res.reps << "\t";
 
-        os << res.seqY_len << ", ";
-        os << res.seqX_len << ", ";
+        os << res.seqY_len << "\t";
+        os << res.seqX_len << "\t";
 
-        paramsToCsv(os, res.algParams);
-        os << ", ";
+        json algParamsJson = res.algParams;
 
-        os << res.errstep << ", ";
-        os << int(res.stat) << ", ";
-        os << int(res.cudaerr) << ", ";
+        os << algParamsJson.dump() << "\t";
+
+        os << res.errstep << "\t";
+        os << int(res.stat) << "\t";
+        os << int(res.cudaerr) << "\t";
 
         os.fill('0');
-        os << res.score_hash << ", ";
-        os << res.trace_hash << ", ";
+        os << std::setw(10) << res.score_hash << "\t";
+        os << std::setw(10) << res.trace_hash << "\t";
     }
     fg.restore();
-    to_csv(os, res.sw_align);
-}
-void paramsToCsv(std::ostream& os, const std::map<std::string, int>& paramMap)
-{
-    std::stringstream strs;
-    {
-        strs.fill(' ');
 
-        strs << "\"";
-        bool firstIter = true;
-        for (auto iter = paramMap.begin(); iter != paramMap.end(); iter++)
-        {
-            if (!firstIter)
-            {
-                strs << " ";
-            }
-            else
-            {
-                firstIter = false;
-            }
+    lapTimeToTsv(os, res.sw_align.get_or_default("alloc"));
+    os << "\t";
+    lapTimeToTsv(os, res.sw_align.get_or_default("cpy-dev"));
+    os << "\t";
+    lapTimeToTsv(os, res.sw_align.get_or_default("init-hdr"));
+    os << "\t";
+    lapTimeToTsv(os, res.sw_align.get_or_default("calc-init"));
+    os << "\t";
+    lapTimeToTsv(os, res.sw_align.get_or_default("calc"));
+    os << "\t";
+    lapTimeToTsv(os, res.sw_align.get_or_default("cpy-host"));
+    os << "\t";
 
-            auto& paramName = iter->first;
-            auto& paramValue = iter->second;
-            strs << paramName << ":" << paramValue;
-        }
-        strs << "\"";
-    }
-
-    os << strs.str();
-}
-void to_csv(std::ostream& os, const Stopwatch& sw)
-{
-    lapTimeToCsv(os, sw.get_or_default("alloc"));
-    os << ", ";
-    lapTimeToCsv(os, sw.get_or_default("cpy-dev"));
-    os << ", ";
-    lapTimeToCsv(os, sw.get_or_default("init-hdr"));
-    os << ", ";
-    lapTimeToCsv(os, sw.get_or_default("calc-init"));
-    os << ", ";
-    lapTimeToCsv(os, sw.get_or_default("calc"));
-    os << ", ";
-    lapTimeToCsv(os, sw.get_or_default("cpy-host"));
-}
-void lapTimeToCsv(std::ostream& os, float lapTime)
-{
-    FormatFlagsGuard fg {os};
-
-    os << std::fixed << std::setprecision(3) << lapTime;
+    lapTimeToTsv(os, res.sw_trace.get_or_default("trace-alloc"));
+    os << "\t";
+    lapTimeToTsv(os, res.sw_trace.get_or_default("trace-calc"));
+    os << "\t";
 }
 
 // convert the sequence string to a vector using a character map
