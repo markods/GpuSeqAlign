@@ -418,7 +418,7 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure calculation init time
-    sw.lap("calc-1");
+    sw.lap("calc-init");
 
     // launch kernel B
     {
@@ -480,7 +480,7 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure calculation time
-    sw.lap("calc-2");
+    sw.lap("calc");
 
     // save the calculated score matrix
     if (cudaSuccess != (cudaStatus = memTransfer(nw.score, nw.score_gpu, nw.adjrows, nw.adjcols, adjcols)))

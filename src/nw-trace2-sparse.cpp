@@ -81,7 +81,7 @@ NwStat NwTrace2_Sparse(const NwInput& nw, NwResult& res)
     }
 
     // Measure allocation time.
-    sw.lap("alloc");
+    sw.lap("trace-alloc");
 
     // ---------------
     // |h  h  h  h  h| h
@@ -180,7 +180,7 @@ NwStat NwTrace2_Sparse(const NwInput& nw, NwResult& res)
     std::reverse(trace.begin(), trace.end());
 
     // Measure trace time.
-    sw.lap("calc-1");
+    sw.lap("trace-calc");
 
     // Calculate the trace hash.
     // http://www.cse.yorku.ca/~oz/hash.html
@@ -304,8 +304,8 @@ NwStat NwHash2_Sparse(const NwInput& nw, NwResult& res)
     // Save the resulting hash.
     res.score_hash = hash;
 
-    // Measure hash time.
-    sw.lap("calc-1");
+    // Measure trace time.
+    sw.lap("calc");
 
     return NwStat::success;
 }

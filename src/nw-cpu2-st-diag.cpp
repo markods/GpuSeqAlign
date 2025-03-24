@@ -53,9 +53,6 @@ NwStat NwAlign_Cpu2_St_Diag(NwParams& pr, NwInput& nw, NwResult& res)
         }
     }
 
-    // measure calculation time for the upper triangle
-    sw.lap("calc-1");
-
     //  x x x x x x
     //  x . . . / /
     //  x . . / / .
@@ -74,9 +71,6 @@ NwStat NwAlign_Cpu2_St_Diag(NwParams& pr, NwInput& nw, NwResult& res)
         }
     }
 
-    // measure calculation time for the central parallelogram
-    sw.lap("calc-2");
-
     //  x x x x x x
     //  x . . . . .|/ /
     //  x . . . . /|/
@@ -91,8 +85,8 @@ NwStat NwAlign_Cpu2_St_Diag(NwParams& pr, NwInput& nw, NwResult& res)
         }
     }
 
-    // measure calculation time for the lower triangle
-    sw.lap("calc-3");
+    // measure calculation time
+    sw.lap("calc");
 
     return NwStat::success;
 }

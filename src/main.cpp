@@ -175,7 +175,7 @@ int main(int argc, char* argv[])
     NwCompareData compareData {};
 
     // write the csv file's header
-    resHeaderToCsv(ofsRes, resData);
+    resHeaderToCsv(ofsRes);
     ofsRes.flush();
 
     // for all algorithms which have parameters in the param map

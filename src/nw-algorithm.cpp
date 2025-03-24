@@ -107,34 +107,29 @@ void to_json(json& j, const NwSeqData& seqData)
 }
 
 // conversion to csv from object
-void resHeaderToCsv(std::ostream& os, const NwResData& resData)
+void resHeaderToCsv(std::ostream& os)
 {
     FormatFlagsGuard fg {os};
     os.fill(' ');
 
-    os << "# " << std::setw(1) << std::left << "substFname: \"" << resData.substFname << "\"" << '\n';
-    os << "# " << std::setw(1) << std::left << "paramFname: \"" << resData.paramFname << "\"" << '\n';
-    os << "# " << std::setw(1) << std::left << "seqFname: \"" << resData.seqFname << "\"" << '\n';
-    os << "# ______________________________________________________________________________" << '\n';
+    os << "algName" << ", ";
+    os << "iY" << ", ";
+    os << "iX" << ", ";
+    os << "reps" << ", ";
 
-    os << std::setw(42) << std::left << "algName" << ", ";
-    os << std::setw(2) << std::right << "iY" << ", ";
-    os << std::setw(2) << std::right << "iX" << ", ";
-    os << std::setw(4) << std::right << "reps" << ",   ";
+    os << "lenY" << ", ";
+    os << "lenX" << ", ";
 
-    os << std::setw(5) << std::right << "lenY" << ", ";
-    os << std::setw(5) << std::right << "lenX" << ",   ";
+    os << "algParams" << ", ";
 
-    os << std::setw(66) << std::left << "algParams" << ",   ";
+    os << "step" << ",";
+    os << "stat" << ",";
+    os << "cuda" << ", ";
 
-    os << std::setw(1) << std::right << "step" << ",";
-    os << std::setw(1) << std::right << "stat" << ",";
-    os << std::setw(3) << std::right << "cuda" << ",   ";
+    os << "score_hash" << ", ";
+    os << "trace_hash" << ", ";
 
-    os << std::setw(10) << std::right << "score_hash" << ", ";
-    os << std::setw(10) << std::right << "trace_hash" << ",   ";
-
-    os << std::setw(1) << std::left << "       alloc,        cpy-dev,       init-hdr,         calc-1,       calc-2,       calc-3,       cpy-host,          total,     calc-sum" << '\n';
+    os << "alloc, cpy-dev, init-hdr, calc-init, calc, cpy-host" << '\n';
 }
 void to_csv(std::ostream& os, const NwResult& res)
 {
@@ -142,25 +137,24 @@ void to_csv(std::ostream& os, const NwResult& res)
     {
         os.fill(' ');
 
-        os << std::setw(42) << std::left << ("\"" + res.algName + "\"") << ", ";
-        os << std::setw(2) << std::right << res.iY << ", ";
-        os << std::setw(2) << std::right << res.iX << ", ";
-        os << std::setw(4) << std::right << res.reps << ",   ";
+        os << ("\"" + res.algName + "\"") << ", ";
+        os << res.iY << ", ";
+        os << res.iX << ", ";
+        os << res.reps << ", ";
 
-        os << std::setw(5) << std::right << res.seqY_len << ", ";
-        os << std::setw(5) << std::right << res.seqX_len << ",   ";
+        os << res.seqY_len << ", ";
+        os << res.seqX_len << ", ";
 
-        os << std::setw(66) << std::left;
         paramsToCsv(os, res.algParams);
-        os << ",   ";
+        os << ", ";
 
-        os << std::setw(1) << std::right << res.errstep << ",";
-        os << std::setw(1) << std::right << int(res.stat) << ",";
-        os << std::setw(3) << std::right << int(res.cudaerr) << ",          ";
+        os << res.errstep << ", ";
+        os << int(res.stat) << ", ";
+        os << int(res.cudaerr) << ", ";
 
         os.fill('0');
-        os << std::setw(10) << std::right << res.score_hash << ", ";
-        os << std::setw(10) << std::right << res.trace_hash << ",   ";
+        os << res.score_hash << ", ";
+        os << res.trace_hash << ", ";
     }
     fg.restore();
     to_csv(os, res.sw_align);
@@ -186,7 +180,7 @@ void paramsToCsv(std::ostream& os, const std::map<std::string, int>& paramMap)
 
             auto& paramName = iter->first;
             auto& paramValue = iter->second;
-            strs << paramName << ":" << std::setw(2) << std::right << paramValue;
+            strs << paramName << ":" << paramValue;
         }
         strs << "\"";
     }
@@ -196,35 +190,22 @@ void paramsToCsv(std::ostream& os, const std::map<std::string, int>& paramMap)
 void to_csv(std::ostream& os, const Stopwatch& sw)
 {
     lapTimeToCsv(os, sw.get_or_default("alloc"));
-    os << ",   ";
+    os << ", ";
     lapTimeToCsv(os, sw.get_or_default("cpy-dev"));
-    os << ",   ";
+    os << ", ";
     lapTimeToCsv(os, sw.get_or_default("init-hdr"));
-    os << ",   ";
-    lapTimeToCsv(os, sw.get_or_default("calc-1"));
     os << ", ";
-    lapTimeToCsv(os, sw.get_or_default("calc-2"));
+    lapTimeToCsv(os, sw.get_or_default("calc-init"));
     os << ", ";
-    lapTimeToCsv(os, sw.get_or_default("calc-3"));
-    os << ",   ";
+    lapTimeToCsv(os, sw.get_or_default("calc"));
+    os << ", ";
     lapTimeToCsv(os, sw.get_or_default("cpy-host"));
-    os << ",   ";
-
-    float total = sw.total();
-    float calc_total =
-        sw.get_or_default("calc-1") +
-        sw.get_or_default("calc-2") +
-        sw.get_or_default("calc-3");
-
-    lapTimeToCsv(os, total);
-    os << ", ";
-    lapTimeToCsv(os, calc_total);
 }
 void lapTimeToCsv(std::ostream& os, float lapTime)
 {
     FormatFlagsGuard fg {os};
 
-    os << std::fixed << std::setw(12) << std::setprecision(3) << std::setfill(' ') << lapTime;
+    os << std::fixed << std::setprecision(3) << lapTime;
 }
 
 // convert the sequence string to a vector using a character map

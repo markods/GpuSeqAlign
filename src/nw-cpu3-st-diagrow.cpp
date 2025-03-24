@@ -84,7 +84,7 @@ NwStat NwAlign_Cpu3_St_DiagRow(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure calculation time
-    sw.lap("calc-1");
+    sw.lap("calc");
 
     return NwStat::success;
 }

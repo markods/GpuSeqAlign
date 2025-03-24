@@ -52,7 +52,7 @@ NwStat NwAlign_Cpu1_St_Row(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure calculation time
-    sw.lap("calc-1");
+    sw.lap("calc");
 
     return NwStat::success;
 }

@@ -140,7 +140,7 @@ void to_json(json& j, const NwParam& param);
 void to_json(json& j, const NwSeqData& seqData);
 
 // conversion to csv from object
-void resHeaderToCsv(std::ostream& os, const NwResData& resData);
+void resHeaderToCsv(std::ostream& os);
 void to_csv(std::ostream& os, const NwResult& res);
 void to_csv(std::ostream& os, const Stopwatch& sw);
 void paramsToCsv(std::ostream& os, const std::map<std::string, int>& paramMap);

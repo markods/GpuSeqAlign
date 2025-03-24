@@ -454,7 +454,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure calculation time
-    sw.lap("calc-1");
+    sw.lap("calc");
 
     // save the calculated score matrix
     if (cudaSuccess != (cudaStatus = memTransfer(nw.score, nw.score_gpu, nw.adjrows, nw.adjcols, adjcols)))

@@ -407,7 +407,7 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure calculation init time
-    sw.lap("calc-1");
+    sw.lap("calc-init");
 
     //  x x x x x x       x x x x x x       x x x x x x
     //  x / / / . .       x . . . / /       x . . . . .|/ /
@@ -522,7 +522,7 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure calculation time
-    sw.lap("calc-2");
+    sw.lap("calc");
 
     // save the calculated score matrix
     if (cudaSuccess != (cudaStatus = memTransfer(nw.score, nw.score_gpu, nw.adjrows, nw.adjcols, adjcols)))

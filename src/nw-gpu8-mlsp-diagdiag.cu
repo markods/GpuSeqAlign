@@ -561,7 +561,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // Measure calculation time.
-    sw.lap("calc-1");
+    sw.lap("calc");
 
     // Save the calculated score matrix.
     nw.tileHdrMatRows = trows;
