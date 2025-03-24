@@ -181,7 +181,7 @@ NwStat openOutFile(const std::string& path, std::ofstream& ofs);
 
 // read a json file into a variable
 template <typename T>
-NwStat readFromJson(const std::string& path, T& var)
+NwStat readFromJson(const std::string& path, T& res)
 {
     std::ifstream ifs;
 
@@ -197,18 +197,25 @@ NwStat readFromJson(const std::string& path, T& var)
         ifs.close();
     });
 
+    // NOTE: the parser doesn't allow for trailing commas
+    auto json = nlohmann::ordered_json::parse(
+        ifs,
+        /*callback*/ nullptr,
+        /*allow_exceptions*/ false,
+        /*ignore_comments*/ true);
+
+    if (json.is_discarded())
+    {
+        return NwStat::errorInvalidFormat;
+    }
+
     try
     {
-        // NOTE: the parser doesn't allow for trailing commas
-        var = nlohmann::ordered_json::parse(
-            ifs,
-            /*callback*/ nullptr,
-            /*allow_exceptions*/ true,
-            /*ignore_comments*/ true);
+        res = json;
     }
-    catch (const std::exception&)
+    catch (const std::exception& ex)
     {
-        NwStat::errorInvalidFormat;
+        return NwStat::errorInvalidFormat;
     }
 
     return NwStat::success;
