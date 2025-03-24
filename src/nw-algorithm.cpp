@@ -49,24 +49,24 @@ NwAlgorithmData algData {
 };
 
 // conversion to object from json
-void from_json(const json& j, NwSubstData& substData)
+void from_json(const nlohmann::ordered_json& j, NwSubstData& substData)
 {
     j.at("letterMap").get_to(substData.letterMap);
     j.at("substMap").get_to(substData.substMap);
 }
-void from_json(const json& j, NwParamData& paramData)
+void from_json(const nlohmann::ordered_json& j, NwParamData& paramData)
 {
     j.get_to(paramData.paramMap);
 }
-void from_json(const json& j, NwParams& params)
+void from_json(const nlohmann::ordered_json& j, NwParams& params)
 {
     j.get_to(params._params);
 }
-void from_json(const json& j, NwParam& param)
+void from_json(const nlohmann::ordered_json& j, NwParam& param)
 {
     j.get_to(param._values);
 }
-void from_json(const json& j, NwSeqData& seqData)
+void from_json(const nlohmann::ordered_json& j, NwSeqData& seqData)
 {
     j.at("substName").get_to(seqData.substName);
     j.at("indel").get_to(seqData.indel);
@@ -75,30 +75,30 @@ void from_json(const json& j, NwSeqData& seqData)
 }
 
 // conversion to json from object
-void to_json(json& j, const NwSubstData& substData)
+void to_json(nlohmann::ordered_json& j, const NwSubstData& substData)
 {
-    j = json {
+    j = nlohmann::ordered_json {
         {"letterMap", substData.letterMap},
         {"substMap",  substData.substMap }
     };
 }
-void to_json(json& j, const NwParamData& paramData)
+void to_json(nlohmann::ordered_json& j, const NwParamData& paramData)
 {
-    j = json {
+    j = nlohmann::ordered_json {
         {"paramMap", paramData.paramMap},
     };
 }
-void to_json(json& j, const NwParams& params)
+void to_json(nlohmann::ordered_json& j, const NwParams& params)
 {
     j = params._params;
 }
-void to_json(json& j, const NwParam& param)
+void to_json(nlohmann::ordered_json& j, const NwParam& param)
 {
     j = param._values;
 }
-void to_json(json& j, const NwSeqData& seqData)
+void to_json(nlohmann::ordered_json& j, const NwSeqData& seqData)
 {
-    j = json {
+    j = nlohmann::ordered_json {
         {"substName", seqData.substName},
         {"indel",     seqData.indel    },
         {"repeat",    seqData.repeat   },
@@ -162,7 +162,7 @@ void nwResultToTsv(std::ostream& os, const NwResult& res)
         os << res.seqY_len << "\t";
         os << res.seqX_len << "\t";
 
-        json algParamsJson = res.algParams;
+        nlohmann::ordered_json algParamsJson = res.algParams;
 
         os << algParamsJson.dump() << "\t";
 

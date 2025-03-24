@@ -9,8 +9,6 @@
 #include <map>
 #include <sstream>
 #include <string>
-using json = nlohmann::ordered_json;
-using namespace std::string_literals;
 
 // main program
 int main(int argc, char* argv[])

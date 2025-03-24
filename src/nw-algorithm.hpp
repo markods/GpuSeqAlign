@@ -7,7 +7,6 @@
 #include <map>
 #include <string>
 #include <vector>
-using json = nlohmann::ordered_json;
 
 using NwAlignFn = NwStat (*)(NwParams& pr, NwInput& nw, NwResult& res);
 using NwTraceFn = NwStat (*)(const NwInput& nw, NwResult& res);
@@ -126,18 +125,18 @@ struct NwResData
 };
 
 // conversion to object from json
-void from_json(const json& j, NwSubstData& substData);
-void from_json(const json& j, NwParamData& paramData);
-void from_json(const json& j, NwParams& params);
-void from_json(const json& j, NwParam& param);
-void from_json(const json& j, NwSeqData& seqData);
+void from_json(const nlohmann::ordered_json& j, NwSubstData& substData);
+void from_json(const nlohmann::ordered_json& j, NwParamData& paramData);
+void from_json(const nlohmann::ordered_json& j, NwParams& params);
+void from_json(const nlohmann::ordered_json& j, NwParam& param);
+void from_json(const nlohmann::ordered_json& j, NwSeqData& seqData);
 
 // conversion to json from object
-void to_json(json& j, const NwSubstData& substData);
-void to_json(json& j, const NwParamData& paramData);
-void to_json(json& j, const NwParams& params);
-void to_json(json& j, const NwParam& param);
-void to_json(json& j, const NwSeqData& seqData);
+void to_json(nlohmann::ordered_json& j, const NwSubstData& substData);
+void to_json(nlohmann::ordered_json& j, const NwParamData& paramData);
+void to_json(nlohmann::ordered_json& j, const NwParams& params);
+void to_json(nlohmann::ordered_json& j, const NwParam& param);
+void to_json(nlohmann::ordered_json& j, const NwSeqData& seqData);
 
 // conversion to tsv from object
 void resHeaderToTsv(std::ostream& os);
@@ -201,7 +200,7 @@ NwStat readFromJson(const std::string& path, T& var)
     try
     {
         // NOTE: the parser doesn't allow for trailing commas
-        var = json::parse(
+        var = nlohmann::ordered_json::parse(
             ifs,
             /*callback*/ nullptr,
             /*allow_exceptions*/ true,

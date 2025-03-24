@@ -2,15 +2,14 @@
 #define INCLUDE_COMMON_HPP
 
 #include <chrono>
-#include <cstdlib>
 #include <cuda_runtime.h>
 #include <iomanip>
 #include <iostream>
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
-using namespace std::string_literals;
 
 // defer execution to scope exit
 template <typename F>
@@ -116,7 +115,7 @@ enum class NwStat : int
     errorInvalidResult = 7,
 };
 // cuda status, used for getting the return status of cuda functions
-extern thread_local cudaError_t cudaStatus;
+extern cudaError_t cudaStatus;
 
 // create an uninitialized array on the host
 template <typename T>
