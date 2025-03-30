@@ -97,18 +97,18 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <TargetName>nw</TargetName>
-    <OutDir>$(SolutionDir)build\win-$(Platform.toLower())_vs_$(Configuration.toLower())\</OutDir>
-    <IntDir>$(SolutionDir)build\win-$(Platform.toLower())_vs_$(Configuration.toLower())\</IntDir>
+    <OutDir>$(SolutionDir)build\windows-$(Platform.toLower())-vs-$(Configuration.toLower())\</OutDir>
+    <IntDir>$(SolutionDir)build\windows-$(Platform.toLower())-vs-$(Configuration.toLower())\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">
     <TargetName>nw</TargetName>
-    <OutDir>$(SolutionDir)build\win-$(Platform.toLower())_vs_$(Configuration.toLower())\</OutDir>
-    <IntDir>$(SolutionDir)build\win-$(Platform.toLower())_vs_$(Configuration.toLower())\</IntDir>
+    <OutDir>$(SolutionDir)build\windows-$(Platform.toLower())-vs-$(Configuration.toLower())\</OutDir>
+    <IntDir>$(SolutionDir)build\windows-$(Platform.toLower())-vs-$(Configuration.toLower())\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetName>nw</TargetName>
-    <OutDir>$(SolutionDir)build\win-$(Platform.toLower())_vs_$(Configuration.toLower())\</OutDir>
-    <IntDir>$(SolutionDir)build\win-$(Platform.toLower())_vs_$(Configuration.toLower())\</IntDir>
+    <OutDir>$(SolutionDir)build\windows-$(Platform.toLower())-vs-$(Configuration.toLower())\</OutDir>
+    <IntDir>$(SolutionDir)build\windows-$(Platform.toLower())-vs-$(Configuration.toLower())\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -132,7 +132,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_86,sm_86</CodeGeneration>
       <MaxRegCount>32</MaxRegCount>
-      <CompileOut>$(SolutionDir)build\win-$(Platform.toLower())_vs_$(Configuration.toLower())\%(Filename)%(Extension).obj</CompileOut>
+      <CompileOut>$(SolutionDir)build\windows-$(Platform.toLower())-vs-$(Configuration.toLower())\%(Filename)%(Extension).obj</CompileOut>
     </CudaCompile>
     <CudaLink>
       <GPUDebugInfo>true</GPUDebugInfo>
@@ -168,7 +168,7 @@
       <CodeGeneration>compute_86,sm_86</CodeGeneration>
       <MaxRegCount>32</MaxRegCount>
       <Optimization>O2</Optimization>
-      <CompileOut>$(SolutionDir)build\win-$(Platform.toLower())_vs_$(Configuration.toLower())\%(Filename)%(Extension).obj</CompileOut>
+      <CompileOut>$(SolutionDir)build\windows-$(Platform.toLower())-vs-$(Configuration.toLower())\%(Filename)%(Extension).obj</CompileOut>
       <GPUDebugInfo>true</GPUDebugInfo>
       <HostDebugInfo>true</HostDebugInfo>
     </CudaCompile>
@@ -208,7 +208,7 @@
       <CodeGeneration>compute_86,sm_86</CodeGeneration>
       <MaxRegCount>32</MaxRegCount>
       <Optimization>O2</Optimization>
-      <CompileOut>$(SolutionDir)build\win-$(Platform.toLower())_vs_$(Configuration.toLower())\%(Filename)%(Extension).obj</CompileOut>
+      <CompileOut>$(SolutionDir)build\windows-$(Platform.toLower())-vs-$(Configuration.toLower())\%(Filename)%(Extension).obj</CompileOut>
       <ExtensibleWholeProgramCompilation>true</ExtensibleWholeProgramCompilation>
     </CudaCompile>
     <CudaLink>
