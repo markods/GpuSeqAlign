@@ -53,7 +53,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{760CE57B-A3BD-45D3-A9D2-E2997D70B26A}</ProjectGuid>
-    <RootNamespace>GpuNW</RootNamespace>
+    <RootNamespace>GpuSeqAlign</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

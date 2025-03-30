@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.6.33801.468
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GpuNW", "GpuNW.vcxproj", "{760CE57B-A3BD-45D3-A9D2-E2997D70B26A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GpuSeqAlign", "GpuSeqAlign.vcxproj", "{760CE57B-A3BD-45D3-A9D2-E2997D70B26A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
