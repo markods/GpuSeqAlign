@@ -49,7 +49,7 @@
     <None Include="resrc\seq-gen2.json" />
     <None Include="resrc\seq-gen3.json" />
     <None Include="resrc\seq-optimize.json" />
-    <None Include="resrc\subst-blosum.json" />
+    <None Include="resrc\subst.json" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{760CE57B-A3BD-45D3-A9D2-E2997D70B26A}</ProjectGuid>
