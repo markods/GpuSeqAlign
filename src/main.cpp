@@ -379,75 +379,81 @@ int main(int argc, char* argv[])
     std::ofstream ofsRes;
     cudaError_t cudaStatus = cudaSuccess;
 
-    for (int i = 1; i < argc; i++)
+    if (argc != 4)
     {
-        std::string arg = argv[i];
-
-        if (arg == "-b" || arg == "--substPath")
-        {
-        }
-        else if (arg == "-r" || arg == "--algParamPath")
-        {
-        }
-        else if (arg == "-s" || arg == "--seqPath")
-        {
-        }
-        else if (arg == "-p" || arg == "--pairPath")
-        {
-        }
-        else if (arg == "-o" || arg == "--resPath")
-        {
-        }
-        else if (arg == "--substName")
-        {
-        }
-        else if (arg == "--gapoCost")
-        {
-        }
-        else if (arg == "--gapeCost")
-        {
-        }
-        else if (arg == "--algName")
-        {
-        }
-        else if (arg == "--refAlgName")
-        {
-        }
-        else if (arg == "--warmupPerAlign")
-        {
-        }
-        else if (arg == "--samplesPerAlign")
-        {
-        }
-        else if (arg == "--calcTrace")
-        {
-        }
-        else if (arg == "--calcScoreHash")
-        {
-        }
-        else if (arg == "--debugPath")
-        {
-        }
-        else if (arg == "--printScore")
-        {
-        }
-        else if (arg == "--printTrace")
-        {
-        }
-        else if (arg == "--substPath")
-        {
-        }
-        else if (arg == "-h" || arg == "--help")
-        {
-            print_cmd_usage(std::cout);
-            return 0;
-        }
-        else
-        {
-            std::cerr << "Unknown parameter: \"" << arg << "\"";
-            return -1;
-        }
+        print_cmd_usage(std::cout);
+        return -1;
     }
+
+    // for (int i = 1; i < argc; i++)
+    // {
+    //     std::string arg = argv[i];
+    //
+    //     if (arg == "-b" || arg == "--substPath")
+    //     {
+    //     }
+    //     else if (arg == "-r" || arg == "--algParamPath")
+    //     {
+    //     }
+    //     else if (arg == "-s" || arg == "--seqPath")
+    //     {
+    //     }
+    //     else if (arg == "-p" || arg == "--pairPath")
+    //     {
+    //     }
+    //     else if (arg == "-o" || arg == "--resPath")
+    //     {
+    //     }
+    //     else if (arg == "--substName")
+    //     {
+    //     }
+    //     else if (arg == "--gapoCost")
+    //     {
+    //     }
+    //     else if (arg == "--gapeCost")
+    //     {
+    //     }
+    //     else if (arg == "--algName")
+    //     {
+    //     }
+    //     else if (arg == "--refAlgName")
+    //     {
+    //     }
+    //     else if (arg == "--warmupPerAlign")
+    //     {
+    //     }
+    //     else if (arg == "--samplesPerAlign")
+    //     {
+    //     }
+    //     else if (arg == "--calcTrace")
+    //     {
+    //     }
+    //     else if (arg == "--calcScoreHash")
+    //     {
+    //     }
+    //     else if (arg == "--debugPath")
+    //     {
+    //     }
+    //     else if (arg == "--printScore")
+    //     {
+    //     }
+    //     else if (arg == "--printTrace")
+    //     {
+    //     }
+    //     else if (arg == "--substPath")
+    //     {
+    //     }
+    //     else if (arg == "-h" || arg == "--help")
+    //     {
+    //         print_cmd_usage(std::cout);
+    //         return 0;
+    //     }
+    //     else
+    //     {
+    //         std::cerr << "Unknown parameter: \"" << arg << "\"";
+    //         return -1;
+    //     }
+    // }
 
     resData.projPath = std::filesystem::current_path().string() + "/../../";
     resData.resrcPath = resData.projPath + "resrc/";
