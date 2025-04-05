@@ -1,6 +1,6 @@
+#include "algorithm.hpp"
 #include "common.hpp"
 #include "json.hpp"
-#include "algorithm.hpp"
 #include <chrono>
 #include <ctime>
 #include <cuda_runtime.h>
@@ -314,7 +314,7 @@ void nwResultToTsv(std::ostream& os, const NwResult& res)
 
         os << res.errstep << "\t";
         os << int(res.stat) << "\t";
-        os << int(res.cudaerr) << "\t";
+        os << int(res.cudaStat) << "\t";
 
         os.fill('0');
         os << std::setw(10) << res.score_hash << "\t";
@@ -374,6 +374,7 @@ int main(int argc, char* argv[])
     NwSeqData seqData;
     NwResData resData;
     std::ofstream ofsRes;
+    cudaError_t cudaStatus = cudaSuccess;
 
     for (int i = 1; i < argc; i++)
     {
@@ -681,17 +682,14 @@ int main(int argc, char* argv[])
                             {
                                 res.errstep = 2;
                             }
-                            res.cudaerr = cudaStatus;
                         }
                         if (!res.errstep && NwStat::success != (res.stat = alg.hash(nw, res)))
                         {
                             res.errstep = 3;
-                            res.cudaerr = cudaStatus;
                         }
                         if (!res.errstep && NwStat::success != (res.stat = alg.trace(nw, res)))
                         {
                             res.errstep = 4;
-                            res.cudaerr = cudaStatus;
                         }
                         if (!res.errstep && NwStat::success != (res.stat = setOrVerifyResult(res, compareData)))
                         {

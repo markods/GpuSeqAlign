@@ -439,20 +439,20 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
     sw.lap("alloc");
 
     // Copy data from host to device.
-    if (cudaSuccess != (cudaStatus = memTransfer(nw.seqX_gpu, nw.seqX, nw.adjcols)))
+    if (cudaSuccess != (res.cudaStat = memTransfer(nw.seqX_gpu, nw.seqX, nw.adjcols)))
     {
         return NwStat::errorMemoryTransfer;
     }
-    if (cudaSuccess != (cudaStatus = memTransfer(nw.seqY_gpu, nw.seqY, nw.adjrows)))
+    if (cudaSuccess != (res.cudaStat = memTransfer(nw.seqY_gpu, nw.seqY, nw.adjrows)))
     {
         return NwStat::errorMemoryTransfer;
     }
     // Also initialize padding, since it is used to access elements in the substitution matrix.
-    if (cudaSuccess != (cudaStatus = memSet(nw.seqX_gpu, nw.adjcols, 0 /*value*/)))
+    if (cudaSuccess != (res.cudaStat = memSet(nw.seqX_gpu, nw.adjcols, 0 /*value*/)))
     {
         return NwStat::errorMemoryTransfer;
     }
-    if (cudaSuccess != (cudaStatus = memSet(nw.seqY_gpu, nw.adjrows, 0 /*value*/)))
+    if (cudaSuccess != (res.cudaStat = memSet(nw.seqY_gpu, nw.adjrows, 0 /*value*/)))
     {
         return NwStat::errorMemoryTransfer;
     }
@@ -496,14 +496,14 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
             &tileBy,
             &nw.indel};
 
-        if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu9_KernelA, gridDim, blockDim, kargs, shmemByteSize, cudaStreamDefault)))
+        if (cudaSuccess != (res.cudaStat = cudaLaunchKernel((void*)Nw_Gpu9_KernelA, gridDim, blockDim, kargs, shmemByteSize, cudaStreamDefault)))
         {
             return NwStat::errorKernelFailure;
         }
     }
 
     // Wait for the gpu to finish before going to the next step.
-    if (cudaSuccess != (cudaStatus = cudaDeviceSynchronize()))
+    if (cudaSuccess != (res.cudaStat = cudaDeviceSynchronize()))
     {
         return NwStat::errorKernelFailure;
     }
@@ -518,7 +518,7 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
     // Launch kernel B for each (minor) tile diagonal of the score matrix.
     {
         cudaStream_t stream;
-        if (cudaSuccess != (cudaStatus = cudaStreamCreate(&stream)))
+        if (cudaSuccess != (res.cudaStat = cudaStreamCreate(&stream)))
         {
             return NwStat::errorKernelFailure;
         }
@@ -528,7 +528,7 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
         });
 
         cudaGraph_t graph;
-        if (cudaSuccess != (cudaStatus = cudaGraphCreate(&graph, 0)))
+        if (cudaSuccess != (res.cudaStat = cudaGraphCreate(&graph, 0)))
         {
             return NwStat::errorKernelFailure;
         }
@@ -538,7 +538,7 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
         });
 
         // start capturing kernel launches by this thread
-        if (cudaSuccess != (cudaStatus = cudaStreamBeginCapture(stream, cudaStreamCaptureModeThreadLocal)))
+        if (cudaSuccess != (res.cudaStat = cudaStreamBeginCapture(stream, cudaStreamCaptureModeThreadLocal)))
         {
             return NwStat::errorKernelFailure;
         }
@@ -599,20 +599,20 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
                 //&subtileBy,
                 &d};
 
-            if (cudaSuccess != (cudaStatus = cudaLaunchKernel((void*)Nw_Gpu9_KernelB, gridB, blockB, kargs, shmemsz, stream)))
+            if (cudaSuccess != (res.cudaStat = cudaLaunchKernel((void*)Nw_Gpu9_KernelB, gridB, blockB, kargs, shmemsz, stream)))
             {
                 return NwStat::errorKernelFailure;
             }
         }
 
         // collect kernel launches from this thread
-        if (cudaSuccess != (cudaStatus = cudaStreamEndCapture(stream, &graph)))
+        if (cudaSuccess != (res.cudaStat = cudaStreamEndCapture(stream, &graph)))
         {
             return NwStat::errorKernelFailure;
         }
 
         cudaGraphExec_t graphExec;
-        if (cudaSuccess != (cudaStatus = cudaGraphInstantiate(&graphExec, graph, nullptr /*pErrorNode*/, nullptr /*pLogBuffer*/, 0 /*bufferSize*/)))
+        if (cudaSuccess != (res.cudaStat = cudaGraphInstantiate(&graphExec, graph, nullptr /*pErrorNode*/, nullptr /*pLogBuffer*/, 0 /*bufferSize*/)))
         {
             return NwStat::errorKernelFailure;
         }
@@ -622,14 +622,14 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
         });
 
         // actually execute the kernels
-        if (cudaSuccess != (cudaStatus = cudaGraphLaunch(graphExec, cudaStreamDefault)))
+        if (cudaSuccess != (res.cudaStat = cudaGraphLaunch(graphExec, cudaStreamDefault)))
         {
             return NwStat::errorKernelFailure;
         }
     }
 
     // Wait for the gpu to finish before going to the next step.
-    if (cudaSuccess != (cudaStatus = cudaDeviceSynchronize()))
+    if (cudaSuccess != (res.cudaStat = cudaDeviceSynchronize()))
     {
         return NwStat::errorKernelFailure;
     }
@@ -643,11 +643,11 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
     nw.tileHrowLen = 1 + tileBx;
     nw.tileHcolLen = 1 + tileBy;
 
-    if (cudaSuccess != (cudaStatus = memTransfer(nw.tileHrowMat, nw.tileHrowMat_gpu, trows * tcols * (1 + tileBx))))
+    if (cudaSuccess != (res.cudaStat = memTransfer(nw.tileHrowMat, nw.tileHrowMat_gpu, trows * tcols * (1 + tileBx))))
     {
         return NwStat::errorMemoryTransfer;
     }
-    if (cudaSuccess != (cudaStatus = memTransfer(nw.tileHcolMat, nw.tileHcolMat_gpu, trows * tcols * (1 + tileBy))))
+    if (cudaSuccess != (res.cudaStat = memTransfer(nw.tileHcolMat, nw.tileHcolMat_gpu, trows * tcols * (1 + tileBy))))
     {
         return NwStat::errorMemoryTransfer;
     }

@@ -15,7 +15,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\common.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\algorithm.cpp" />
     <ClCompile Include="src\nw-cpu1-st-row.cpp" />
@@ -29,6 +28,7 @@
     <ClInclude Include="src\common.hpp" />
     <ClInclude Include="src\json.hpp" />
     <ClInclude Include="src\algorithm.hpp" />
+    <ClInclude Include="src\memory.hpp" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\nw-gpu1-ml-diag.cu" />

@@ -358,20 +358,20 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
     sw.lap("alloc");
 
     // copy data from host to device
-    if (cudaSuccess != (cudaStatus = memTransfer(nw.seqX_gpu, nw.seqX, nw.adjcols)))
+    if (cudaSuccess != (res.cudaStat = memTransfer(nw.seqX_gpu, nw.seqX, nw.adjcols)))
     {
         return NwStat::errorMemoryTransfer;
     }
-    if (cudaSuccess != (cudaStatus = memTransfer(nw.seqY_gpu, nw.seqY, nw.adjrows)))
+    if (cudaSuccess != (res.cudaStat = memTransfer(nw.seqY_gpu, nw.seqY, nw.adjrows)))
     {
         return NwStat::errorMemoryTransfer;
     }
     // also initialize padding, since it is used to access elements in the substitution matrix
-    if (cudaSuccess != (cudaStatus = memSet(nw.seqX_gpu, nw.adjcols, 0 /*value*/)))
+    if (cudaSuccess != (res.cudaStat = memSet(nw.seqX_gpu, nw.adjcols, 0 /*value*/)))
     {
         return NwStat::errorMemoryTransfer;
     }
-    if (cudaSuccess != (cudaStatus = memSet(nw.seqY_gpu, nw.adjrows, 0 /*value*/)))
+    if (cudaSuccess != (res.cudaStat = memSet(nw.seqY_gpu, nw.adjrows, 0 /*value*/)))
     {
         return NwStat::errorMemoryTransfer;
     }
@@ -410,7 +410,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
             int numThreads = blockA.x;
 
             // calculate the max number of parallel blocks per streaming multiprocessor
-            if (cudaSuccess != (cudaStatus = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxBlocksPerSm, Nw_Gpu5_Kernel, numThreads, shmemsz)))
+            if (cudaSuccess != (res.cudaStat = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxBlocksPerSm, Nw_Gpu5_Kernel, numThreads, shmemsz)))
             {
                 return NwStat::errorKernelFailure;
             }
@@ -441,14 +441,14 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
             &tileAy};
 
         // launch the kernel in the given stream (don't statically allocate shared memory)
-        if (cudaSuccess != (cudaStatus = cudaLaunchCooperativeKernel((void*)Nw_Gpu5_Kernel, gridA, blockA, kargs, shmemsz, cudaStreamDefault)))
+        if (cudaSuccess != (res.cudaStat = cudaLaunchCooperativeKernel((void*)Nw_Gpu5_Kernel, gridA, blockA, kargs, shmemsz, cudaStreamDefault)))
         {
             return NwStat::errorKernelFailure;
         }
     }
 
     // wait for the gpu to finish before going to the next step
-    if (cudaSuccess != (cudaStatus = cudaDeviceSynchronize()))
+    if (cudaSuccess != (res.cudaStat = cudaDeviceSynchronize()))
     {
         return NwStat::errorKernelFailure;
     }
@@ -457,7 +457,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
     sw.lap("calc");
 
     // save the calculated score matrix
-    if (cudaSuccess != (cudaStatus = memTransfer(nw.score, nw.score_gpu, nw.adjrows, nw.adjcols, adjcols)))
+    if (cudaSuccess != (res.cudaStat = memTransfer(nw.score, nw.score_gpu, nw.adjrows, nw.adjcols, adjcols)))
     {
         return NwStat::errorMemoryTransfer;
     }
