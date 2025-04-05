@@ -1,5 +1,15 @@
 #include "common.hpp"
 
+// update the score given the current score matrix and position
+// NOTE: indel and most elements in the substitution matrix are negative, therefore find the maximum of them (instead of the minimum)
+static void UpdateScore(NwInput& nw, int i, int j) noexcept
+{
+    int p1 = el(nw.score, nw.adjcols, i - 1, j - 1) + el(nw.subst, nw.substsz, nw.seqY[i], nw.seqX[j]); // MOVE DOWN-RIGHT
+    int p2 = el(nw.score, nw.adjcols, i - 1, j) + nw.indel;                                             // MOVE DOWN
+    int p3 = el(nw.score, nw.adjcols, i, j - 1) + nw.indel;                                             // MOVE RIGHT
+    el(nw.score, nw.adjcols, i, j) = max3(p1, p2, p3);
+}
+
 // parallel cpu implementation of the Needleman-Wunsch algorithm
 NwStat NwAlign_Cpu3_St_DiagRow(NwParams& pr, NwInput& nw, NwResult& res)
 {
