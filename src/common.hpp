@@ -25,30 +25,13 @@ enum class NwStat : int
 // parameter that takes values from a vector
 struct NwParam
 {
-public:
-    NwParam() = default;
-    NwParam(std::vector<int> values)
-    {
-        _values = values;
-        _currIdx = 0;
-    }
+    NwParam();
+    NwParam(std::vector<int> values);
 
-    int curr() const
-    {
-        return _values[_currIdx];
-    }
-    bool hasCurr() const
-    {
-        return _currIdx < _values.size();
-    }
-    void next()
-    {
-        _currIdx++;
-    }
-    void reset()
-    {
-        _currIdx = 0;
-    }
+    int curr() const;
+    bool hasCurr() const;
+    void next();
+    void reset();
 
     std::vector<int> _values;
     int _currIdx = 0;
@@ -57,65 +40,17 @@ public:
 // parameters for the Needleman-Wunsch algorithm variant
 struct NwParams
 {
-    NwParams()
-    {
-        _params = {};
-        _isEnd = false;
-    }
-    NwParams(std::map<std::string, NwParam> params)
-    {
-        _params = params;
-        // always allow the inital iteration, even if there are no params
-        _isEnd = false;
-    }
+    NwParams();
+    NwParams(std::map<std::string, NwParam> params);
 
-    NwParam& operator[](const std::string name)
-    {
-        return _params.at(name);
-    }
+    NwParam& operator[](const std::string name);
 
-    bool hasCurr() const
-    {
-        return !_isEnd;
-    }
-    void next() // updates starting from the last parameter and so on
-    {
-        for (auto iter = _params.rbegin(); iter != _params.rend(); iter++)
-        {
-            auto& param = iter->second;
-            param.next();
+    bool hasCurr() const;
+    // updates starting from the last parameter and so on
+    void next();
+    void reset();
 
-            if (param.hasCurr())
-            {
-                return;
-            }
-            param.reset();
-        }
-        _isEnd = true;
-    }
-    void reset()
-    {
-        for (auto iter = _params.rbegin(); iter != _params.rend(); iter++)
-        {
-            auto& param = iter->second;
-            param.reset();
-        }
-        _isEnd = false;
-    }
-
-    std::map<std::string, int> copy() const
-    {
-        std::map<std::string, int> res;
-        for (const auto& paramTuple : _params)
-        {
-            const std::string& paramName = paramTuple.first;
-            int paramValue = paramTuple.second.curr();
-
-            res[paramName] = paramValue;
-        }
-
-        return res;
-    }
+    std::map<std::string, int> copy() const;
 
     std::map<std::string, NwParam> _params;
     bool _isEnd;
@@ -124,9 +59,6 @@ struct NwParams
 // input for the Needleman-Wunsch algorithm variant
 struct NwInput
 {
-    // IMPORTANT: dont't use .size() on vectors to get the number of elements, since it is not accurate
-    // +   instead, use the alignment parameters below
-
     ////// host specific memory
     std::vector<int> subst;
     std::vector<int> seqX;
@@ -146,6 +78,7 @@ struct NwInput
     DeviceArray<int> tileHcolMat_gpu;
 
     // alignment parameters
+    // prefer using them instead of vector.size()
     int substsz;
     int adjrows;
     int adjcols;
@@ -162,42 +95,10 @@ struct NwInput
     int maxThreadsPerBlock;
 
     // free all memory allocated by the Needleman-Wunsch algorithms
-    void resetAllocsBenchmarkCycle()
-    {
-        // NOTE: first free device memory, since there is less of it for other algorithms
-
-        ////// device specific memory
-        // subst_gpu.clear();
-        seqX_gpu.clear();
-        seqY_gpu.clear();
-        score_gpu.clear();
-        ////// sparse representation of score matrix
-        tileHrowMat_gpu.clear();
-        tileHcolMat_gpu.clear();
-
-        ////// host specific memory
-        // subst.clear();
-        // seqX.clear();
-        // seqY.clear();
-        score.clear();
-        ////// sparse representation of score matrix
-        tileHrowMat.clear();
-        tileHcolMat.clear();
-    }
+    void resetAllocsBenchmarkCycle();
 
     // free all remaining memory not cleared by resetAllocs
-    void resetAllocsBenchmarkEnd()
-    {
-        // NOTE: first free device memory, since there is less of it for other algorithms
-
-        ////// device specific memory
-        subst_gpu.clear();
-
-        ////// host specific memory
-        subst.clear();
-        seqX.clear();
-        seqY.clear();
-    }
+    void resetAllocsBenchmarkEnd();
 };
 
 // results which the Needleman-Wunsch algorithm variant returns

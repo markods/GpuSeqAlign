@@ -15,6 +15,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\common.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\nwalign_cpu1_st_row.cpp" />
     <ClCompile Include="src\nwalign_cpu2_st_diag.cpp" />
