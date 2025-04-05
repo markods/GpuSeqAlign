@@ -27,7 +27,7 @@ NwStat NwTrace1_Plain(const NwInput& nw, NwResult& res)
     }
 
     // measure allocation time
-    sw.lap("trace-alloc");
+    sw.lap("trace.alloc");
 
     // for all elements on one of the optimal paths
     bool loop = true;
@@ -79,7 +79,7 @@ NwStat NwTrace1_Plain(const NwInput& nw, NwResult& res)
     std::reverse(trace.begin(), trace.end());
 
     // measure trace time
-    sw.lap("trace-calc");
+    sw.lap("trace.calc");
 
     // calculate the hash value
     for (auto& curr : trace)
@@ -119,7 +119,7 @@ NwStat NwHash1_Plain(const NwInput& nw, NwResult& res)
     res.score_hash = hash;
 
     // Measure hash time.
-    sw.lap("hash-score");
+    sw.lap("hash.calc");
 
     return NwStat::success;
 }

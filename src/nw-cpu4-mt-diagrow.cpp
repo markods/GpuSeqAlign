@@ -40,7 +40,7 @@ NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure allocation time
-    sw.lap("alloc");
+    sw.lap("align.alloc");
 
     #pragma omp parallel
     {
@@ -59,7 +59,7 @@ NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams& pr, NwInput& nw, NwResult& res)
         #pragma omp single
         {
             // measure header initialization time
-            sw.lap("init-hdr");
+            sw.lap("align.init_hdr");
         }
 
         //  / / / . .       . . . / /       . . . . .|/ /
@@ -93,7 +93,7 @@ NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure calculation time
-    sw.lap("calc");
+    sw.lap("align.calc");
 
     return NwStat::success;
 }

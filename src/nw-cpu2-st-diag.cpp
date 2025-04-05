@@ -24,7 +24,7 @@ NwStat NwAlign_Cpu2_St_Diag(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure allocation time
-    sw.lap("alloc");
+    sw.lap("align.alloc");
 
     // initialize the first row and column of the score matrix
     for (int i = 0; i < nw.adjrows; i++)
@@ -37,7 +37,7 @@ NwStat NwAlign_Cpu2_St_Diag(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure header initialization time
-    sw.lap("init-hdr");
+    sw.lap("align.init_hdr");
 
     //  x x x x x x
     //  x / / / . .
@@ -86,7 +86,7 @@ NwStat NwAlign_Cpu2_St_Diag(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure calculation time
-    sw.lap("calc");
+    sw.lap("align.calc");
 
     return NwStat::success;
 }

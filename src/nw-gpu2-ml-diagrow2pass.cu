@@ -161,7 +161,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure allocation time
-    sw.lap("alloc");
+    sw.lap("align.alloc");
 
     // copy data from host to device
     if (cudaSuccess != (res.cudaStat = memTransfer(nw.seqX_gpu, nw.seqX, nw.adjcols)))
@@ -183,7 +183,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure memory transfer time
-    sw.lap("cpy-dev");
+    sw.lap("align.cpy_dev");
 
     //  x x x x x x
     //  x . . . . .
@@ -230,7 +230,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure header initialization time
-    sw.lap("init-hdr");
+    sw.lap("align.init_hdr");
 
     //  x x x x x x       x x x x x x       x x x x x x
     //  x / / / . .       x . . . / /       x . . . . .|/ /
@@ -352,7 +352,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure calculation time
-    sw.lap("calc");
+    sw.lap("align.calc");
 
     // save the calculated score matrix
     if (cudaSuccess != (res.cudaStat = memTransfer(nw.score, nw.score_gpu, nw.adjrows, nw.adjcols, adjcols)))
@@ -361,7 +361,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // measure memory transfer time
-    sw.lap("cpy-host");
+    sw.lap("align.cpy_host");
 
     return NwStat::success;
 }

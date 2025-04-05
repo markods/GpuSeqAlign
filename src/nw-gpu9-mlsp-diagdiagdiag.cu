@@ -436,7 +436,7 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // Measure allocation time.
-    sw.lap("alloc");
+    sw.lap("align.alloc");
 
     // Copy data from host to device.
     if (cudaSuccess != (res.cudaStat = memTransfer(nw.seqX_gpu, nw.seqX, nw.adjcols)))
@@ -458,7 +458,7 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // Measure memory transfer time.
-    sw.lap("cpy-dev");
+    sw.lap("align.cpy_dev");
 
     //  x x x x x x
     //  x . . . . .
@@ -509,7 +509,7 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // Measure header initialization time.
-    sw.lap("init-hdr");
+    sw.lap("align.init_hdr");
 
     //  x x x x x x       x x x x x x       x x x x x x
     //  x / / / . .       x . . . / /       x . . . . .|/ /
@@ -635,7 +635,7 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // Measure calculation time.
-    sw.lap("calc");
+    sw.lap("align.calc");
 
     // Save the calculated score matrix.
     nw.tileHdrMatRows = trows;
@@ -653,7 +653,7 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
     }
 
     // Measure memory transfer time.
-    sw.lap("cpy-host");
+    sw.lap("align.cpy_host");
 
     return NwStat::success;
 }

@@ -282,15 +282,15 @@ void resHeaderToTsv(std::ostream& os)
     os << "score_hash" << "\t";
     os << "trace_hash" << "\t";
 
-    os << "alloc" << "\t";
-    os << "cpy-dev" << "\t";
-    os << "init-hdr" << "\t";
-    os << "calc-init" << "\t";
-    os << "calc" << "\t";
-    os << "cpy-host" << "\t";
+    os << "align.alloc" << "\t";
+    os << "align.cpy_dev" << "\t";
+    os << "align.init_hdr" << "\t";
+    os << "align.calc_init" << "\t";
+    os << "align.calc" << "\t";
+    os << "align.cpy_host" << "\t";
 
-    os << "trace-alloc" << "\t";
-    os << "trace-calc" << "\t";
+    os << "trace.alloc" << "\t";
+    os << "trace.calc" << "\t";
 
     os << '\n';
 }
@@ -322,25 +322,25 @@ void nwResultToTsv(std::ostream& os, const NwResult& res)
     }
     fg.restore();
 
-    lapTimeToTsv(os, res.sw_align.get_or_default("alloc"));
+    lapTimeToTsv(os, res.sw_align.get_or_default("align.alloc"));
     os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("cpy-dev"));
+    lapTimeToTsv(os, res.sw_align.get_or_default("align.cpy_dev"));
     os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("init-hdr"));
+    lapTimeToTsv(os, res.sw_align.get_or_default("align.init_hdr"));
     os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("calc-init"));
+    lapTimeToTsv(os, res.sw_align.get_or_default("align.calc_init"));
     os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("calc"));
+    lapTimeToTsv(os, res.sw_align.get_or_default("align.calc"));
     os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("cpy-host"));
-    os << "\t";
-
-    lapTimeToTsv(os, res.sw_hash.get_or_default("hash-score"));
+    lapTimeToTsv(os, res.sw_align.get_or_default("align.cpy_host"));
     os << "\t";
 
-    lapTimeToTsv(os, res.sw_trace.get_or_default("trace-alloc"));
+    lapTimeToTsv(os, res.sw_hash.get_or_default("hash.calc"));
     os << "\t";
-    lapTimeToTsv(os, res.sw_trace.get_or_default("trace-calc"));
+
+    lapTimeToTsv(os, res.sw_trace.get_or_default("trace.alloc"));
+    os << "\t";
+    lapTimeToTsv(os, res.sw_trace.get_or_default("trace.calc"));
     os << "\t";
 }
 
