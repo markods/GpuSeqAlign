@@ -2,20 +2,42 @@
 #define INCLUDE_NW_ALGORITHM_HPP
 
 #include "common.hpp"
-#include "json.hpp"
-#include <iostream>
 #include <map>
 #include <string>
 #include <vector>
 
-using NwAlignFn = NwStat (*)(NwParams& pr, NwInput& nw, NwResult& res);
-using NwTraceFn = NwStat (*)(const NwInput& nw, NwResult& res);
-using NwHashFn = NwStat (*)(const NwInput& nw, NwResult& res);
-using NwPrintFn = NwStat (*)(std::ostream& os, const NwInput& nw, NwResult& res);
+// align functions implemented in other files
+NwStat NwAlign_Cpu1_St_Row(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Cpu2_St_Diag(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Cpu3_St_DiagRow(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu1_Ml_Diag(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res);
+NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res);
+
+// traceback, hash and print functions implemented in other files
+NwStat NwTrace1_Plain(const NwInput& nw, NwResult& res);
+NwStat NwTrace2_Sparse(const NwInput& nw, NwResult& res);
+NwStat NwHash1_Plain(const NwInput& nw, NwResult& res);
+NwStat NwHash2_Sparse(const NwInput& nw, NwResult& res);
+NwStat NwPrint1_Plain(std::ostream& os, const NwInput& nw, NwResult& res);
+NwStat NwPrint2_Sparse(std::ostream& os, const NwInput& nw, NwResult& res);
 
 // the Needleman-Wunsch algorithm implementations
 class NwAlgorithm
 {
+public:
+    using NwAlignFn = NwStat (*)(NwParams& pr, NwInput& nw, NwResult& res);
+    using NwTraceFn = NwStat (*)(const NwInput& nw, NwResult& res);
+    using NwHashFn = NwStat (*)(const NwInput& nw, NwResult& res);
+    using NwPrintFn = NwStat (*)(std::ostream& os, const NwInput& nw, NwResult& res);
+
 public:
     NwAlgorithm()
     {
@@ -78,74 +100,6 @@ private:
 };
 
 // algorithm map
-struct NwAlgorithmData
-{
-    std::map<std::string, NwAlgorithm> algMap;
-};
-extern NwAlgorithmData algData;
-
-// input file formats
-struct NwSubstData
-{
-    std::map<std::string, int> letterMap;
-    std::map<std::string, std::vector<int>> substMap;
-};
-
-struct NwParamData
-{
-    std::map<std::string, NwParams> paramMap;
-};
-
-struct NwSeqData
-{
-    std::string substName;
-    int indel = 0;
-    // repeat each comparison this many times
-    int repeat = 0;
-    // each sequence will be an int vector and have a header (zeroth) element
-    std::vector<std::string> seqList;
-};
-
-struct NwResData
-{
-    // directories
-    std::string projPath;
-    std::string resrcPath;
-    std::string resPath;
-
-    // filenames
-    std::string isoTime;
-    std::string substFname;
-    std::string paramFname;
-    std::string seqFname;
-    std::string resFname;
-
-    // result list
-    std::vector<NwResult> resList;
-};
-
-// conversion to object from json
-void from_json(const nlohmann::ordered_json& j, NwSubstData& substData);
-void from_json(const nlohmann::ordered_json& j, NwParamData& paramData);
-void from_json(const nlohmann::ordered_json& j, NwParams& params);
-void from_json(const nlohmann::ordered_json& j, NwParam& param);
-void from_json(const nlohmann::ordered_json& j, NwSeqData& seqData);
-
-// conversion to json from object
-void to_json(nlohmann::ordered_json& j, const NwSubstData& substData);
-void to_json(nlohmann::ordered_json& j, const NwParamData& paramData);
-void to_json(nlohmann::ordered_json& j, const NwParams& params);
-void to_json(nlohmann::ordered_json& j, const NwParam& param);
-void to_json(nlohmann::ordered_json& j, const NwSeqData& seqData);
-
-// conversion to tsv from object
-void resHeaderToTsv(std::ostream& os);
-void nwResultToTsv(std::ostream& os, const NwResult& res);
-
-// convert the sequence string to a vector using a character map
-// + NOTE: add the header (zeroth) element if requested
-std::vector<int> seqStrToVect(const std::string& str, const std::map<std::string, int>& map, const bool addHeader);
-
 // structs used to verify that the algorithms' results are correct
 struct NwCompareKey
 {
@@ -172,53 +126,5 @@ struct NwCompareData
 NwStat setOrVerifyResult(const NwResult& res, NwCompareData& compareData);
 // combine results from many repetitions into one
 NwResult combineResults(std::vector<NwResult>& resList);
-
-// get the current time as an ISO string
-std::string IsoTime();
-
-// open output file stream
-NwStat openOutFile(const std::string& path, std::ofstream& ofs);
-
-// read a json file into a variable
-template <typename T>
-NwStat readFromJson(const std::string& path, T& res)
-{
-    std::ifstream ifs;
-
-    ifs.open(path, std::ios_base::in);
-    ifs.exceptions(std::ios_base::goodbit);
-    if (!ifs)
-    {
-        return NwStat::errorIoStream;
-    }
-
-    auto defer1 = make_defer([&]() noexcept
-    {
-        ifs.close();
-    });
-
-    // NOTE: the parser doesn't allow for trailing commas
-    auto json = nlohmann::ordered_json::parse(
-        ifs,
-        /*callback*/ nullptr,
-        /*allow_exceptions*/ false,
-        /*ignore_comments*/ true);
-
-    if (json.is_discarded())
-    {
-        return NwStat::errorInvalidFormat;
-    }
-
-    try
-    {
-        res = json;
-    }
-    catch (const std::exception& ex)
-    {
-        return NwStat::errorInvalidFormat;
-    }
-
-    return NwStat::success;
-}
 
 #endif // INCLUDE_NW_ALGORITHM_HPP
