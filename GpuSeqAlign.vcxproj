@@ -26,6 +26,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\common.hpp" />
+    <ClInclude Include="src\fmt_guard.hpp" />
     <ClInclude Include="src\json.hpp" />
     <ClInclude Include="src\algorithm.hpp" />
     <ClInclude Include="src\memory.hpp" />

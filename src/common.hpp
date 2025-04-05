@@ -1,11 +1,10 @@
 #ifndef INCLUDE_COMMON_HPP
 #define INCLUDE_COMMON_HPP
 
+#include "fmt_guard.hpp"
 #include "memory.hpp"
 #include <chrono>
 #include <cuda_runtime.h>
-#include <iomanip>
-#include <iostream>
 #include <map>
 #include <string>
 #include <utility>
@@ -406,8 +405,8 @@ struct NwResult
     unsigned score_hash;
     unsigned trace_hash;
 
-    int errstep;         // 0 for success
-    NwStat stat;         // 0 for success
+    int errstep;          // 0 for success
+    NwStat stat;          // 0 for success
     cudaError_t cudaStat; // 0 for success
 };
 
@@ -420,39 +419,5 @@ inline void UpdateScore(NwInput& nw, int i, int j) noexcept
     int p3 = el(nw.score, nw.adjcols, i, j - 1) + nw.indel;                                             // MOVE RIGHT
     el(nw.score, nw.adjcols, i, j) = max3(p1, p2, p3);
 }
-
-// iostream format flags guard
-template <typename T>
-class FormatFlagsGuard
-{
-public:
-    FormatFlagsGuard(T& stream, int fwidth = 1, char ffill = ' ')
-        : _stream {stream}
-    {
-        // backup format flags and set the fill character and width
-        _fflags = _stream.flags();
-        _fwidth = _stream.width(fwidth);
-        _ffill = _stream.fill(ffill);
-    }
-
-    ~FormatFlagsGuard()
-    {
-        restore();
-    }
-
-    void restore()
-    {
-        // restore the format flags, fill character and width
-        _stream.flags(_fflags);
-        _stream.width(_fwidth);
-        _stream.fill(_ffill);
-    }
-
-private:
-    T& _stream;
-    std::ios_base::fmtflags _fflags;
-    std::streamsize _fwidth;
-    char _ffill;
-};
 
 #endif // INCLUDE_COMMON_HPP
