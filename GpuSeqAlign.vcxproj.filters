@@ -1,60 +1,54 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <CudaCompile Include="src\nw-gpu1-ml-diag.cu">
+    <CudaCompile Include="src\nwalign_gpu1_ml_diag.cu">
       <Filter>src</Filter>
     </CudaCompile>
-    <CudaCompile Include="src\nw-gpu2-ml-diagrow2pass.cu">
+    <CudaCompile Include="src\nwalign_gpu2_ml_diagrow2pass.cu">
       <Filter>src</Filter>
     </CudaCompile>
-    <CudaCompile Include="src\nw-gpu3-ml-diagdiag.cu">
+    <CudaCompile Include="src\nwalign_gpu3_ml_diagdiag.cu">
       <Filter>src</Filter>
     </CudaCompile>
-    <CudaCompile Include="src\nw-gpu4-ml-diagdiag2pass.cu">
+    <CudaCompile Include="src\nwalign_gpu4_ml_diagdiag2pass.cu">
       <Filter>src</Filter>
     </CudaCompile>
-    <CudaCompile Include="src\nw-gpu5-coop-diagdiag.cu">
+    <CudaCompile Include="src\nwalign_gpu5_coop_diagdiag.cu">
       <Filter>src</Filter>
     </CudaCompile>
-    <CudaCompile Include="src\nw-gpu6-coop-diagdiag2pass.cu">
+    <CudaCompile Include="src\nwalign_gpu6_coop_diagdiag2pass.cu">
       <Filter>src</Filter>
     </CudaCompile>
-    <CudaCompile Include="src\nw-gpu7-mlsp-diagdiag.cu">
+    <CudaCompile Include="src\nwalign_gpu7_mlsp_diagdiag.cu">
       <Filter>src</Filter>
     </CudaCompile>
-    <CudaCompile Include="src\nw-gpu8-mlsp-diagdiag.cu">
+    <CudaCompile Include="src\nwalign_gpu8_mlsp_diagdiag.cu">
       <Filter>src</Filter>
     </CudaCompile>
-    <CudaCompile Include="src\nw-gpu9-mlsp-diagdiagdiag.cu">
+    <CudaCompile Include="src\nwalign_gpu9_mlsp_diagdiagdiag.cu">
       <Filter>src</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\common.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\nw-algorithm.cpp">
+    <ClCompile Include="src\nwalign_cpu1_st_row.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\nw-cpu1-st-row.cpp">
+    <ClCompile Include="src\nwalign_cpu2_st_diag.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\nw-cpu2-st-diag.cpp">
+    <ClCompile Include="src\nwalign_cpu3_st_diagrow.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\nw-cpu3-st-diagrow.cpp">
+    <ClCompile Include="src\nwalign_cpu4_mt_diagrow.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\nw-cpu4-mt-diagrow.cpp">
+    <ClCompile Include="src\nwtrace1_plain.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\nw-trace1-plain.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\nw-trace2-sparse.cpp">
+    <ClCompile Include="src\nwtrace2_sparse.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
@@ -65,7 +59,22 @@
     <ClInclude Include="src\json.hpp">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\nw-algorithm.hpp">
+    <ClInclude Include="src\defer.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fmt_guard.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\memory.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\print_mat.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\stopwatch.hpp">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
@@ -78,28 +87,31 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="resrc\param-best.json">
+    <None Include="resrc\param_best.json">
       <Filter>resrc</Filter>
     </None>
-    <None Include="resrc\param-optimize.json">
+    <None Include="resrc\param_optimize.json">
       <Filter>resrc</Filter>
     </None>
-    <None Include="resrc\seq-gen0.json">
+    <None Include="resrc\seq_debug.json">
       <Filter>resrc</Filter>
     </None>
-    <None Include="resrc\seq-gen1.json">
+    <None Include="resrc\seq_gen1.json">
       <Filter>resrc</Filter>
     </None>
-    <None Include="resrc\seq-gen2.json">
+    <None Include="resrc\seq_gen2.json">
       <Filter>resrc</Filter>
     </None>
-    <None Include="resrc\seq-gen3.json">
+    <None Include="resrc\seq_gen3.json">
       <Filter>resrc</Filter>
     </None>
-    <None Include="resrc\seq-optimize.json">
+    <None Include="resrc\seq_optimize.json">
       <Filter>resrc</Filter>
     </None>
-    <None Include="resrc\subst-blosum.json">
+    <None Include="resrc\seq_profile.json">
+      <Filter>resrc</Filter>
+    </None>
+    <None Include="resrc\subst.json">
       <Filter>resrc</Filter>
     </None>
   </ItemGroup>
