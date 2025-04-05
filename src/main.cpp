@@ -645,8 +645,8 @@ int main(int argc, char* argv[])
                     {
                         // initialize the result in the result list
                         resList.push_back(NwResult {
-                            algName,                  // algName;
-                            alg.alignPr().snapshot(), // algParams;
+                            algName,              // algName;
+                            alg.alignPr().copy(), // algParams;
 
                             nw.seqX.size(), // seqX_len;
                             nw.seqY.size(), // seqY_len;

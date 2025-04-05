@@ -288,7 +288,7 @@ struct NwParams
         _isEnd = false;
     }
 
-    std::map<std::string, int> snapshot() const
+    std::map<std::string, int> copy() const
     {
         std::map<std::string, int> res;
         for (const auto& paramTuple : _params)
