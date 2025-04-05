@@ -1,6 +1,6 @@
 #include "common.hpp"
 #include "json.hpp"
-#include "nw-algorithm.hpp"
+#include "algorithm.hpp"
 #include <chrono>
 #include <ctime>
 #include <cuda_runtime.h>

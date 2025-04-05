@@ -1,4 +1,4 @@
-#include "nw-algorithm.hpp"
+#include "algorithm.hpp"
 
 // structs used to verify that the algorithms' results are correct
 bool operator<(const NwCompareKey& l, const NwCompareKey& r)

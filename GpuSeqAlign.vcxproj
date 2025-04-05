@@ -17,7 +17,7 @@
   <ItemGroup>
     <ClCompile Include="src\common.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\nw-algorithm.cpp" />
+    <ClCompile Include="src\algorithm.cpp" />
     <ClCompile Include="src\nw-cpu1-st-row.cpp" />
     <ClCompile Include="src\nw-cpu2-st-diag.cpp" />
     <ClCompile Include="src\nw-cpu3-st-diagrow.cpp" />
@@ -28,7 +28,7 @@
   <ItemGroup>
     <ClInclude Include="src\common.hpp" />
     <ClInclude Include="src\json.hpp" />
-    <ClInclude Include="src\nw-algorithm.hpp" />
+    <ClInclude Include="src\algorithm.hpp" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\nw-gpu1-ml-diag.cu" />
