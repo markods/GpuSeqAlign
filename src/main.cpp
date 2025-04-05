@@ -335,6 +335,9 @@ void nwResultToTsv(std::ostream& os, const NwResult& res)
     lapTimeToTsv(os, res.sw_align.get_or_default("cpy-host"));
     os << "\t";
 
+    lapTimeToTsv(os, res.sw_hash.get_or_default("hash-score"));
+    os << "\t";
+
     lapTimeToTsv(os, res.sw_trace.get_or_default("trace-alloc"));
     os << "\t";
     lapTimeToTsv(os, res.sw_trace.get_or_default("trace-calc"));

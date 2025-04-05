@@ -304,8 +304,8 @@ NwStat NwHash2_Sparse(const NwInput& nw, NwResult& res)
     // Save the resulting hash.
     res.score_hash = hash;
 
-    // Measure trace time.
-    sw.lap("calc");
+    // Measure hash time.
+    sw.lap("hash-score");
 
     return NwStat::success;
 }

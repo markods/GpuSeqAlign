@@ -101,6 +101,10 @@ NwStat NwHash1_Plain(const NwInput& nw, NwResult& res)
     // the starting value is a magic constant
     unsigned hash = 5381;
 
+    // Start the timer.
+    Stopwatch& sw = res.sw_hash;
+    sw.start();
+
     for (int i = 0; i < nw.adjrows; i++)
     {
         for (int j = 0; j < nw.adjcols; j++)
@@ -113,6 +117,9 @@ NwStat NwHash1_Plain(const NwInput& nw, NwResult& res)
 
     // save the resulting hash
     res.score_hash = hash;
+
+    // Measure hash time.
+    sw.lap("hash-score");
 
     return NwStat::success;
 }
