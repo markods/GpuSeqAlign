@@ -56,46 +56,36 @@ This work is part of my master's thesis (todo link). The idea is to start with t
 3. Focus on pairwise alignment, and use linear/affine gap penalty functions.
 
 ## Prerequisites
-The project is run on Windows and Ubuntu WSL<sup>2</sup>. It should work out-of-the-box on more platforms, but it's not been tested. The algorithms themselves are platform-agnostic.  
-Minimum Cuda supported version is `sm6_1`<sup>1</sup>.
+The project is run on Windows. The algorithms themselves are platform-agnostic.  
+Minimum Cuda supported architecture is `sm6_8`<sup>1</sup>.
 
-1. Install Cuda by following the tutorial for [Windows](https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/) or [Ubuntu](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/)/[Ubuntu WSL](https://docs.nvidia.com/cuda/wsl-user-guide/index.html#getting-started-with-cuda-on-wsl-2).
+1. Install [Visual Studio Community Edition 2022](https://visualstudio.microsoft.com/vs/community/).
 
-2. The build script is written in PowerShell Core - install it by following the tutorial for [Windows](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.4) or [Ubuntu/Ubuntu WSL](https://learn.microsoft.com/en-us/powershell/scripting/install/install-ubuntu?view=powershell-7.4).
-
-<sup>2</sup> Currently untested.
+2. Install [Cuda for Windows](https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/).
 
 ## Build
-See below commands:
-
-```PowerShell
-# List all options.
-./build.ps1
-
-# Build the project.
-./build.ps1 =build
-```
+The build is done in Visual Studio Community Edition 2022. Build output is in the `/build` directory.
 
 ## Benchmark
-Benchmark files are in `.json` format, in the `/resrc` directory. Sequences inside benchmark files are aligned each-with-each without repeating, the specified number of times. The average time for each step is reported.
+Benchmark files are in `.json` format, in the `/resrc` directory. Sequences inside benchmark files are aligned each-with-each without repeating, the specified number of times. The average time for each step is reported. Results are written to the `log` directory.
 
-To run existing benchmarks, use one of the following commands:
+Run existing benchmarks from the project root:
 
-```PowerShell
+```shell
 # Calibrate optimal algoritm parameters on your system. See the results in the '/logs' directory.
-./build.ps1 -0
+./build/windows-x64-vs-release/nw.exe "./resrc/subst-blosum.json" "./resrc/param-optimize.json" "./resrc/seq-optimize.json"
 
 # Run a quick test to verify all algorithms work on your system.
-./build.ps1 -1
+# Run the sequences used in profiling reports.
+./build/windows-x64-vs-release/nw.exe "./resrc/subst-blosum.json" "./resrc/param-best.json" "./resrc/seq-debug.json"
+./build/windows-x64-vs-release/nw.exe "./resrc/subst-blosum.json" "./resrc/param-best.json" "./resrc/seq-profile.json"
 
-# Small test - sequences up to 0.1k base pairs. Uses best parameters.
-./build.ps1 -3
-
-# Medium test - sequences up to 1k base pairs. Uses best parameters.
-./build.ps1 -4
-
-# Large benchmark - sequences up to 10k base pairs. Uses best parameters.
-./build.ps1 -5
+# Small test - sequences up to 0.1k base pairs.
+# Medium test - sequences up to 1k base pairs.
+# Large test - sequences up to 10k base pairs.
+./build/windows-x64-vs-release/nw.exe "./resrc/subst-blosum.json" "./resrc/param-best.json" "./resrc/seq-gen1.json"
+./build/windows-x64-vs-release/nw.exe "./resrc/subst-blosum.json" "./resrc/param-best.json" "./resrc/seq-gen2.json"
+./build/windows-x64-vs-release/nw.exe "./resrc/subst-blosum.json" "./resrc/param-best.json" "./resrc/seq-gen3.json"
 ```
 
 ## Results
