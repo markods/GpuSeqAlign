@@ -29,6 +29,12 @@ NwStat NwHash2_Sparse(const NwInput& nw, NwResult& res);
 NwStat NwPrint1_Plain(std::ostream& os, const NwInput& nw, NwResult& res);
 NwStat NwPrint2_Sparse(std::ostream& os, const NwInput& nw, NwResult& res);
 
+void NwPrintVect(std::ostream& os, const int* const vect, const int len);
+void NwPrintMat(std::ostream& os, const int* const mat, const int rows, const int cols);
+void NwPrintTiledMat(std::ostream& os, const int* const mat, const int rows, const int cols, const int tileWid /*without header column*/, const int tileHei /*without header row*/);
+void NwPrintHdrMat(std::ostream& os, const int* const tileHdrMat, const int rows, const int cols, const int hdrLen);
+
+
 // the Needleman-Wunsch algorithm implementations
 class NwAlgorithm
 {
@@ -39,56 +45,22 @@ public:
     using NwPrintFn = NwStat (*)(std::ostream& os, const NwInput& nw, NwResult& res);
 
 public:
-    NwAlgorithm()
-    {
-        _alignFn = {};
-        _traceFn = {};
-        _hashFn = {};
-        _printFn = {};
-
-        _alignPr = {};
-    }
+    NwAlgorithm();
 
     NwAlgorithm(
         NwAlignFn alignFn,
         NwTraceFn traceFn,
         NwHashFn hashFn,
-        NwPrintFn printFn)
-    {
-        _alignFn = alignFn;
-        _traceFn = traceFn;
-        _hashFn = hashFn;
-        _printFn = printFn;
+        NwPrintFn printFn);
 
-        _alignPr = {};
-    }
+    void init(NwParams& alignPr);
 
-    void init(NwParams& alignPr)
-    {
-        _alignPr = alignPr;
-    }
+    NwParams& alignPr();
 
-    NwParams& alignPr()
-    {
-        return _alignPr;
-    }
-
-    NwStat align(NwInput& nw, NwResult& res)
-    {
-        return _alignFn(_alignPr, nw, res);
-    }
-    NwStat trace(const NwInput& nw, NwResult& res)
-    {
-        return _traceFn(nw, res);
-    }
-    NwStat hash(const NwInput& nw, NwResult& res)
-    {
-        return _hashFn(nw, res);
-    }
-    NwStat print(std::ostream& os, const NwInput& nw, NwResult& res)
-    {
-        return _printFn(os, nw, res);
-    }
+    NwStat align(NwInput& nw, NwResult& res);
+    NwStat trace(const NwInput& nw, NwResult& res);
+    NwStat hash(const NwInput& nw, NwResult& res);
+    NwStat print(std::ostream& os, const NwInput& nw, NwResult& res);
 
 private:
     NwAlignFn _alignFn;

@@ -1,3 +1,4 @@
+#include "algorithm.hpp"
 #include "common.hpp"
 #include <limits>
 
