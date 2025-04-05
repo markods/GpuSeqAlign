@@ -24,12 +24,14 @@
     <ClCompile Include="src\nwtrace2_sparse.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\math.hpp" />
     <ClInclude Include="src\common.hpp" />
     <ClInclude Include="src\fmt_guard.hpp" />
     <ClInclude Include="src\json.hpp" />
     <ClInclude Include="src\defer.hpp" />
     <ClInclude Include="src\memory.hpp" />
     <ClInclude Include="src\print_mat.hpp" />
+    <ClInclude Include="src\stopwatch.hpp" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\nwalign_gpu1_ml_diag.cu" />
