@@ -1,4 +1,5 @@
 #include "algorithm.hpp"
+#include "fmt_guard.hpp"
 
 NwAlgorithm::NwAlgorithm()
 {

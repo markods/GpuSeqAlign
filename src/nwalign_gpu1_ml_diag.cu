@@ -1,4 +1,7 @@
 #include "common.hpp"
+#include "fmt_guard.hpp"
+#include "lang.hpp"
+#include <cuda_runtime.h>
 
 // cuda kernel for the parallel implementation
 __global__ static void Nw_Gpu1_KernelA(
@@ -186,8 +189,8 @@ NwStat NwAlign_Gpu1_Ml_Diag(NwParams& pr, NwInput& nw, NwResult& res)
         {
             // calculate grid and block dimensions for kernel
             {
-                int pbeg = max(0, d - (cols - 1));
-                int pend = min(d + 1, rows);
+                int pbeg = max2(0, d - (cols - 1));
+                int pend = min2(d + 1, rows);
 
                 // the number of elements on the current diagonal
                 int dsize = pend - pbeg;

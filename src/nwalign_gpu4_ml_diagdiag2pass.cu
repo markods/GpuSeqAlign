@@ -1,4 +1,7 @@
 #include "common.hpp"
+#include "lang.hpp"
+#include <cuda_runtime.h>
+#include <stdexcept>
 
 // cuda kernel A for the parallel implementation
 // +   initializes the score matrix in the gpu
@@ -363,7 +366,7 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res)
         gridA.y = (int)ceil(float(adjrows) / tileAy);
         gridA.x = (int)ceil(float(adjcols) / tileAx);
         // block dimensions for kernel A
-        int threadsPerBlockA = min(nw.maxThreadsPerBlock, tileAy * tileAx);
+        int threadsPerBlockA = min2(nw.maxThreadsPerBlock, tileAy * tileAx);
         dim3 blockA {(unsigned)threadsPerBlockA};
 
         // calculate size of shared memory per block in bytes
@@ -457,15 +460,15 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res)
         {
             // calculate grid and block dimensions for kernel B
             {
-                int pbeg = max(0, d - (tcols - 1));
-                int pend = min(d + 1, trows);
+                int pbeg = max2(0, d - (tcols - 1));
+                int pend = min2(d + 1, trows);
 
                 // the number of elements on the current diagonal
                 int dsize = pend - pbeg;
 
                 // take the number of threads on the largest diagonal of the tile
                 // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-                blockB.x = nw.warpsz * (int)ceil(max(tileBy, tileBx) * 2. / nw.warpsz);
+                blockB.x = nw.warpsz * (int)ceil(max2(tileBy, tileBx) * 2. / nw.warpsz);
 
                 // take the number of blocks on the current score matrix diagonal as the only dimension
                 // +   launch at least one block on the x axis

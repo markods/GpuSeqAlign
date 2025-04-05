@@ -1,5 +1,8 @@
 #include "common.hpp"
+#include "lang.hpp"
 #include <cooperative_groups.h>
+#include <cuda_runtime.h>
+#include <stdexcept>
 
 // cuda kernel A for the parallel implementation
 // +   initializes the score matrix in the gpu
@@ -374,7 +377,7 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res)
         gridA.y = (int)ceil(float(adjrows) / tileAy);
         gridA.x = (int)ceil(float(adjcols) / tileAx);
         // block dimensions for kernel A
-        int threadsPerBlockA = min(nw.maxThreadsPerBlock, tileAy * tileAx);
+        int threadsPerBlockA = min2(nw.maxThreadsPerBlock, tileAy * tileAx);
         dim3 blockA {(unsigned)threadsPerBlockA};
 
         // calculate size of shared memory per block in bytes
@@ -437,7 +440,7 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res)
         {
             // take the number of threads on the largest diagonal of the tile
             // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-            blockB.x = nw.warpsz * (int)ceil(max(tileBy, tileBx) * 2. / nw.warpsz);
+            blockB.x = nw.warpsz * (int)ceil(max2(tileBy, tileBx) * 2. / nw.warpsz);
 
             // the maximum number of parallel blocks on a streaming multiprocessor
             int maxBlocksPerSm = 0;
@@ -451,7 +454,7 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res)
             }
             // take the number of tiles on the largest score matrix diagonal as the only dimension
             // +   the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
-            gridB.x = min(min(trows, tcols), nw.sm_count * maxBlocksPerSm);
+            gridB.x = min2(min2(trows, tcols), nw.sm_count * maxBlocksPerSm);
         }
 
         // create variables for gpu arrays in order to be able to take their addresses

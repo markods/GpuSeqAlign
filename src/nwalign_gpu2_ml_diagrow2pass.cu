@@ -1,4 +1,7 @@
 #include "common.hpp"
+#include "lang.hpp"
+#include <cuda_runtime.h>
+#include <stdexcept>
 
 // cuda kernel A for the parallel implementation
 // +   initializes the score matrix's header row and column in the gpu
@@ -280,8 +283,8 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams& pr, NwInput& nw, NwResult& res)
         {
             // calculate grid and block dimensions for kernel B
             {
-                int pbeg = max(0, d - (tcols - 1));
-                int pend = min(d + 1, trows);
+                int pbeg = max2(0, d - (tcols - 1));
+                int pend = min2(d + 1, trows);
 
                 // the number of elements on the current diagonal
                 int dsize = pend - pbeg;

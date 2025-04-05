@@ -1,5 +1,8 @@
 #include "common.hpp"
+#include "lang.hpp"
 #include <cooperative_groups.h>
+#include <cuda_runtime.h>
+#include <stdexcept>
 
 // cuda kernel for the parallel implementation
 __global__ static void Nw_Gpu5_Kernel(
@@ -402,7 +405,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
         {
             // take the number of threads on the largest diagonal of the tile
             // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-            blockA.x = nw.warpsz * (int)ceil(max(tileAy, tileAx) * 2. / nw.warpsz);
+            blockA.x = nw.warpsz * (int)ceil(max2(tileAy, tileAx) * 2. / nw.warpsz);
 
             // the maximum number of parallel blocks on a streaming multiprocessor
             int maxBlocksPerSm = 0;
@@ -416,7 +419,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
             }
             // take the number of tiles on the largest score matrix diagonal as the only dimension
             // +   the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
-            gridA.x = min(min(trows, tcols), nw.sm_count * maxBlocksPerSm);
+            gridA.x = min2(min2(trows, tcols), nw.sm_count * maxBlocksPerSm);
         }
 
         // create variables for gpu arrays in order to be able to take their addresses

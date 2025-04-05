@@ -1,11 +1,8 @@
 #ifndef INCLUDE_COMMON_HPP
 #define INCLUDE_COMMON_HPP
 
-#include "fmt_guard.hpp"
-#include "lang.hpp"
 #include "memory.hpp"
 #include <chrono>
-#include <cuda_runtime.h>
 #include <map>
 #include <string>
 #include <utility>

@@ -1,4 +1,7 @@
 #include "common.hpp"
+#include "lang.hpp"
+#include <cuda_runtime.h>
+#include <stdexcept>
 
 // Initialize the score matrix's header row and column.
 // The score matrix is represented as two matrices (row-major order):
@@ -565,8 +568,8 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
         {
             dim3 gridB {};
             {
-                int tbeg = max(0, d - (tcols - 1));
-                int tend = min(d + 1, trows);
+                int tbeg = max2(0, d - (tcols - 1));
+                int tend = min2(d + 1, trows);
                 // Number of tiles on the current (minor) tile diagonal.
                 int dsize = tend - tbeg;
 

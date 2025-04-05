@@ -1,4 +1,7 @@
 #include "common.hpp"
+#include "lang.hpp"
+#include <cuda_runtime.h>
+#include <stdexcept>
 
 // Initialize the score matrix's header row and column.
 // The score matrix is represented as two matrices (row-major order):
@@ -464,7 +467,7 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
         // That way the thread block can be smaller while doing the same amount of work.
         dim3 blockB {};
         {
-            int warps = (int)ceil(float(max(tileBx, tileBx)) / nw.warpsz / warpDivFactorB);
+            int warps = (int)ceil(float(max2(tileBx, tileBx)) / nw.warpsz / warpDivFactorB);
             blockB.x = nw.warpsz * warps;
         }
 
@@ -473,8 +476,8 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res)
         {
             dim3 gridB {};
             {
-                int tbeg = max(0, d - (tcols - 1));
-                int tend = min(d + 1, trows);
+                int tbeg = max2(0, d - (tcols - 1));
+                int tend = min2(d + 1, trows);
                 // Number of tiles on the current (minor) tile diagonal.
                 int dsize = tend - tbeg;
 
