@@ -1,5 +1,5 @@
-#ifndef INCLUDE_LANG_HPP
-#define INCLUDE_LANG_HPP
+#ifndef INCLUDE_DEFER_HPP
+#define INCLUDE_DEFER_HPP
 
 // defer execution to scope exit
 template <typename F>
@@ -63,4 +63,4 @@ Defer<F> make_defer(F _func)
     return Defer<F>(std::move(_func));
 }
 
-#endif // INCLUDE_LANG_HPP
+#endif // INCLUDE_DEFER_HPP

@@ -27,7 +27,7 @@
     <ClInclude Include="src\common.hpp" />
     <ClInclude Include="src\fmt_guard.hpp" />
     <ClInclude Include="src\json.hpp" />
-    <ClInclude Include="src\lang.hpp" />
+    <ClInclude Include="src\defer.hpp" />
     <ClInclude Include="src\memory.hpp" />
     <ClInclude Include="src\print_mat.hpp" />
   </ItemGroup>
