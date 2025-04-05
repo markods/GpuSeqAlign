@@ -1,5 +1,5 @@
-#include "common.hpp"
 #include "defer.hpp"
+#include "run_types.hpp"
 #include <cooperative_groups.h>
 #include <cuda_runtime.h>
 #include <stdexcept>

@@ -1,4 +1,4 @@
-#include "common.hpp"
+#include "run_types.hpp"
 
 ////// NwParam //////
 

@@ -1,5 +1,5 @@
-#include "common.hpp"
 #include "print_mat.hpp"
+#include "run_types.hpp"
 #include <limits>
 
 // get one of the optimal matching paths to a file

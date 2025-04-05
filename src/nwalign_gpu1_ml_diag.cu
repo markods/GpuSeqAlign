@@ -1,6 +1,6 @@
-#include "common.hpp"
-#include "fmt_guard.hpp"
 #include "defer.hpp"
+#include "fmt_guard.hpp"
+#include "run_types.hpp"
 #include <cuda_runtime.h>
 
 // cuda kernel for the parallel implementation

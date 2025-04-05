@@ -1,8 +1,8 @@
 #ifndef INCLUDE_PRINT_MAT_HPP
 #define INCLUDE_PRINT_MAT_HPP
 
-#include "common.hpp"
 #include "fmt_guard.hpp"
+#include "run_types.hpp"
 #include <iostream>
 
 template <typename T>

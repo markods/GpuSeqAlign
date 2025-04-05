@@ -1,12 +1,10 @@
-#ifndef INCLUDE_COMMON_HPP
-#define INCLUDE_COMMON_HPP
+#ifndef INCLUDE_RUN_TYPES_HPP
+#define INCLUDE_RUN_TYPES_HPP
 
 #include "math.hpp"
 #include "memory.hpp"
 #include "stopwatch.hpp"
 #include <map>
-#include <string>
-#include <utility>
 #include <vector>
 
 // Needleman-Wunsch status
@@ -126,4 +124,4 @@ struct NwResult
     cudaError_t cudaStat; // 0 for success
 };
 
-#endif // INCLUDE_COMMON_HPP
+#endif // INCLUDE_RUN_TYPES_HPP

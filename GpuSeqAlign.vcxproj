@@ -15,7 +15,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\common.cpp" />
+    <ClCompile Include="src\run_types.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\nwalign_cpu1_st_row.cpp" />
     <ClCompile Include="src\nwalign_cpu2_st_diag.cpp" />
@@ -26,7 +26,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\math.hpp" />
-    <ClInclude Include="src\common.hpp" />
+    <ClInclude Include="src\run_types.hpp" />
     <ClInclude Include="src\fmt_guard.hpp" />
     <ClInclude Include="src\json.hpp" />
     <ClInclude Include="src\defer.hpp" />

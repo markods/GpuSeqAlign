@@ -1,4 +1,4 @@
-#include "common.hpp"
+#include "run_types.hpp"
 
 // update the score given the current score matrix and position
 // NOTE: indel and most elements in the substitution matrix are negative, therefore find the maximum of them (instead of the minimum)

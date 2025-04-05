@@ -51,12 +51,12 @@
     <ClCompile Include="src\nwtrace2_sparse.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\common.cpp">
+    <ClCompile Include="src\run_types.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\common.hpp">
+    <ClInclude Include="src\run_types.hpp">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\json.hpp">

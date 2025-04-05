@@ -1,8 +1,8 @@
-#include "common.hpp"
+#include "defer.hpp"
 #include "fmt_guard.hpp"
 #include "json.hpp"
-#include "defer.hpp"
 #include "print_mat.hpp"
+#include "run_types.hpp"
 #include <chrono>
 #include <ctime>
 #include <cuda_runtime.h>

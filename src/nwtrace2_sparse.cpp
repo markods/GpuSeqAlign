@@ -1,5 +1,5 @@
-#include "common.hpp"
 #include "fmt_guard.hpp"
+#include "run_types.hpp"
 #include <limits>
 
 static void NwLoadHeaderAndAlignTile(std::vector<int>& tile, const NwInput& nw, int iTile, int jTile)
