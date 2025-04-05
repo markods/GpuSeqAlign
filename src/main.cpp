@@ -10,27 +10,125 @@
 #include <sstream>
 #include <string>
 
-// main program
+void print_cmd_usage()
+{
+    std::cout << "nw --algParamPath \"path\" --seqPath \"path\" [params]\n"
+                 "\n"
+                 "Parameters:\n"
+                 "-b, --substPath            Path of JSON substitution matrices file, defaults to \"./resrc/subst.json\".\n"
+                 "-r, --algParamPath         Path of JSON algorithm parameters file.\n"
+                 "-s, --seqPath              Path of FASTA file with sequences to be aligned.\n"
+                 "-p, --pairPath             Path of TXT file with sequence pairs to be aligned. Each line is in the format\n"
+                 "                           \"seqA[0:42] seqB\", where \"seqA\" and \"seqB\" are sequence ids, and \"[a:b]\" specifies the\n"
+                 "                           substring starting from element \"a\" (inclusive) until element \"b\" (exclusive).\n"
+                 "                           It's possible to omit the start/end of the interval, like so: \"[a:b]\", \"[a:]\", \"[:b]\".\n"
+                 "                           If the TXT file is not specified, then all sequences in the FASTA file except the first\n"
+                 "                           are aligned to the first sequence. If there is only one sequence in the FASTA file,\n"
+                 "                           it's aligned with itself.\n"
+                 "-o, --resPath              Path of JSON test bench results file, defaults to \"./logs/<datetime>.json\".\n"
+                 "\n"
+                 "--substName                Specify which substitution matrix from the \"subst\" file will be used. Defaults to\n"
+                 "                           \"blosum62\".\n"
+                 "--gapoCost                 Gap open cost, defaults to 11.\n"
+                 "--gapeCost                 Unused, defaults to 0.\n"
+                 "--algName                  Specify which algorithm from the \"algParam\" JSON file will be used. Can be specified\n"
+                 "                           multiple times, in which case those algorithms will be used, in that order.\n"
+                 "                           If not specified, all algorithms in the \"algParam\" JSON file are used, in that order.\n"
+                 "--refAlgName               Specify the algorithm name which should be considered as the source of truth.\n"
+                 "                           If not specified, defaults to the first algorithm in the \"algParam\" JSON file.\n"
+                 "--warmupPerAlign           Number of warmup runs per alignments. Defaults to 0.\n"
+                 "--samplesPerAlign          Number of runs per alignment. Defaults to 1.\n"
+                 "\n"
+                 "--calcTrace                Should the trace be calculated. Defaults to true.\n"
+                 "--calcScoreHash            Should the score matrix hash be calculated. Used to verify correctness with the reference\n"
+                 "                           algorithm implementation. Defaults to false.\n"
+                 "--debugPath                For debug purposes, path of the TXT file where score matrices/traces will be\n"
+                 "                           written to, once per alignment. Defaults to \"\".\n"
+                 "--printScore               Should the score matrix be printed. Defaults to false.\n"
+                 "--printTrace               Should the trace be printed. Defaults to false.\n"
+                 "\n"
+                 "-h, --help                 Print help and exit.\n"
+                 "\n";
+}
+
 int main(int argc, char* argv[])
 {
-    // check if the arguments are valid
-    if (argc != 4)
-    {
-        std::cerr << "ERR - invalid arguments\n"
-                     "nw fsubsts fparams fseqs\n"
-                     "   fsubst     json file with substitution matrices\n"
-                     "   fparams    json file with nw parameters\n"
-                     "   fseqs      json file with sequences to be compared\n";
-
-        return -1;
-    }
-
     extern NwAlgorithmData algData;
     NwSubstData substData;
     NwParamData paramData;
     NwSeqData seqData;
     NwResData resData;
     std::ofstream ofsRes;
+
+    for (int i = 1; i < argc; i++)
+    {
+        std::string arg = argv[i];
+
+        if (arg == "-b" || arg == "--substPath")
+        {
+        }
+        else if (arg == "-r" || arg == "--algParamPath")
+        {
+        }
+        else if (arg == "-s" || arg == "--seqPath")
+        {
+        }
+        else if (arg == "-p" || arg == "--pairPath")
+        {
+        }
+        else if (arg == "-o" || arg == "--resPath")
+        {
+        }
+        else if (arg == "--substName")
+        {
+        }
+        else if (arg == "--gapoCost")
+        {
+        }
+        else if (arg == "--gapeCost")
+        {
+        }
+        else if (arg == "--algName")
+        {
+        }
+        else if (arg == "--refAlgName")
+        {
+        }
+        else if (arg == "--warmupPerAlign")
+        {
+        }
+        else if (arg == "--samplesPerAlign")
+        {
+        }
+        else if (arg == "--calcTrace")
+        {
+        }
+        else if (arg == "--calcScoreHash")
+        {
+        }
+        else if (arg == "--debugPath")
+        {
+        }
+        else if (arg == "--printScore")
+        {
+        }
+        else if (arg == "--printTrace")
+        {
+        }
+        else if (arg == "--substPath")
+        {
+        }
+        else if (arg == "-h" || arg == "--help")
+        {
+            print_cmd_usage();
+            return 0;
+        }
+        else
+        {
+            std::cerr << "Unknown parameter: \"" << arg << "\"";
+            return -1;
+        }
+    }
 
     resData.projPath = std::filesystem::current_path().string() + "/../../";
     resData.resrcPath = resData.projPath + "resrc/";
