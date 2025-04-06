@@ -523,6 +523,7 @@ void print_cmd_usage(std::ostream& os)
           "--fCalcTrace               Should the trace be calculated. Defaults to false.\n"
           "--fCalcScoreHash           Should the score matrix hash be calculated. Used to verify correctness with the reference\n"
           "                           algorithm implementation. Defaults to false.\n"
+          "--fWriteProgress           Should progress be printed on stdout. Defaults to false.\n"
           "--debugPath <path>         For debug purposes, path of the TXT file where score matrices/traces will be\n"
           "                           written to, once per alignment. Defaults to \"\".\n"
           "--fPrintScore              Should the score matrix be printed. Defaults to false.\n"
@@ -549,6 +550,7 @@ struct NwCmdArgs
 
     std::optional<bool> fCalcTrace;
     std::optional<bool> fCalcScoreHash;
+    std::optional<bool> fWriteProgress;
     std::optional<std::string> debugPath;
     std::optional<bool> fPrintScore;
     std::optional<bool> fPrintTrace;
@@ -737,6 +739,10 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
         {
             ZIG_TRY(NwStat::success, setSwitchArgOnce(cmdArgs.fCalcScoreHash, arg));
         }
+        else if (arg == "--writeProgress")
+        {
+            ZIG_TRY(NwStat::success, setSwitchArgOnce(cmdArgs.fWriteProgress, arg));
+        }
         else if (arg == "--debugPath")
         {
             ZIG_TRY(NwStat::success, setStringArgOnce(argc, argv, i, cmdArgs.debugPath, arg));
@@ -776,6 +782,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
 
     setDefaultIfArgEmpty(cmdArgs.fCalcTrace, false);
     setDefaultIfArgEmpty(cmdArgs.fCalcScoreHash, false);
+    setDefaultIfArgEmpty(cmdArgs.fWriteProgress, false);
     cmdArgs.debugPath = std::nullopt;
     setDefaultIfArgEmpty(cmdArgs.fPrintScore, false);
     setDefaultIfArgEmpty(cmdArgs.fPrintTrace, false);
