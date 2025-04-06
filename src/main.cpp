@@ -563,12 +563,12 @@ NwStat setStringArgOnce(
 {
     if (arg.has_value())
     {
-        std::cerr << "error: argument already set: \"" << arg_name << "\"";
+        std::cerr << "error: parameter already set: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
     if (i >= argc)
     {
-        std::cerr << "error: missing value of argument: \"" << arg_name << "\"";
+        std::cerr << "error: expected parameter value: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
 
@@ -585,7 +585,7 @@ NwStat setStringVectArg(
 {
     if (i >= argc)
     {
-        std::cerr << "error: missing value of argument: \"" << arg_name << "\"";
+        std::cerr << "error: expected parameter value: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
 
@@ -607,12 +607,12 @@ NwStat setIntArgOnce(
 {
     if (arg.has_value())
     {
-        std::cerr << "error: argument already set: \"" << arg_name << "\"";
+        std::cerr << "error: parameter already set: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
     if (i >= argc)
     {
-        std::cerr << "error: missing value of argument: \"" << arg_name << "\"";
+        std::cerr << "error: expected parameter value: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
 
@@ -622,12 +622,12 @@ NwStat setIntArgOnce(
     }
     catch (const std::invalid_argument&)
     {
-        std::cerr << "error: provided argument value should be an int: \"" << arg_name << "\"";
+        std::cerr << "error: parameter value should be int: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
     catch (const std::out_of_range&)
     {
-        std::cerr << "error: provided argument value is out-of-range for an int: \"" << arg_name << "\"";
+        std::cerr << "error: parameter value is out-of-range for int: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
 
@@ -640,11 +640,22 @@ NwStat setSwitchArgOnce(
 {
     if (arg.has_value())
     {
-        std::cerr << "error: argument already set: \"" << arg_name << "\"";
+        std::cerr << "error: parameter already set: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
 
     arg.emplace(true);
+    return NwStat::success;
+}
+
+template <typename T>
+NwStat expectNonEmptyArg(std::optional<T>& arg, const std::string& arg_name)
+{
+    if (!arg.has_value())
+    {
+        std::cerr << "error: expected parameter: \"" << arg_name << "\"";
+        return NwStat::errorInvalidValue;
+    }
     return NwStat::success;
 }
 
@@ -661,7 +672,8 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
 {
     if (argc == 1)
     {
-        std::cerr << "error: expected command arguments";
+        print_cmd_usage(std::cout);
+        std::cerr << "error: expected command parameters";
         return NwStat::errorInvalidValue;
     }
 
@@ -748,6 +760,9 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
             return NwStat::errorInvalidValue;
         }
     }
+
+    ZIG_TRY(NwStat::success, expectNonEmptyArg(cmdArgs.algParamPath, "--algParamPath"));
+    ZIG_TRY(NwStat::success, expectNonEmptyArg(cmdArgs.seqPath, "--seqPath"));
 
     setDefaultIfArgEmpty(cmdArgs.substPath, std::string("./resrc/subst.json"));
     setDefaultIfArgEmpty(cmdArgs.resPath, std::string("./logs/") + isoDatetimeAsString() + std::string(".tsv"));
