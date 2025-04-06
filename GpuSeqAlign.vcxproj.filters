@@ -83,6 +83,9 @@
     <ClInclude Include="src\nwalign.hpp">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\json_fwd.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">

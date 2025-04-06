@@ -1,5 +1,3 @@
-#pragma warning(push, 0)  // Disable all warnings
-
 //     __ _____ _____ _____
 //  __|  |   __|     |   | |  JSON for Modern C++
 // |  |  |__   |  |  | | | |  version 3.11.3
@@ -19,6 +17,8 @@
 
 #ifndef INCLUDE_NLOHMANN_JSON_HPP_
 #define INCLUDE_NLOHMANN_JSON_HPP_
+
+#pragma warning(push, 0)  // Disable all warnings
 
 #include <algorithm> // all_of, find, for_each
 #include <cstddef> // nullptr_t, ptrdiff_t, size_t
@@ -25010,4 +25010,5 @@ inline void swap(nlohmann::NLOHMANN_BASIC_JSON_TPL& j1, nlohmann::NLOHMANN_BASIC
 
 
 #pragma warning(pop)
+
 #endif  // INCLUDE_NLOHMANN_JSON_HPP_
