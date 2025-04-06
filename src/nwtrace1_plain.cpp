@@ -3,7 +3,7 @@
 #include <limits>
 
 // get one of the optimal matching paths to a file
-NwStat NwTrace1_Plain(const NwInput& nw, NwResult& res)
+NwStat NwTrace1_Plain(const NwAlgInput& nw, NwAlgResult& res)
 {
     // variable used to calculate the hash function
     // http://www.cse.yorku.ca/~oz/hash.html
@@ -94,7 +94,7 @@ NwStat NwTrace1_Plain(const NwInput& nw, NwResult& res)
 }
 
 // hash the score matrix
-NwStat NwHash1_Plain(const NwInput& nw, NwResult& res)
+NwStat NwHash1_Plain(const NwAlgInput& nw, NwAlgResult& res)
 {
     // variable used to calculate the hash function
     // http://www.cse.yorku.ca/~oz/hash.html
@@ -125,7 +125,7 @@ NwStat NwHash1_Plain(const NwInput& nw, NwResult& res)
 }
 
 // print the score matrix
-NwStat NwPrint1_Plain(std::ostream& os, const NwInput& nw, NwResult& res)
+NwStat NwPrint1_Plain(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res)
 {
     (void)res;
     NwPrintMat(os, nw.score.data(), nw.adjrows, nw.adjcols);

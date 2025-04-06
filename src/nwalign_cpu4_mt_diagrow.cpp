@@ -2,7 +2,7 @@
 
 // update the score given the current score matrix and position
 // NOTE: indel and most elements in the substitution matrix are negative, therefore find the maximum of them (instead of the minimum)
-static void UpdateScore(NwInput& nw, int i, int j) noexcept
+static void UpdateScore(NwAlgInput& nw, int i, int j) noexcept
 {
     int p1 = el(nw.score, nw.adjcols, i - 1, j - 1) + el(nw.subst, nw.substsz, nw.seqY[i], nw.seqX[j]); // MOVE DOWN-RIGHT
     int p2 = el(nw.score, nw.adjcols, i - 1, j) + nw.indel;                                             // MOVE DOWN
@@ -11,7 +11,7 @@ static void UpdateScore(NwInput& nw, int i, int j) noexcept
 }
 
 // parallel cpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams& pr, NwInput& nw, NwResult& res)
+NwStat NwAlign_Cpu4_Mt_DiagRow(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
 {
     // size of square block that will be a unit of work
     // +   8*(16 ints) on standard architectures, or 8 cache lines

@@ -2,7 +2,7 @@
 #include "run_types.hpp"
 #include <limits>
 
-static void NwLoadHeaderAndAlignTile(std::vector<int>& tile, const NwInput& nw, int iTile, int jTile)
+static void NwLoadHeaderAndAlignTile(std::vector<int>& tile, const NwAlgInput& nw, int iTile, int jTile)
 {
     //  x x x x x x
     //  x / / / / /
@@ -60,7 +60,7 @@ static void NwLoadHeaderAndAlignTile(std::vector<int>& tile, const NwInput& nw, 
 // The score matrix is represented as two matrices (row-major order):
 // + tile header row matrix,
 // + tile header column matrix.
-NwStat NwTrace2_Sparse(const NwInput& nw, NwResult& res)
+NwStat NwTrace2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
 {
     std::vector<int> trace;
     std::vector<int> tile;
@@ -201,7 +201,7 @@ NwStat NwTrace2_Sparse(const NwInput& nw, NwResult& res)
 // The score matrix is represented as two matrices (row-major order):
 // + tile header row matrix,
 // + tile header column matrix.
-NwStat NwHash2_Sparse(const NwInput& nw, NwResult& res)
+NwStat NwHash2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
 {
     // http://www.cse.yorku.ca/~oz/hash.html
     unsigned hash = 5381;
@@ -315,7 +315,7 @@ NwStat NwHash2_Sparse(const NwInput& nw, NwResult& res)
 // The score matrix is represented as two matrices (row-major order):
 // + tile header row matrix,
 // + tile header column matrix.
-NwStat NwPrint2_Sparse(std::ostream& os, const NwInput& nw, NwResult& res)
+NwStat NwPrint2_Sparse(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res)
 {
     (void)res;
 

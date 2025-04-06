@@ -58,7 +58,7 @@ NwStat openOutFile(const std::string& path, std::ofstream& ofs)
 
 // read a json file into a variable
 template <typename T>
-NwStat readFromJson(const std::string& path, T& res)
+NwStat readFromJsonFile(const std::string& path, T& res)
 {
     std::ifstream ifs;
 
@@ -102,10 +102,10 @@ NwStat readFromJson(const std::string& path, T& res)
 class NwAlgorithm
 {
 public:
-    using NwAlignFn = NwStat (*)(NwParams& pr, NwInput& nw, NwResult& res);
-    using NwTraceFn = NwStat (*)(const NwInput& nw, NwResult& res);
-    using NwHashFn = NwStat (*)(const NwInput& nw, NwResult& res);
-    using NwPrintFn = NwStat (*)(std::ostream& os, const NwInput& nw, NwResult& res);
+    using NwAlignFn = NwStat (*)(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res);
+    using NwTraceFn = NwStat (*)(const NwAlgInput& nw, NwAlgResult& res);
+    using NwHashFn = NwStat (*)(const NwAlgInput& nw, NwAlgResult& res);
+    using NwPrintFn = NwStat (*)(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res);
 
 public:
     NwAlgorithm();
@@ -116,14 +116,14 @@ public:
         NwHashFn hashFn,
         NwPrintFn printFn);
 
-    void init(NwParams& alignPr);
+    void init(NwAlgParams& alignPr);
 
-    NwParams& alignPr();
+    NwAlgParams& alignPr();
 
-    NwStat align(NwInput& nw, NwResult& res);
-    NwStat trace(const NwInput& nw, NwResult& res);
-    NwStat hash(const NwInput& nw, NwResult& res);
-    NwStat print(std::ostream& os, const NwInput& nw, NwResult& res);
+    NwStat align(NwAlgInput& nw, NwAlgResult& res);
+    NwStat trace(const NwAlgInput& nw, NwAlgResult& res);
+    NwStat hash(const NwAlgInput& nw, NwAlgResult& res);
+    NwStat print(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res);
 
 private:
     NwAlignFn _alignFn;
@@ -131,7 +131,7 @@ private:
     NwHashFn _hashFn;
     NwPrintFn _printFn;
 
-    NwParams _alignPr;
+    NwAlgParams _alignPr;
 };
 
 NwAlgorithm::NwAlgorithm()
@@ -158,29 +158,29 @@ NwAlgorithm::NwAlgorithm(
     _alignPr = {};
 }
 
-void NwAlgorithm::init(NwParams& alignPr)
+void NwAlgorithm::init(NwAlgParams& alignPr)
 {
     _alignPr = alignPr;
 }
 
-NwParams& NwAlgorithm::alignPr()
+NwAlgParams& NwAlgorithm::alignPr()
 {
     return _alignPr;
 }
 
-NwStat NwAlgorithm::align(NwInput& nw, NwResult& res)
+NwStat NwAlgorithm::align(NwAlgInput& nw, NwAlgResult& res)
 {
     return _alignFn(_alignPr, nw, res);
 }
-NwStat NwAlgorithm::trace(const NwInput& nw, NwResult& res)
+NwStat NwAlgorithm::trace(const NwAlgInput& nw, NwAlgResult& res)
 {
     return _traceFn(nw, res);
 }
-NwStat NwAlgorithm::hash(const NwInput& nw, NwResult& res)
+NwStat NwAlgorithm::hash(const NwAlgInput& nw, NwAlgResult& res)
 {
     return _hashFn(nw, res);
 }
-NwStat NwAlgorithm::print(std::ostream& os, const NwInput& nw, NwResult& res)
+NwStat NwAlgorithm::print(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res)
 {
     return _printFn(os, nw, res);
 }
@@ -194,7 +194,7 @@ struct NwSubstData
 
 struct NwParamData
 {
-    std::map<std::string, NwParams> paramMap;
+    std::map<std::string, NwAlgParams> paramMap;
 };
 
 struct NwSeqData
@@ -213,11 +213,11 @@ void from_json(const nlohmann::ordered_json& j, NwSubstData& substData)
     j.at("letterMap").get_to(substData.letterMap);
     j.at("substMap").get_to(substData.substMap);
 }
-void from_json(const nlohmann::ordered_json& j, NwParam& param)
+void from_json(const nlohmann::ordered_json& j, NwAlgParam& param)
 {
     j.get_to(param._values);
 }
-void from_json(const nlohmann::ordered_json& j, NwParams& params)
+void from_json(const nlohmann::ordered_json& j, NwAlgParams& params)
 {
     j.get_to(params._params);
 }
@@ -239,11 +239,11 @@ void to_json(nlohmann::ordered_json& j, const NwSubstData& substData)
     j["letterMap"] = substData.letterMap;
     j["substMap"] = substData.substMap;
 }
-void to_json(nlohmann::ordered_json& j, const NwParam& param)
+void to_json(nlohmann::ordered_json& j, const NwAlgParam& param)
 {
     j = param._values;
 }
-void to_json(nlohmann::ordered_json& j, const NwParams& params)
+void to_json(nlohmann::ordered_json& j, const NwAlgParams& params)
 {
     j = params._params;
 }
@@ -267,7 +267,7 @@ static void lapTimeToTsv(std::ostream& os, float lapTime)
 }
 
 // conversion to tsv from object
-void resHeaderToTsv(std::ostream& os)
+void writeResultHeaderToTsv(std::ostream& os)
 {
     FormatFlagsGuard fg {os};
     os.fill(' ');
@@ -301,7 +301,7 @@ void resHeaderToTsv(std::ostream& os)
 
     os << '\n';
 }
-void nwResultToTsv(std::ostream& os, const NwResult& res)
+void writeResultLineToTsv(std::ostream& os, const NwAlgResult& res)
 {
     FormatFlagsGuard fg {os};
     {
@@ -424,7 +424,7 @@ bool operator!=(const NwCompareRes& l, const NwCompareRes& r)
 }
 
 // check that the result hashes match the hashes calculated by the first algorithm (the gold standard)
-NwStat setOrVerifyResult(const NwResult& res, NwCompareData& compareData)
+NwStat setOrVerifyResult(const NwAlgResult& res, NwCompareData& compareData)
 {
     std::map<NwCompareKey, NwCompareRes>& compareMap = compareData.compareMap;
     NwCompareKey key {
@@ -458,12 +458,12 @@ NwStat setOrVerifyResult(const NwResult& res, NwCompareData& compareData)
 }
 
 // combine results from many repetitions into one
-NwResult combineResults(std::vector<NwResult>& resList)
+NwAlgResult combineResults(std::vector<NwAlgResult>& resList)
 {
     // if the result list is empty, return a default initialized result
     if (resList.empty())
     {
-        return NwResult {};
+        return NwAlgResult {};
     }
 
     // get the stopwatches from multiple repeats as lists
@@ -479,7 +479,7 @@ NwResult combineResults(std::vector<NwResult>& resList)
 
     // copy on purpose here -- don't modify the given result list
     // +   take the last result since it might have an error (if it errored it is definitely the last result)
-    NwResult res = resList[resList.size() - 1];
+    NwAlgResult res = resList[resList.size() - 1];
     // combine the stopwatches from many repeats into one
     res.sw_align = Stopwatch::combineStopwatches(swAlignList);
     res.sw_hash = Stopwatch::combineStopwatches(swHashList);
@@ -794,7 +794,7 @@ int main(const int argc, const char* argv[])
     std::ofstream ofsRes {};
     cudaError_t cudaStatus {cudaSuccess};
 
-    std::vector<NwResult> resultList {};
+    std::vector<NwAlgResult> resultList {};
     std::map<std::string, NwAlgorithm> algMap {
         /*algMap:*/ {
                      {"NwAlign_Cpu1_St_Row", {NwAlign_Cpu1_St_Row, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
@@ -817,17 +817,17 @@ int main(const int argc, const char* argv[])
     NwParamData paramData {};
     NwSeqData seqData {};
 
-    if (NwStat::success != readFromJson(cmdArgs.substPath.value(), substData))
+    if (NwStat::success != readFromJsonFile(cmdArgs.substPath.value(), substData))
     {
         std::cerr << "ERR - could not open/read json from substs file";
         return -1;
     }
-    if (NwStat::success != readFromJson(cmdArgs.algParamPath.value(), paramData))
+    if (NwStat::success != readFromJsonFile(cmdArgs.algParamPath.value(), paramData))
     {
         std::cerr << "ERR - could not open/read json from params file";
         return -1;
     }
-    if (NwStat::success != readFromJson(cmdArgs.seqPath.value(), seqData))
+    if (NwStat::success != readFromJsonFile(cmdArgs.seqPath.value(), seqData))
     {
         std::cerr << "ERR - could not open/read json from seqs file";
         return -1;
@@ -856,7 +856,7 @@ int main(const int argc, const char* argv[])
     const int warpsz = deviceProps.warpSize;
     const int maxThreadsPerBlock = deviceProps.maxThreadsPerBlock;
 
-    NwInput nw {
+    NwAlgInput nw {
         ////// host specific memory
         // subst;   <-- once
         // seqX;    <-- loop-inited
@@ -940,7 +940,7 @@ int main(const int argc, const char* argv[])
     NwCompareData compareData {};
 
     // write the tsv file's header
-    resHeaderToTsv(ofsRes);
+    writeResultHeaderToTsv(ofsRes);
     ofsRes.flush();
 
     // for all algorithms which have parameters in the param map
@@ -988,13 +988,13 @@ int main(const int argc, const char* argv[])
                 for (; alg.alignPr().hasCurr(); alg.alignPr().next())
                 {
                     // results from multiple repetitions
-                    std::vector<NwResult> resList {};
+                    std::vector<NwAlgResult> resList {};
 
                     // for all requested repeats
                     for (int iR = 0; iR < seqData.repeat; iR++)
                     {
                         // initialize the result in the result list
-                        resList.push_back(NwResult {
+                        resList.push_back(NwAlgResult {
                             algName,              // algName;
                             alg.alignPr().copy(), // algParams;
 
@@ -1017,7 +1017,7 @@ int main(const int argc, const char* argv[])
                             {}, // cudaerr;   // 0 for success
                         });
                         // get the result from the list
-                        NwResult& res = resList.back();
+                        NwAlgResult& res = resList.back();
 
                         auto defer4 = make_defer([&]() noexcept
                         {
@@ -1073,12 +1073,12 @@ int main(const int argc, const char* argv[])
 
                     // add the result to the results list
                     resultList.push_back(combineResults(resList));
-                    NwResult& res = resultList.back();
+                    NwAlgResult& res = resultList.back();
                     // reset the multiple repetition list
                     resList.clear();
 
                     // print the result as a tsv line to the tsv output file
-                    nwResultToTsv(ofsRes, res);
+                    writeResultLineToTsv(ofsRes, res);
                     ofsRes << '\n';
                     ofsRes.flush();
                 }

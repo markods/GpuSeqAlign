@@ -1,55 +1,55 @@
 #include "run_types.hpp"
 
-////// NwParam //////
+////// NwAlgParam //////
 
-NwParam::NwParam() = default;
-NwParam::NwParam(std::vector<int> values)
+NwAlgParam::NwAlgParam() = default;
+NwAlgParam::NwAlgParam(std::vector<int> values)
 {
     _values = values;
     _currIdx = 0;
 }
 
-int NwParam::curr() const
+int NwAlgParam::curr() const
 {
     return _values[_currIdx];
 }
-bool NwParam::hasCurr() const
+bool NwAlgParam::hasCurr() const
 {
     return _currIdx < _values.size();
 }
-void NwParam::next()
+void NwAlgParam::next()
 {
     _currIdx++;
 }
-void NwParam::reset()
+void NwAlgParam::reset()
 {
     _currIdx = 0;
 }
 
-////// NwParams //////
+////// NwAlgParams //////
 
-NwParams::NwParams()
+NwAlgParams::NwAlgParams()
 {
     _params = {};
     _isEnd = false;
 }
-NwParams::NwParams(std::map<std::string, NwParam> params)
+NwAlgParams::NwAlgParams(std::map<std::string, NwAlgParam> params)
 {
     _params = params;
     // always allow the inital iteration, even if there are no params
     _isEnd = false;
 }
 
-NwParam& NwParams::operator[](const std::string name)
+NwAlgParam& NwAlgParams::operator[](const std::string name)
 {
     return _params.at(name);
 }
 
-bool NwParams::hasCurr() const
+bool NwAlgParams::hasCurr() const
 {
     return !_isEnd;
 }
-void NwParams::next() // updates starting from the last parameter and so on
+void NwAlgParams::next() // updates starting from the last parameter and so on
 {
     for (auto iter = _params.rbegin(); iter != _params.rend(); iter++)
     {
@@ -64,7 +64,7 @@ void NwParams::next() // updates starting from the last parameter and so on
     }
     _isEnd = true;
 }
-void NwParams::reset()
+void NwAlgParams::reset()
 {
     for (auto iter = _params.rbegin(); iter != _params.rend(); iter++)
     {
@@ -74,7 +74,7 @@ void NwParams::reset()
     _isEnd = false;
 }
 
-std::map<std::string, int> NwParams::copy() const
+std::map<std::string, int> NwAlgParams::copy() const
 {
     std::map<std::string, int> res;
     for (const auto& paramTuple : _params)
@@ -88,10 +88,10 @@ std::map<std::string, int> NwParams::copy() const
     return res;
 }
 
-////// NwInput //////
+////// NwAlgInput //////
 
 // free all memory allocated by the Needleman-Wunsch algorithms
-void NwInput::resetAllocsBenchmarkCycle()
+void NwAlgInput::resetAllocsBenchmarkCycle()
 {
     // NOTE: first free device memory, since there is less of it for other algorithms
 
@@ -115,7 +115,7 @@ void NwInput::resetAllocsBenchmarkCycle()
 }
 
 // free all remaining memory not cleared by resetAllocs
-void NwInput::resetAllocsBenchmarkEnd()
+void NwAlgInput::resetAllocsBenchmarkEnd()
 {
     // NOTE: first free device memory, since there is less of it for other algorithms
 

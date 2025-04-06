@@ -275,7 +275,7 @@ __global__ static void Nw_Gpu4_KernelB(
 }
 
 // parallel gpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res)
+NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
 {
     // tile sizes for kernels A and B
     // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing

@@ -21,10 +21,10 @@ enum class NwStat : int
 };
 
 // parameter that takes values from a vector
-struct NwParam
+struct NwAlgParam
 {
-    NwParam();
-    NwParam(std::vector<int> values);
+    NwAlgParam();
+    NwAlgParam(std::vector<int> values);
 
     int curr() const;
     bool hasCurr() const;
@@ -36,12 +36,12 @@ struct NwParam
 };
 
 // parameters for the Needleman-Wunsch algorithm variant
-struct NwParams
+struct NwAlgParams
 {
-    NwParams();
-    NwParams(std::map<std::string, NwParam> params);
+    NwAlgParams();
+    NwAlgParams(std::map<std::string, NwAlgParam> params);
 
-    NwParam& operator[](const std::string name);
+    NwAlgParam& operator[](const std::string name);
 
     bool hasCurr() const;
     // updates starting from the last parameter and so on
@@ -50,12 +50,12 @@ struct NwParams
 
     std::map<std::string, int> copy() const;
 
-    std::map<std::string, NwParam> _params;
+    std::map<std::string, NwAlgParam> _params;
     bool _isEnd;
 };
 
 // input for the Needleman-Wunsch algorithm variant
-struct NwInput
+struct NwAlgInput
 {
     ////// host specific memory
     std::vector<int> subst;
@@ -100,7 +100,7 @@ struct NwInput
 };
 
 // results which the Needleman-Wunsch algorithm variant returns
-struct NwResult
+struct NwAlgResult
 {
     std::string algName;
     std::map<std::string, int> algParams;
