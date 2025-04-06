@@ -3,6 +3,16 @@
 
 #include <utility>
 
+#define ZIG_TRY(exp_res, expr)  \
+    do                      \
+    {                       \
+        auto res = (expr);  \
+        if (res != exp_res) \
+        {                   \
+            return res;     \
+        }                   \
+    } while (false)
+
 // defer execution to scope exit
 template <typename F>
 class Defer

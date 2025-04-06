@@ -1,17 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>subst.json param_best.json seq_debug.json</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-b "../../resrc/subst.json" -r "../../resrc/param_best.json" -s "../../resrc/seq_debug.json"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>$(TargetDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">
-    <LocalDebuggerCommandArguments>subst.json param_best.json seq_profile.json</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-b "../../resrc/subst.json" -r "../../resrc/param_best.json" -s "../../resrc/seq_profile.json"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>$(TargetDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LocalDebuggerCommandArguments>subst.json param_best.json seq_profile.json</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-b "../../resrc/subst.json" -r "../../resrc/param_best.json" -s "../../resrc/seq_release.json"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>$(TargetDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>

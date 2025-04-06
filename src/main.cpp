@@ -12,11 +12,12 @@
 #include <iomanip>
 #include <iostream>
 #include <map>
+#include <optional>
 #include <sstream>
 #include <string>
 
 // get the current time as an ISO string
-std::string isoTimeAsString()
+std::string isoDatetimeAsString()
 {
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
@@ -184,11 +185,6 @@ NwStat NwAlgorithm::print(std::ostream& os, const NwInput& nw, NwResult& res)
     return _printFn(os, nw, res);
 }
 
-struct NwAlgorithmData
-{
-    std::map<std::string, NwAlgorithm> algMap;
-};
-
 // input file formats
 struct NwSubstData
 {
@@ -209,24 +205,6 @@ struct NwSeqData
     int repeat = 0;
     // each sequence will be an int vector and have a header (zeroth) element
     std::vector<std::string> seqList;
-};
-
-struct NwResData
-{
-    // directories
-    std::string projPath;
-    std::string resrcPath;
-    std::string resPath;
-
-    // filenames
-    std::string isoTime;
-    std::string substFname;
-    std::string paramFname;
-    std::string seqFname;
-    std::string resFname;
-
-    // result list
-    std::vector<NwResult> resList;
 };
 
 // conversion to object from json
@@ -551,9 +529,273 @@ void print_cmd_usage(std::ostream& os)
           "\n";
 }
 
-int main(int argc, char* argv[])
+struct NwCmdArgs
 {
-    NwAlgorithmData algData {
+    std::optional<std::string> substPath;
+    std::optional<std::string> algParamPath;
+    std::optional<std::string> seqPath;
+    std::optional<std::string> pairPath;
+    std::optional<std::string> resPath;
+
+    std::optional<std::string> substName;
+    std::optional<int> gapoCost;
+    std::optional<int> gapeCost;
+    std::optional<std::vector<std::string>> algName;
+    std::optional<std::string> refAlgName;
+    std::optional<int> warmupPerAlign;
+    std::optional<int> samplesPerAlign;
+
+    std::optional<bool> calcTrace;
+    std::optional<bool> calcScoreHash;
+    std::optional<std::string> debugPath;
+    std::optional<bool> printScore;
+    std::optional<bool> printTrace;
+};
+
+NwStat setStringArgOnce(
+    const int argc,
+    const char* argv[],
+    int& i,
+    std::optional<std::string>& arg,
+    const std::string& arg_name /*must not be a rvalue*/)
+{
+    if (arg.has_value())
+    {
+        std::cerr << "Argument already set: \"" << arg_name << "\"";
+        return NwStat::errorInvalidValue;
+    }
+    if (i >= argc)
+    {
+        std::cerr << "Missing value of argument: \"" << arg_name << "\"";
+        return NwStat::errorInvalidValue;
+    }
+
+    arg.emplace(argv[++i]);
+    return NwStat::success;
+}
+
+NwStat setStringVectArg(
+    const int argc,
+    const char* argv[],
+    int& i,
+    std::optional<std::vector<std::string>>& arg,
+    const std::string& arg_name /*must not be a rvalue*/)
+{
+    if (i >= argc)
+    {
+        std::cerr << "Missing value of argument: \"" << arg_name << "\"";
+        return NwStat::errorInvalidValue;
+    }
+
+    if (!arg.has_value())
+    {
+        arg.emplace(std::vector<std::string> {});
+    }
+
+    arg.value().push_back(argv[++i]);
+    return NwStat::success;
+}
+
+NwStat setBoolArgOnce(
+    const int argc,
+    const char* argv[],
+    int& i,
+    std::optional<bool>& arg,
+    const std::string& arg_name /*must not be a rvalue*/)
+{
+    if (arg.has_value())
+    {
+        std::cerr << "Argument already set: \"" << arg_name << "\"";
+        return NwStat::errorInvalidValue;
+    }
+    if (i >= argc)
+    {
+        std::cerr << "Missing value of argument: \"" << arg_name << "\"";
+        return NwStat::errorInvalidValue;
+    }
+
+    std::string value = argv[++i];
+
+    if (value == "true")
+    {
+        arg.emplace(true);
+        return NwStat::success;
+    }
+    else if (value == "false")
+    {
+        arg.emplace(false);
+        return NwStat::success;
+    }
+    else
+    {
+        std::cerr << "Provided argument value should be a bool: \"" << arg_name << "\"";
+        return NwStat::errorInvalidValue;
+    }
+}
+
+NwStat setIntArgOnce(
+    const int argc,
+    const char* argv[],
+    int& i,
+    std::optional<int>& arg,
+    const std::string& arg_name /*must not be a rvalue*/)
+{
+    if (arg.has_value())
+    {
+        std::cerr << "Argument already set: \"" << arg_name << "\"";
+        return NwStat::errorInvalidValue;
+    }
+    if (i >= argc)
+    {
+        std::cerr << "Missing value of argument: \"" << arg_name << "\"";
+        return NwStat::errorInvalidValue;
+    }
+
+    try
+    {
+        arg.emplace(std::stoi(argv[++i]));
+    }
+    catch (const std::invalid_argument&)
+    {
+        std::cerr << "Provided argument value should be an int: \"" << arg_name << "\"";
+        return NwStat::errorInvalidValue;
+    }
+    catch (const std::out_of_range&)
+    {
+        std::cerr << "Provided argument value is out-of-range for an int: \"" << arg_name << "\"";
+        return NwStat::errorInvalidValue;
+    }
+
+    return NwStat::success;
+}
+
+template <typename T>
+void setDefaultIfArgEmpty(std::optional<T>& arg, const T& value)
+{
+    if (!arg.has_value())
+    {
+        arg.emplace(value);
+    }
+}
+
+NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
+{
+    for (int i = 1; i < argc; i++)
+    {
+        std::string arg = argv[i];
+
+        if (arg == "-b" || arg == "--substPath")
+        {
+            ZIG_TRY(NwStat::success, setStringArgOnce(argc, argv, i, cmdArgs.substPath, arg));
+        }
+        else if (arg == "-r" || arg == "--algParamPath")
+        {
+            ZIG_TRY(NwStat::success, setStringArgOnce(argc, argv, i, cmdArgs.algParamPath, arg));
+        }
+        else if (arg == "-s" || arg == "--seqPath")
+        {
+            ZIG_TRY(NwStat::success, setStringArgOnce(argc, argv, i, cmdArgs.seqPath, arg));
+        }
+        else if (arg == "-p" || arg == "--pairPath")
+        {
+            ZIG_TRY(NwStat::success, setStringArgOnce(argc, argv, i, cmdArgs.pairPath, arg));
+        }
+        else if (arg == "-o" || arg == "--resPath")
+        {
+            ZIG_TRY(NwStat::success, setStringArgOnce(argc, argv, i, cmdArgs.resPath, arg));
+        }
+        else if (arg == "--substName")
+        {
+            ZIG_TRY(NwStat::success, setStringArgOnce(argc, argv, i, cmdArgs.substName, arg));
+        }
+        else if (arg == "--gapoCost")
+        {
+            ZIG_TRY(NwStat::success, setIntArgOnce(argc, argv, i, cmdArgs.gapoCost, arg));
+        }
+        else if (arg == "--gapeCost")
+        {
+            ZIG_TRY(NwStat::success, setIntArgOnce(argc, argv, i, cmdArgs.gapeCost, arg));
+        }
+        else if (arg == "--algName")
+        {
+            ZIG_TRY(NwStat::success, setStringVectArg(argc, argv, i, cmdArgs.algName, arg));
+        }
+        else if (arg == "--refAlgName")
+        {
+            ZIG_TRY(NwStat::success, setStringArgOnce(argc, argv, i, cmdArgs.refAlgName, arg));
+        }
+        else if (arg == "--warmupPerAlign")
+        {
+            ZIG_TRY(NwStat::success, setIntArgOnce(argc, argv, i, cmdArgs.warmupPerAlign, arg));
+        }
+        else if (arg == "--samplesPerAlign")
+        {
+            ZIG_TRY(NwStat::success, setIntArgOnce(argc, argv, i, cmdArgs.samplesPerAlign, arg));
+        }
+        else if (arg == "--calcTrace")
+        {
+            ZIG_TRY(NwStat::success, setBoolArgOnce(argc, argv, i, cmdArgs.calcTrace, arg));
+        }
+        else if (arg == "--calcScoreHash")
+        {
+            ZIG_TRY(NwStat::success, setBoolArgOnce(argc, argv, i, cmdArgs.calcScoreHash, arg));
+        }
+        else if (arg == "--debugPath")
+        {
+            ZIG_TRY(NwStat::success, setStringArgOnce(argc, argv, i, cmdArgs.debugPath, arg));
+        }
+        else if (arg == "--printScore")
+        {
+            ZIG_TRY(NwStat::success, setBoolArgOnce(argc, argv, i, cmdArgs.printScore, arg));
+        }
+        else if (arg == "--printTrace")
+        {
+            ZIG_TRY(NwStat::success, setBoolArgOnce(argc, argv, i, cmdArgs.printTrace, arg));
+        }
+        else if (arg == "-h" || arg == "--help")
+        {
+            print_cmd_usage(std::cout);
+            return NwStat::success;
+        }
+        else
+        {
+            std::cerr << "Unknown parameter: \"" << arg << "\"";
+            return NwStat::errorInvalidValue;
+        }
+    }
+
+    setDefaultIfArgEmpty(cmdArgs.substPath, std::string("./resrc/subst.json"));
+    setDefaultIfArgEmpty(cmdArgs.resPath, std::string("./logs/") + isoDatetimeAsString() + std::string(".tsv"));
+
+    setDefaultIfArgEmpty(cmdArgs.substName, std::string("blosum62"));
+    setDefaultIfArgEmpty(cmdArgs.gapoCost, 11);
+    setDefaultIfArgEmpty(cmdArgs.gapeCost, 0);
+    cmdArgs.refAlgName; // TODO
+    setDefaultIfArgEmpty(cmdArgs.warmupPerAlign, 0);
+    setDefaultIfArgEmpty(cmdArgs.samplesPerAlign, 0);
+
+    setDefaultIfArgEmpty(cmdArgs.calcTrace, true);
+    setDefaultIfArgEmpty(cmdArgs.calcScoreHash, false);
+    cmdArgs.debugPath = std::nullopt;
+    setDefaultIfArgEmpty(cmdArgs.printScore, false);
+    setDefaultIfArgEmpty(cmdArgs.printTrace, false);
+
+    return NwStat::success;
+}
+
+int main(const int argc, const char* argv[])
+{
+    NwCmdArgs cmdArgs {};
+    if (NwStat::success != parseCmdArgs(argc, argv, cmdArgs))
+    {
+        return -1;
+    }
+
+    std::ofstream ofsRes {};
+    cudaError_t cudaStatus {cudaSuccess};
+
+    std::vector<NwResult> resultList {};
+    std::map<std::string, NwAlgorithm> algMap {
         /*algMap:*/ {
                      {"NwAlign_Cpu1_St_Row", {NwAlign_Cpu1_St_Row, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
                      {"NwAlign_Cpu2_St_Diag", {NwAlign_Cpu2_St_Diag, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
@@ -571,127 +813,30 @@ int main(int argc, char* argv[])
                      },
     };
 
-    NwSubstData substData;
-    NwParamData paramData;
-    NwSeqData seqData;
-    NwResData resData;
-    std::ofstream ofsRes;
-    cudaError_t cudaStatus = cudaSuccess;
+    NwSubstData substData {};
+    NwParamData paramData {};
+    NwSeqData seqData {};
 
-    if (argc != 4)
+    if (NwStat::success != readFromJson(cmdArgs.substPath.value(), substData))
     {
-        print_cmd_usage(std::cout);
+        std::cerr << "ERR - could not open/read json from substs file";
+        return -1;
+    }
+    if (NwStat::success != readFromJson(cmdArgs.algParamPath.value(), paramData))
+    {
+        std::cerr << "ERR - could not open/read json from params file";
+        return -1;
+    }
+    if (NwStat::success != readFromJson(cmdArgs.seqPath.value(), seqData))
+    {
+        std::cerr << "ERR - could not open/read json from seqs file";
         return -1;
     }
 
-    // for (int i = 1; i < argc; i++)
-    // {
-    //     std::string arg = argv[i];
-    //
-    //     if (arg == "-b" || arg == "--substPath")
-    //     {
-    //     }
-    //     else if (arg == "-r" || arg == "--algParamPath")
-    //     {
-    //     }
-    //     else if (arg == "-s" || arg == "--seqPath")
-    //     {
-    //     }
-    //     else if (arg == "-p" || arg == "--pairPath")
-    //     {
-    //     }
-    //     else if (arg == "-o" || arg == "--resPath")
-    //     {
-    //     }
-    //     else if (arg == "--substName")
-    //     {
-    //     }
-    //     else if (arg == "--gapoCost")
-    //     {
-    //     }
-    //     else if (arg == "--gapeCost")
-    //     {
-    //     }
-    //     else if (arg == "--algName")
-    //     {
-    //     }
-    //     else if (arg == "--refAlgName")
-    //     {
-    //     }
-    //     else if (arg == "--warmupPerAlign")
-    //     {
-    //     }
-    //     else if (arg == "--samplesPerAlign")
-    //     {
-    //     }
-    //     else if (arg == "--calcTrace")
-    //     {
-    //     }
-    //     else if (arg == "--calcScoreHash")
-    //     {
-    //     }
-    //     else if (arg == "--debugPath")
-    //     {
-    //     }
-    //     else if (arg == "--printScore")
-    //     {
-    //     }
-    //     else if (arg == "--printTrace")
-    //     {
-    //     }
-    //     else if (arg == "--substPath")
-    //     {
-    //     }
-    //     else if (arg == "-h" || arg == "--help")
-    //     {
-    //         print_cmd_usage(std::cout);
-    //         return 0;
-    //     }
-    //     else
-    //     {
-    //         std::cerr << "Unknown parameter: \"" << arg << "\"";
-    //         return -1;
-    //     }
-    // }
-
-    resData.projPath = std::filesystem::current_path().string() + "/../../";
-    resData.resrcPath = resData.projPath + "resrc/";
-    resData.resPath = resData.projPath + "log/";
-
-    resData.isoTime = isoTimeAsString();
-    resData.substFname = argv[1];
-    resData.paramFname = argv[2];
-    resData.seqFname = argv[3];
-    resData.resFname = resData.isoTime + ".tsv";
-
-    // read data from input .json files
-    // +   also open the output file
+    if (NwStat::success != openOutFile(cmdArgs.resPath.value(), ofsRes))
     {
-        std::string substPath = resData.resrcPath + resData.substFname;
-        std::string paramPath = resData.resrcPath + resData.paramFname;
-        std::string seqPath = resData.resrcPath + resData.seqFname;
-        std::string resPath = resData.resPath + resData.resFname;
-
-        if (NwStat::success != readFromJson(substPath, substData))
-        {
-            std::cerr << "ERR - could not open/read json from substs file";
-            return -1;
-        }
-        if (NwStat::success != readFromJson(paramPath, paramData))
-        {
-            std::cerr << "ERR - could not open/read json from params file";
-            return -1;
-        }
-        if (NwStat::success != readFromJson(seqPath, seqData))
-        {
-            std::cerr << "ERR - could not open/read json from seqs file";
-            return -1;
-        }
-        if (NwStat::success != openOutFile(resPath, ofsRes))
-        {
-            std::cerr << "ERR - could not open tsv results file";
-            return -1;
-        }
+        std::cerr << "ERR - could not open tsv results file";
+        return -1;
     }
     auto defer1 = make_defer([&]() noexcept
     {
@@ -699,7 +844,7 @@ int main(int argc, char* argv[])
     });
 
     // get the device properties
-    cudaDeviceProp deviceProps;
+    cudaDeviceProp deviceProps {};
     if (cudaSuccess != (cudaStatus = cudaGetDeviceProperties(&deviceProps, 0 /*deviceId*/)))
     {
         std::cerr << "ERR - could not get device properties";
@@ -803,7 +948,7 @@ int main(int argc, char* argv[])
     {
         // if the current algorithm doesn't exist, skip it
         const std::string& algName = paramTuple.first;
-        if (algData.algMap.find(algName) == algData.algMap.end())
+        if (algMap.find(algName) == algMap.end())
         {
             continue;
         }
@@ -811,7 +956,7 @@ int main(int argc, char* argv[])
         std::cout << algName << ":";
 
         // get the current algorithm and initialize its parameters
-        NwAlgorithm& alg = algData.algMap[algName];
+        NwAlgorithm& alg = algMap[algName];
         alg.init(paramTuple.second /*algParams*/);
 
         // for all Y sequences + for all X sequences (also compare every sequence with itself)
@@ -927,8 +1072,8 @@ int main(int argc, char* argv[])
                     }
 
                     // add the result to the results list
-                    resData.resList.push_back(combineResults(resList));
-                    NwResult& res = resData.resList.back();
+                    resultList.push_back(combineResults(resList));
+                    NwResult& res = resultList.back();
                     // reset the multiple repetition list
                     resList.clear();
 

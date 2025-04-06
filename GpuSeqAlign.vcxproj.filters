@@ -120,5 +120,8 @@
     <None Include="resrc\subst.json">
       <Filter>resrc</Filter>
     </None>
+    <None Include="resrc\seq_release.json">
+      <Filter>resrc</Filter>
+    </None>
   </ItemGroup>
 </Project>
