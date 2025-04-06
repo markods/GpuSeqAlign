@@ -26,6 +26,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\math.hpp" />
+    <ClInclude Include="src\nwalign.hpp" />
     <ClInclude Include="src\run_types.hpp" />
     <ClInclude Include="src\fmt_guard.hpp" />
     <ClInclude Include="src\json.hpp" />

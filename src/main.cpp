@@ -1,6 +1,7 @@
 #include "defer.hpp"
 #include "fmt_guard.hpp"
 #include "json.hpp"
+#include "nwalign.hpp"
 #include "print_mat.hpp"
 #include "run_types.hpp"
 #include <chrono>
@@ -14,72 +15,8 @@
 #include <sstream>
 #include <string>
 
-void print_cmd_usage(std::ostream& os)
-{
-    os << "nw --algParamPath \"path\" --seqPath \"path\" [params]\n"
-          "\n"
-          "Parameters:\n"
-          "-b, --substPath            Path of JSON substitution matrices file, defaults to \"./resrc/subst.json\".\n"
-          "-r, --algParamPath         Path of JSON algorithm parameters file.\n"
-          "-s, --seqPath              Path of FASTA file with sequences to be aligned.\n"
-          "-p, --pairPath             Path of TXT file with sequence pairs to be aligned. Each line is in the format\n"
-          "                           \"seqA[0:42] seqB\", where \"seqA\" and \"seqB\" are sequence ids, and \"[a:b]\" specifies the\n"
-          "                           substring starting from element \"a\" (inclusive) until element \"b\" (exclusive).\n"
-          "                           It's possible to omit the start/end of the interval, like so: \"[a:b]\", \"[a:]\", \"[:b]\".\n"
-          "                           If the TXT file is not specified, then all sequences in the FASTA file except the first\n"
-          "                           are aligned to the first sequence. If there is only one sequence in the FASTA file,\n"
-          "                           it's aligned with itself.\n"
-          "-o, --resPath              Path of JSON test bench results file, defaults to \"./logs/<datetime>.json\".\n"
-          "\n"
-          "--substName                Specify which substitution matrix from the \"subst\" file will be used. Defaults to\n"
-          "                           \"blosum62\".\n"
-          "--gapoCost                 Gap open cost, defaults to 11.\n"
-          "--gapeCost                 Unused, defaults to 0.\n"
-          "--algName                  Specify which algorithm from the \"algParam\" JSON file will be used. Can be specified\n"
-          "                           multiple times, in which case those algorithms will be used, in that order.\n"
-          "                           If not specified, all algorithms in the \"algParam\" JSON file are used, in that order.\n"
-          "--refAlgName               Specify the algorithm name which should be considered as the source of truth.\n"
-          "                           If not specified, defaults to the first algorithm in the \"algParam\" JSON file.\n"
-          "--warmupPerAlign           Number of warmup runs per alignments. Defaults to 0.\n"
-          "--samplesPerAlign          Number of runs per alignment. Defaults to 1.\n"
-          "\n"
-          "--calcTrace                Should the trace be calculated. Defaults to true.\n"
-          "--calcScoreHash            Should the score matrix hash be calculated. Used to verify correctness with the reference\n"
-          "                           algorithm implementation. Defaults to false.\n"
-          "--debugPath                For debug purposes, path of the TXT file where score matrices/traces will be\n"
-          "                           written to, once per alignment. Defaults to \"\".\n"
-          "--printScore               Should the score matrix be printed. Defaults to false.\n"
-          "--printTrace               Should the trace be printed. Defaults to false.\n"
-          "\n"
-          "-h, --help                 Print help and exit.\n"
-          "\n";
-}
-
-// align functions implemented in other files
-NwStat NwAlign_Cpu1_St_Row(NwParams& pr, NwInput& nw, NwResult& res);
-NwStat NwAlign_Cpu2_St_Diag(NwParams& pr, NwInput& nw, NwResult& res);
-NwStat NwAlign_Cpu3_St_DiagRow(NwParams& pr, NwInput& nw, NwResult& res);
-NwStat NwAlign_Cpu4_Mt_DiagRow(NwParams& pr, NwInput& nw, NwResult& res);
-NwStat NwAlign_Gpu1_Ml_Diag(NwParams& pr, NwInput& nw, NwResult& res);
-NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwParams& pr, NwInput& nw, NwResult& res);
-NwStat NwAlign_Gpu3_Ml_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res);
-NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res);
-NwStat NwAlign_Gpu5_Coop_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res);
-NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwParams& pr, NwInput& nw, NwResult& res);
-NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res);
-NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwParams& pr, NwInput& nw, NwResult& res);
-NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwParams& pr, NwInput& nw, NwResult& res);
-
-// traceback, hash and print functions implemented in other files
-NwStat NwTrace1_Plain(const NwInput& nw, NwResult& res);
-NwStat NwTrace2_Sparse(const NwInput& nw, NwResult& res);
-NwStat NwHash1_Plain(const NwInput& nw, NwResult& res);
-NwStat NwHash2_Sparse(const NwInput& nw, NwResult& res);
-NwStat NwPrint1_Plain(std::ostream& os, const NwInput& nw, NwResult& res);
-NwStat NwPrint2_Sparse(std::ostream& os, const NwInput& nw, NwResult& res);
-
 // get the current time as an ISO string
-std::string IsoTime()
+std::string isoTimeAsString()
 {
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
@@ -251,7 +188,6 @@ struct NwAlgorithmData
 {
     std::map<std::string, NwAlgorithm> algMap;
 };
-extern NwAlgorithmData algData;
 
 // input file formats
 struct NwSubstData
@@ -291,25 +227,6 @@ struct NwResData
 
     // result list
     std::vector<NwResult> resList;
-};
-
-// all algorithms
-NwAlgorithmData algData {
-    /*algMap:*/ {
-                 {"NwAlign_Cpu1_St_Row", {NwAlign_Cpu1_St_Row, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-                 {"NwAlign_Cpu2_St_Diag", {NwAlign_Cpu2_St_Diag, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-                 {"NwAlign_Cpu3_St_DiagRow", {NwAlign_Cpu3_St_DiagRow, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-                 {"NwAlign_Cpu4_Mt_DiagRow", {NwAlign_Cpu4_Mt_DiagRow, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-                 {"NwAlign_Gpu1_Ml_Diag", {NwAlign_Gpu1_Ml_Diag, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-                 {"NwAlign_Gpu2_Ml_DiagRow2Pass", {NwAlign_Gpu2_Ml_DiagRow2Pass, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-                 {"NwAlign_Gpu3_Ml_DiagDiag", {NwAlign_Gpu3_Ml_DiagDiag, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-                 {"NwAlign_Gpu4_Ml_DiagDiag2Pass", {NwAlign_Gpu4_Ml_DiagDiag2Pass, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-                 {"NwAlign_Gpu5_Coop_DiagDiag", {NwAlign_Gpu5_Coop_DiagDiag, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-                 {"NwAlign_Gpu6_Coop_DiagDiag2Pass", {NwAlign_Gpu6_Coop_DiagDiag2Pass, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
-                 {"NwAlign_Gpu7_Mlsp_DiagDiag", {NwAlign_Gpu7_Mlsp_DiagDiag, NwTrace2_Sparse, NwHash2_Sparse, NwPrint2_Sparse}},
-                 {"NwAlign_Gpu8_Mlsp_DiagDiag", {NwAlign_Gpu8_Mlsp_DiagDiag, NwTrace2_Sparse, NwHash2_Sparse, NwPrint2_Sparse}},
-                 {"NwAlign_Gpu9_Mlsp_DiagDiagDiag", {NwAlign_Gpu9_Mlsp_DiagDiagDiag, NwTrace2_Sparse, NwHash2_Sparse, NwPrint2_Sparse}},
-                 },
 };
 
 // conversion to object from json
@@ -593,9 +510,67 @@ NwResult combineResults(std::vector<NwResult>& resList)
     return res;
 }
 
+void print_cmd_usage(std::ostream& os)
+{
+    os << "nw --algParamPath \"path\" --seqPath \"path\" [params]\n"
+          "\n"
+          "Parameters:\n"
+          "-b, --substPath            Path of JSON substitution matrices file, defaults to \"./resrc/subst.json\".\n"
+          "-r, --algParamPath         Path of JSON algorithm parameters file.\n"
+          "-s, --seqPath              Path of FASTA file with sequences to be aligned.\n"
+          "-p, --pairPath             Path of TXT file with sequence pairs to be aligned. Each line is in the format\n"
+          "                           \"seqA[0:42] seqB\", where \"seqA\" and \"seqB\" are sequence ids, and \"[a:b]\" specifies the\n"
+          "                           substring starting from element \"a\" (inclusive) until element \"b\" (exclusive).\n"
+          "                           It's possible to omit the start/end of the interval, like so: \"[a:b]\", \"[a:]\", \"[:b]\".\n"
+          "                           If the TXT file is not specified, then all sequences in the FASTA file except the first\n"
+          "                           are aligned to the first sequence. If there is only one sequence in the FASTA file,\n"
+          "                           it's aligned with itself.\n"
+          "-o, --resPath              Path of JSON test bench results file, defaults to \"./logs/<datetime>.json\".\n"
+          "\n"
+          "--substName                Specify which substitution matrix from the \"subst\" file will be used. Defaults to\n"
+          "                           \"blosum62\".\n"
+          "--gapoCost                 Gap open cost, defaults to 11.\n"
+          "--gapeCost                 Unused, defaults to 0.\n"
+          "--algName                  Specify which algorithm from the \"algParam\" JSON file will be used. Can be specified\n"
+          "                           multiple times, in which case those algorithms will be used, in that order.\n"
+          "                           If not specified, all algorithms in the \"algParam\" JSON file are used, in that order.\n"
+          "--refAlgName               Specify the algorithm name which should be considered as the source of truth.\n"
+          "                           If not specified, defaults to the first algorithm in the \"algParam\" JSON file.\n"
+          "--warmupPerAlign           Number of warmup runs per alignments. Defaults to 0.\n"
+          "--samplesPerAlign          Number of runs per alignment. Defaults to 1.\n"
+          "\n"
+          "--calcTrace                Should the trace be calculated. Defaults to true.\n"
+          "--calcScoreHash            Should the score matrix hash be calculated. Used to verify correctness with the reference\n"
+          "                           algorithm implementation. Defaults to false.\n"
+          "--debugPath                For debug purposes, path of the TXT file where score matrices/traces will be\n"
+          "                           written to, once per alignment. Defaults to \"\".\n"
+          "--printScore               Should the score matrix be printed. Defaults to false.\n"
+          "--printTrace               Should the trace be printed. Defaults to false.\n"
+          "\n"
+          "-h, --help                 Print help and exit.\n"
+          "\n";
+}
+
 int main(int argc, char* argv[])
 {
-    extern NwAlgorithmData algData;
+    NwAlgorithmData algData {
+        /*algMap:*/ {
+                     {"NwAlign_Cpu1_St_Row", {NwAlign_Cpu1_St_Row, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+                     {"NwAlign_Cpu2_St_Diag", {NwAlign_Cpu2_St_Diag, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+                     {"NwAlign_Cpu3_St_DiagRow", {NwAlign_Cpu3_St_DiagRow, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+                     {"NwAlign_Cpu4_Mt_DiagRow", {NwAlign_Cpu4_Mt_DiagRow, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+                     {"NwAlign_Gpu1_Ml_Diag", {NwAlign_Gpu1_Ml_Diag, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+                     {"NwAlign_Gpu2_Ml_DiagRow2Pass", {NwAlign_Gpu2_Ml_DiagRow2Pass, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+                     {"NwAlign_Gpu3_Ml_DiagDiag", {NwAlign_Gpu3_Ml_DiagDiag, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+                     {"NwAlign_Gpu4_Ml_DiagDiag2Pass", {NwAlign_Gpu4_Ml_DiagDiag2Pass, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+                     {"NwAlign_Gpu5_Coop_DiagDiag", {NwAlign_Gpu5_Coop_DiagDiag, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+                     {"NwAlign_Gpu6_Coop_DiagDiag2Pass", {NwAlign_Gpu6_Coop_DiagDiag2Pass, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
+                     {"NwAlign_Gpu7_Mlsp_DiagDiag", {NwAlign_Gpu7_Mlsp_DiagDiag, NwTrace2_Sparse, NwHash2_Sparse, NwPrint2_Sparse}},
+                     {"NwAlign_Gpu8_Mlsp_DiagDiag", {NwAlign_Gpu8_Mlsp_DiagDiag, NwTrace2_Sparse, NwHash2_Sparse, NwPrint2_Sparse}},
+                     {"NwAlign_Gpu9_Mlsp_DiagDiagDiag", {NwAlign_Gpu9_Mlsp_DiagDiagDiag, NwTrace2_Sparse, NwHash2_Sparse, NwPrint2_Sparse}},
+                     },
+    };
+
     NwSubstData substData;
     NwParamData paramData;
     NwSeqData seqData;
@@ -683,7 +658,7 @@ int main(int argc, char* argv[])
     resData.resrcPath = resData.projPath + "resrc/";
     resData.resPath = resData.projPath + "log/";
 
-    resData.isoTime = IsoTime();
+    resData.isoTime = isoTimeAsString();
     resData.substFname = argv[1];
     resData.paramFname = argv[2];
     resData.seqFname = argv[3];
