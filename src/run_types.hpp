@@ -10,14 +10,15 @@
 // Needleman-Wunsch status
 enum class NwStat : int
 {
-    success = 0,
-    errorMemoryAllocation = 1,
-    errorMemoryTransfer = 2,
-    errorKernelFailure = 3,
-    errorIoStream = 4,
-    errorInvalidFormat = 5,
-    errorInvalidValue = 6,
-    errorInvalidResult = 7,
+    success,
+    helpMenuRequested,
+    errorMemoryAllocation,
+    errorMemoryTransfer,
+    errorKernelFailure,
+    errorIoStream,
+    errorInvalidFormat,
+    errorInvalidValue,
+    errorInvalidResult,
 };
 
 // parameter that takes values from a vector

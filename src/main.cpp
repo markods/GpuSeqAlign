@@ -323,6 +323,8 @@ void writeResultLineToTsv(std::ostream& os, const NwAlgResult& res)
         os << int(res.stat) << "\t";
         os << int(res.cudaStat) << "\t";
 
+        // TODO: print align score
+
         os.fill('0');
         os << std::setw(10) << res.score_hash << "\t";
         os << std::setw(10) << res.trace_hash << "\t";
@@ -342,6 +344,7 @@ void writeResultLineToTsv(std::ostream& os, const NwAlgResult& res)
     lapTimeToTsv(os, res.sw_align.get_or_default("align.cpy_host"));
     os << "\t";
 
+    // TODO: only print if requested
     lapTimeToTsv(os, res.sw_hash.get_or_default("hash.calc"));
     os << "\t";
 
@@ -493,40 +496,39 @@ void print_cmd_usage(std::ostream& os)
     os << "nw --algParamPath \"path\" --seqPath \"path\" [params]\n"
           "\n"
           "Parameters:\n"
-          "-b, --substPath            Path of JSON substitution matrices file, defaults to \"./resrc/subst.json\".\n"
-          "-r, --algParamPath         Path of JSON algorithm parameters file.\n"
-          "-s, --seqPath              Path of FASTA file with sequences to be aligned.\n"
-          "-p, --pairPath             Path of TXT file with sequence pairs to be aligned. Each line is in the format\n"
+          "-b, --substPath <path>     Path of JSON substitution matrices file, defaults to \"./resrc/subst.json\".\n"
+          "-r, --algParamPath <path>  Path of JSON algorithm parameters file.\n"
+          "-s, --seqPath <path>       Path of FASTA file with sequences to be aligned.\n"
+          "-p, --pairPath <path>      Path of TXT file with sequence pairs to be aligned. Each line is in the format\n"
           "                           \"seqA[0:42] seqB\", where \"seqA\" and \"seqB\" are sequence ids, and \"[a:b]\" specifies the\n"
           "                           substring starting from element \"a\" (inclusive) until element \"b\" (exclusive).\n"
           "                           It's possible to omit the start/end of the interval, like so: \"[a:b]\", \"[a:]\", \"[:b]\".\n"
           "                           If the TXT file is not specified, then all sequences in the FASTA file except the first\n"
           "                           are aligned to the first sequence. If there is only one sequence in the FASTA file,\n"
           "                           it's aligned with itself.\n"
-          "-o, --resPath              Path of JSON test bench results file, defaults to \"./logs/<datetime>.json\".\n"
+          "-o, --resPath <path>       Path of JSON test bench results file, defaults to \"./logs/<datetime>.json\".\n"
           "\n"
-          "--substName                Specify which substitution matrix from the \"subst\" file will be used. Defaults to\n"
+          "--substName <name>         Specify which substitution matrix from the \"subst\" file will be used. Defaults to\n"
           "                           \"blosum62\".\n"
-          "--gapoCost                 Gap open cost, defaults to 11.\n"
-          "--gapeCost                 Unused, defaults to 0.\n"
-          "--algName                  Specify which algorithm from the \"algParam\" JSON file will be used. Can be specified\n"
+          "--gapoCost <cost>          Gap open cost. Nonnegative integer, defaults to 11.\n"
+          "--gapeCost <cost>          Unused. Gap extend cost. Nonnegative integer, defaults to 0.\n"
+          "--algName <name>           Specify which algorithm from the \"algParam\" JSON file will be used. Can be specified\n"
           "                           multiple times, in which case those algorithms will be used, in that order.\n"
           "                           If not specified, all algorithms in the \"algParam\" JSON file are used, in that order.\n"
-          "--refAlgName               Specify the algorithm name which should be considered as the source of truth.\n"
+          "--refAlgName <name>        Specify the algorithm name which should be considered as the source of truth.\n"
           "                           If not specified, defaults to the first algorithm in the \"algParam\" JSON file.\n"
-          "--warmupPerAlign           Number of warmup runs per alignments. Defaults to 0.\n"
-          "--samplesPerAlign          Number of runs per alignment. Defaults to 1.\n"
+          "--warmupPerAlign <num>     Number of warmup runs per alignments. Nonnegative integer, defaults to 0.\n"
+          "--samplesPerAlign <num>    Number of runs per alignment. Nonnegative integer, defaults to 1.\n"
           "\n"
-          "--calcTrace                Should the trace be calculated. Defaults to true.\n"
-          "--calcScoreHash            Should the score matrix hash be calculated. Used to verify correctness with the reference\n"
+          "--fCalcTrace               Should the trace be calculated. Defaults to false.\n"
+          "--fCalcScoreHash           Should the score matrix hash be calculated. Used to verify correctness with the reference\n"
           "                           algorithm implementation. Defaults to false.\n"
-          "--debugPath                For debug purposes, path of the TXT file where score matrices/traces will be\n"
+          "--debugPath <path>         For debug purposes, path of the TXT file where score matrices/traces will be\n"
           "                           written to, once per alignment. Defaults to \"\".\n"
-          "--printScore               Should the score matrix be printed. Defaults to false.\n"
-          "--printTrace               Should the trace be printed. Defaults to false.\n"
+          "--fPrintScore              Should the score matrix be printed. Defaults to false.\n"
+          "--fPrintTrace              Should the trace be printed. Defaults to false.\n"
           "\n"
-          "-h, --help                 Print help and exit.\n"
-          "\n";
+          "-h, --help                 Print help and exit.\n";
 }
 
 struct NwCmdArgs
@@ -545,11 +547,11 @@ struct NwCmdArgs
     std::optional<int> warmupPerAlign;
     std::optional<int> samplesPerAlign;
 
-    std::optional<bool> calcTrace;
-    std::optional<bool> calcScoreHash;
+    std::optional<bool> fCalcTrace;
+    std::optional<bool> fCalcScoreHash;
     std::optional<std::string> debugPath;
-    std::optional<bool> printScore;
-    std::optional<bool> printTrace;
+    std::optional<bool> fPrintScore;
+    std::optional<bool> fPrintTrace;
 };
 
 NwStat setStringArgOnce(
@@ -561,12 +563,12 @@ NwStat setStringArgOnce(
 {
     if (arg.has_value())
     {
-        std::cerr << "Argument already set: \"" << arg_name << "\"";
+        std::cerr << "error: argument already set: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
     if (i >= argc)
     {
-        std::cerr << "Missing value of argument: \"" << arg_name << "\"";
+        std::cerr << "error: missing value of argument: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
 
@@ -583,7 +585,7 @@ NwStat setStringVectArg(
 {
     if (i >= argc)
     {
-        std::cerr << "Missing value of argument: \"" << arg_name << "\"";
+        std::cerr << "error: missing value of argument: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
 
@@ -596,43 +598,6 @@ NwStat setStringVectArg(
     return NwStat::success;
 }
 
-NwStat setBoolArgOnce(
-    const int argc,
-    const char* argv[],
-    int& i,
-    std::optional<bool>& arg,
-    const std::string& arg_name /*must not be a rvalue*/)
-{
-    if (arg.has_value())
-    {
-        std::cerr << "Argument already set: \"" << arg_name << "\"";
-        return NwStat::errorInvalidValue;
-    }
-    if (i >= argc)
-    {
-        std::cerr << "Missing value of argument: \"" << arg_name << "\"";
-        return NwStat::errorInvalidValue;
-    }
-
-    std::string value = argv[++i];
-
-    if (value == "true")
-    {
-        arg.emplace(true);
-        return NwStat::success;
-    }
-    else if (value == "false")
-    {
-        arg.emplace(false);
-        return NwStat::success;
-    }
-    else
-    {
-        std::cerr << "Provided argument value should be a bool: \"" << arg_name << "\"";
-        return NwStat::errorInvalidValue;
-    }
-}
-
 NwStat setIntArgOnce(
     const int argc,
     const char* argv[],
@@ -642,12 +607,12 @@ NwStat setIntArgOnce(
 {
     if (arg.has_value())
     {
-        std::cerr << "Argument already set: \"" << arg_name << "\"";
+        std::cerr << "error: argument already set: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
     if (i >= argc)
     {
-        std::cerr << "Missing value of argument: \"" << arg_name << "\"";
+        std::cerr << "error: missing value of argument: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
 
@@ -657,15 +622,29 @@ NwStat setIntArgOnce(
     }
     catch (const std::invalid_argument&)
     {
-        std::cerr << "Provided argument value should be an int: \"" << arg_name << "\"";
+        std::cerr << "error: provided argument value should be an int: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
     catch (const std::out_of_range&)
     {
-        std::cerr << "Provided argument value is out-of-range for an int: \"" << arg_name << "\"";
+        std::cerr << "error: provided argument value is out-of-range for an int: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
 
+    return NwStat::success;
+}
+
+NwStat setSwitchArgOnce(
+    std::optional<bool>& arg,
+    const std::string& arg_name /*must not be a rvalue*/)
+{
+    if (arg.has_value())
+    {
+        std::cerr << "error: argument already set: \"" << arg_name << "\"";
+        return NwStat::errorInvalidValue;
+    }
+
+    arg.emplace(true);
     return NwStat::success;
 }
 
@@ -680,6 +659,12 @@ void setDefaultIfArgEmpty(std::optional<T>& arg, const T& value)
 
 NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
 {
+    if (argc == 1)
+    {
+        std::cerr << "error: expected command arguments";
+        return NwStat::errorInvalidValue;
+    }
+
     for (int i = 1; i < argc; i++)
     {
         std::string arg = argv[i];
@@ -734,11 +719,11 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
         }
         else if (arg == "--calcTrace")
         {
-            ZIG_TRY(NwStat::success, setBoolArgOnce(argc, argv, i, cmdArgs.calcTrace, arg));
+            ZIG_TRY(NwStat::success, setSwitchArgOnce(cmdArgs.fCalcTrace, arg));
         }
         else if (arg == "--calcScoreHash")
         {
-            ZIG_TRY(NwStat::success, setBoolArgOnce(argc, argv, i, cmdArgs.calcScoreHash, arg));
+            ZIG_TRY(NwStat::success, setSwitchArgOnce(cmdArgs.fCalcScoreHash, arg));
         }
         else if (arg == "--debugPath")
         {
@@ -746,20 +731,20 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
         }
         else if (arg == "--printScore")
         {
-            ZIG_TRY(NwStat::success, setBoolArgOnce(argc, argv, i, cmdArgs.printScore, arg));
+            ZIG_TRY(NwStat::success, setSwitchArgOnce(cmdArgs.fPrintScore, arg));
         }
         else if (arg == "--printTrace")
         {
-            ZIG_TRY(NwStat::success, setBoolArgOnce(argc, argv, i, cmdArgs.printTrace, arg));
+            ZIG_TRY(NwStat::success, setSwitchArgOnce(cmdArgs.fPrintTrace, arg));
         }
         else if (arg == "-h" || arg == "--help")
         {
             print_cmd_usage(std::cout);
-            return NwStat::success;
+            return NwStat::helpMenuRequested;
         }
         else
         {
-            std::cerr << "Unknown parameter: \"" << arg << "\"";
+            std::cerr << "error: unknown parameter: \"" << arg << "\"";
             return NwStat::errorInvalidValue;
         }
     }
@@ -774,11 +759,11 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
     setDefaultIfArgEmpty(cmdArgs.warmupPerAlign, 0);
     setDefaultIfArgEmpty(cmdArgs.samplesPerAlign, 0);
 
-    setDefaultIfArgEmpty(cmdArgs.calcTrace, true);
-    setDefaultIfArgEmpty(cmdArgs.calcScoreHash, false);
+    setDefaultIfArgEmpty(cmdArgs.fCalcTrace, false);
+    setDefaultIfArgEmpty(cmdArgs.fCalcScoreHash, false);
     cmdArgs.debugPath = std::nullopt;
-    setDefaultIfArgEmpty(cmdArgs.printScore, false);
-    setDefaultIfArgEmpty(cmdArgs.printTrace, false);
+    setDefaultIfArgEmpty(cmdArgs.fPrintScore, false);
+    setDefaultIfArgEmpty(cmdArgs.fPrintTrace, false);
 
     return NwStat::success;
 }
@@ -786,8 +771,12 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
 int main(const int argc, const char* argv[])
 {
     NwCmdArgs cmdArgs {};
-    if (NwStat::success != parseCmdArgs(argc, argv, cmdArgs))
+    if (NwStat stat = parseCmdArgs(argc, argv, cmdArgs); stat != NwStat::success)
     {
+        if (stat == NwStat::helpMenuRequested)
+        {
+            return 0;
+        }
         return -1;
     }
 
@@ -819,23 +808,23 @@ int main(const int argc, const char* argv[])
 
     if (NwStat::success != readFromJsonFile(cmdArgs.substPath.value(), substData))
     {
-        std::cerr << "ERR - could not open/read json from substs file";
+        std::cerr << "error: could not open/read json from substs file";
         return -1;
     }
     if (NwStat::success != readFromJsonFile(cmdArgs.algParamPath.value(), paramData))
     {
-        std::cerr << "ERR - could not open/read json from params file";
+        std::cerr << "error: could not open/read json from params file";
         return -1;
     }
     if (NwStat::success != readFromJsonFile(cmdArgs.seqPath.value(), seqData))
     {
-        std::cerr << "ERR - could not open/read json from seqs file";
+        std::cerr << "error: could not open/read json from seqs file";
         return -1;
     }
 
     if (NwStat::success != openOutFile(cmdArgs.resPath.value(), ofsRes))
     {
-        std::cerr << "ERR - could not open tsv results file";
+        std::cerr << "error: could not open tsv results file";
         return -1;
     }
     auto defer1 = make_defer([&]() noexcept
@@ -847,7 +836,7 @@ int main(const int argc, const char* argv[])
     cudaDeviceProp deviceProps {};
     if (cudaSuccess != (cudaStatus = cudaGetDeviceProperties(&deviceProps, 0 /*deviceId*/)))
     {
-        std::cerr << "ERR - could not get device properties";
+        std::cerr << "error: could not get device properties";
         return -1;
     }
 
@@ -911,14 +900,14 @@ int main(const int argc, const char* argv[])
         }
         catch (const std::exception&)
         {
-            std::cerr << "ERR - could not reserve space for the substitution matrix in the gpu";
+            std::cerr << "error: could not reserve space for the substitution matrix in the gpu";
             return -1;
         }
 
         // transfer the substitution matrix to the gpu global memory
         if (cudaSuccess != (cudaStatus = memTransfer(nw.subst_gpu, nw.subst, nw.substsz * nw.substsz)))
         {
-            std::cerr << "ERR - could not transfer substitution matrix to the gpu";
+            std::cerr << "error: could not transfer substitution matrix to the gpu";
             return -1;
         }
     }
@@ -1066,7 +1055,7 @@ int main(const int argc, const char* argv[])
                         cudaStatus = cudaGetLastError();
                         if (cudaStatus != cudaSuccess)
                         {
-                            std::cerr << "ERR - corrupted cuda context";
+                            std::cerr << "error: corrupted cuda context";
                             return -1;
                         }
                     }
@@ -1099,7 +1088,7 @@ int main(const int argc, const char* argv[])
     // print the number of calculation errors
     if (compareData.calcErrors > 0)
     {
-        std::cerr << "ERR - " << compareData.calcErrors << " calculation error(s)";
+        std::cerr << "error: " << compareData.calcErrors << " calculation error(s)";
         return -1;
     }
 }
