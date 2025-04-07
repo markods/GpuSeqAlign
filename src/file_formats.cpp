@@ -20,9 +20,6 @@ void from_json(const nlohmann::ordered_json& j, NwParamData& paramData)
 }
 void from_json(const nlohmann::ordered_json& j, NwSeqData& seqData)
 {
-    j.at("substName").get_to(seqData.substName);
-    j.at("indel").get_to(seqData.indel);
-    j.at("repeat").get_to(seqData.repeat);
     j.at("seqList").get_to(seqData.seqList);
 }
 
@@ -46,9 +43,6 @@ void to_json(nlohmann::ordered_json& j, const NwParamData& paramData)
 }
 void to_json(nlohmann::ordered_json& j, const NwSeqData& seqData)
 {
-    j["substName"] = seqData.substName;
-    j["indel"] = seqData.indel;
-    j["repeat"] = seqData.repeat;
     j["seqList"] = seqData.seqList;
 }
 
@@ -63,10 +57,11 @@ void writeResultHeaderToTsv(std::ostream& os,
     os << "alg_name";
     os << "\t" << "iY";
     os << "\t" << "iX";
-    os << "\t" << "reps";
 
     os << "\t" << "seqY_len";
     os << "\t" << "seqX_len";
+    os << "\t" << "warmup_runs";
+    os << "\t" << "sample_runs";
 
     os << "\t" << "alg_params";
 
@@ -117,13 +112,13 @@ void writeResultLineToTsv(
     FormatFlagsGuard fg {os};
 
     os << res.algName;
-
     os << "\t" << res.iY;
     os << "\t" << res.iX;
-    os << "\t" << res.reps;
 
     os << "\t" << res.seqY_len;
     os << "\t" << res.seqX_len;
+    os << "\t" << res.warmup_runs;
+    os << "\t" << res.sample_runs;
 
     nlohmann::ordered_json algParamsJson = res.algParams;
     os << "\t" << algParamsJson.dump();
@@ -133,19 +128,18 @@ void writeResultLineToTsv(
     os << "\t" << int(res.cudaStat);
 
     os << "\t" << res.align_cost;
-
     if (fPrintScoreStats)
     {
         os.fill('0');
         os << "\t" << std::setw(10) << res.score_hash;
+        fg.restore();
     }
     if (fPrintTraceStats)
     {
         os.fill('0');
         os << "\t" << std::setw(10) << res.trace_hash;
+        fg.restore();
     }
-
-    fg.restore();
 
     os << "\t";
     lapTimeToTsv(os, res.sw_align.get_or_default("align.alloc"));

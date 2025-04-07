@@ -81,6 +81,7 @@ struct NwAlgInput
     int substsz;
     int adjrows;
     int adjcols;
+    // TODO: rename
     int indel;
     // sparse representation of the score matrix
     int tileHdrMatRows;
@@ -105,20 +106,19 @@ struct NwAlgResult
 {
     std::string algName;
     std::map<std::string, int> algParams;
-
-    int iX;
     int iY;
-    int reps;
-
-    size_t seqX_len;
-    size_t seqY_len;
+    int iX;
 
     int errstep;          // 0 for success
     NwStat stat;          // 0 for success
     cudaError_t cudaStat; // 0 for success
 
-    unsigned align_cost;
+    size_t seqY_len;
+    size_t seqX_len;
+    int warmup_runs;
+    int sample_runs;
 
+    unsigned align_cost; // TODO: set value
     unsigned score_hash;
     unsigned trace_hash;
 

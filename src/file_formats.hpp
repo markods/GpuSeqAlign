@@ -21,10 +21,7 @@ struct NwParamData
 
 struct NwSeqData
 {
-    std::string substName;
-    int indel;
-    int repeat;
-    // Sequence is a char vector and has a header (zeroth) element.
+    // Sequence has a header (zeroth) element.
     std::vector<std::string> seqList;
 };
 

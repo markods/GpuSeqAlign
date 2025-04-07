@@ -248,7 +248,7 @@ NwStat setStringArgOnce(
         std::cerr << "error: parameter already set: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
-    if (i >= argc)
+    if (i + 1 >= argc)
     {
         std::cerr << "error: expected parameter value: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
@@ -265,7 +265,7 @@ NwStat setStringVectArg(
     std::optional<std::vector<std::string>>& arg,
     const std::string& arg_name /*must not be a rvalue*/)
 {
-    if (i >= argc)
+    if (i + 1 >= argc)
     {
         std::cerr << "error: expected parameter value: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
@@ -292,7 +292,7 @@ NwStat setIntArgOnce(
         std::cerr << "error: parameter already set: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
     }
-    if (i >= argc)
+    if (i + 1 >= argc)
     {
         std::cerr << "error: expected parameter value: \"" << arg_name << "\"";
         return NwStat::errorInvalidValue;
@@ -547,6 +547,22 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
     return NwStat::success;
 }
 
+struct NwCmdData
+{
+    NwSubstData substData;
+    NwAlgParams algParamsData;
+    NwSeqData seqData;
+    // NwPairData pairData; // TODO
+    std::ofstream resOfs;
+
+    std::ofstream debugOfs;
+};
+
+NwStat initCmdData(const int argc, const char* argv[], NwCmdData& cmdData)
+{
+    return NwStat::success;
+}
+
 int main(const int argc, const char* argv[])
 {
     NwCmdArgs cmdArgs {};
@@ -559,8 +575,9 @@ int main(const int argc, const char* argv[])
         return -1;
     }
 
+    NwCmdData cmdData {};
+
     std::ofstream ofsRes {};
-    cudaError_t cudaStatus {cudaSuccess};
 
     std::vector<NwAlgResult> resultList {};
     std::map<std::string, NwAlgorithm> algMap {
@@ -609,7 +626,7 @@ int main(const int argc, const char* argv[])
 
     // get the device properties
     cudaDeviceProp deviceProps {};
-    if (cudaSuccess != (cudaStatus = cudaGetDeviceProperties(&deviceProps, 0 /*deviceId*/)))
+    if (auto cudaStatus = cudaGetDeviceProperties(&deviceProps, 0 /*deviceId*/); cudaSuccess != cudaStatus)
     {
         std::cerr << "error: could not get device properties";
         return -1;
@@ -665,7 +682,7 @@ int main(const int argc, const char* argv[])
 
     // initialize the substitution matrix on the cpu and gpu
     {
-        nw.subst = substData.substMap[seqData.substName];
+        nw.subst = substData.substMap[cmdArgs.substName.value()];
         nw.substsz = (int)std::sqrt(nw.subst.size());
 
         // reserve space in the gpu global memory
@@ -680,7 +697,7 @@ int main(const int argc, const char* argv[])
         }
 
         // transfer the substitution matrix to the gpu global memory
-        if (cudaSuccess != (cudaStatus = memTransfer(nw.subst_gpu, nw.subst, nw.substsz * nw.substsz)))
+        if (auto cudaStatus = memTransfer(nw.subst_gpu, nw.subst, nw.substsz * nw.substsz); cudaSuccess != cudaStatus)
         {
             std::cerr << "error: could not transfer substitution matrix to the gpu";
             return -1;
@@ -688,9 +705,9 @@ int main(const int argc, const char* argv[])
     }
 
     // initialize the indel cost
-    nw.indel = seqData.indel;
+    nw.indel = cmdArgs.gapoCost.value();
     // initialize the letter map
-    std::map<std::string, int> letterMap = substData.letterMap;
+    std::map<std::string, int>& letterMap = substData.letterMap;
 
     // initialize the sequence map
     std::vector<std::vector<int>> seqList {};
@@ -707,7 +724,7 @@ int main(const int argc, const char* argv[])
     writeResultHeaderToTsv(ofsRes, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
     if (cmdArgs.fWriteProgress.value())
     {
-        // When we write to progress immediately, then write to file immediately.
+        // Since we write to progress immediately, write to file immediately as well.
         ofsRes.flush();
     }
 
@@ -752,13 +769,6 @@ int main(const int argc, const char* argv[])
                 nw.seqX = seqList[iX];
                 nw.adjcols = (int)nw.seqX.size();
 
-                // if the number of columns is less than the number of rows, swap them and the sequences
-                if (nw.adjcols < nw.adjrows)
-                {
-                    std::swap(nw.adjcols, nw.adjrows);
-                    std::swap(nw.seqX, nw.seqY);
-                }
-
                 // for all parameter combinations
                 for (; alg.alignPr().hasCurr(); alg.alignPr().next())
                 {
@@ -766,7 +776,7 @@ int main(const int argc, const char* argv[])
                     std::vector<NwAlgResult> resList {};
 
                     // for all requested repeats
-                    for (int iR = 0; iR < seqData.repeat; iR++)
+                    for (int iR = -cmdArgs.warmupPerAlign.value(); iR < cmdArgs.samplesPerAlign.value(); iR++)
                     {
                         auto defer2 = make_defer([&]() noexcept
                         {
@@ -778,13 +788,14 @@ int main(const int argc, const char* argv[])
 
                         res.algName = algName;
                         res.algParams = alg.alignPr().copy();
-                        //
                         res.iX = iX;
                         res.iY = iY;
-                        res.reps = seqData.repeat;
                         //
                         res.seqX_len = nw.seqX.size();
                         res.seqY_len = nw.seqY.size();
+                        //
+                        res.warmup_runs = cmdArgs.warmupPerAlign.value();
+                        res.sample_runs = cmdArgs.samplesPerAlign.value();
 
                         // compare the sequences, hash and trace the score matrices, and verify the soundness of the results
                         if (!res.errstep && NwStat::success != (res.stat = alg.align(nw, res)))
@@ -812,6 +823,12 @@ int main(const int argc, const char* argv[])
                             compareData.calcErrors++;
                         }
 
+                        if (iR < 0)
+                        {
+                            // Discard warmup runs.
+                            resList.pop_back();
+                        }
+
                         if (cmdArgs.fWriteProgress.value())
                         {
                             // if the result is successful, print a dot, otherwise an x
@@ -825,11 +842,9 @@ int main(const int argc, const char* argv[])
                             }
                         }
 
-                        // clear cuda non-sticky errors and get possible cuda sticky errors
-                        // note: repeat twice, since sticky errors cannot be cleared
-                        cudaStatus = cudaGetLastError();
-                        cudaStatus = cudaGetLastError();
-                        if (cudaStatus != cudaSuccess)
+                        // Clear cuda non-sticky errors and get possible cuda sticky errors.
+                        // Since sticky errors cannot be cleared, so repeat twice.
+                        if (auto cudaStatus = (cudaGetLastError(), cudaGetLastError()); cudaStatus != cudaSuccess)
                         {
                             std::cerr << "error: corrupted cuda context";
                             return -1;
@@ -846,7 +861,7 @@ int main(const int argc, const char* argv[])
                     writeResultLineToTsv(ofsRes, res, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
                     if (cmdArgs.fWriteProgress.value())
                     {
-                        // When we write to progress immediately, then write to file immediately.
+                        // Since we write to progress immediately, write to file immediately as well.
                         ofsRes.flush();
                     }
                 }
