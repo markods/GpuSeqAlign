@@ -296,6 +296,8 @@ void writeResultHeaderToTsv(std::ostream& os)
     os << "align.calc" << "\t";
     os << "align.cpy_host" << "\t";
 
+    os << "hash.calc" << "\t";
+
     os << "trace.alloc" << "\t";
     os << "trace.calc" << "\t";
 
