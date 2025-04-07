@@ -3,6 +3,10 @@
 
 void from_json(const nlohmann::ordered_json& j, NwSubstData& substData)
 {
+    if (j.size() != 2)
+    {
+        throw std::exception("Expected a JSON object with exactly two keys: \"letterMap\", \"substMap\"");
+    }
     j.at("letterMap").get_to(substData.letterMap);
     j.at("substMap").get_to(substData.substMap);
 }
@@ -20,6 +24,10 @@ void from_json(const nlohmann::ordered_json& j, NwParamData& paramData)
 }
 void from_json(const nlohmann::ordered_json& j, NwSeqData& seqData)
 {
+    if (j.size() != 1)
+    {
+        throw std::exception("Expected a JSON object with exactly one key: \"seqList\"");
+    }
     j.at("seqList").get_to(seqData.seqList);
 }
 
@@ -55,8 +63,8 @@ void writeResultHeaderToTsv(std::ostream& os,
     os.fill(' ');
 
     os << "alg_name";
-    os << "\t" << "iY";
-    os << "\t" << "iX";
+    os << "\t" << "seqY_id";
+    os << "\t" << "seqX_id";
 
     os << "\t" << "seqY_len";
     os << "\t" << "seqX_len";
