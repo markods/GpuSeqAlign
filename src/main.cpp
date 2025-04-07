@@ -135,6 +135,7 @@ struct NwCompareKey
 };
 struct NwCompareRes
 {
+    unsigned align_cost;
     unsigned score_hash;
     unsigned trace_hash;
 
@@ -159,6 +160,7 @@ bool operator<(const NwCompareKey& l, const NwCompareKey& r)
 bool operator==(const NwCompareRes& l, const NwCompareRes& r)
 {
     bool res =
+        l.align_cost == r.align_cost &&
         l.score_hash == r.score_hash &&
         l.trace_hash == r.trace_hash;
     return res;
@@ -166,6 +168,7 @@ bool operator==(const NwCompareRes& l, const NwCompareRes& r)
 bool operator!=(const NwCompareRes& l, const NwCompareRes& r)
 {
     bool res =
+        l.align_cost != r.align_cost ||
         l.score_hash != r.score_hash ||
         l.trace_hash != r.trace_hash;
     return res;
@@ -179,10 +182,10 @@ NwStat setOrVerifyResult(const NwAlgResult& res, NwCompareData& compareData)
         res.iY, // iY;
         res.iX  // iX;
     };
-    NwCompareRes calcVal {
-        res.score_hash, // score_hash;
-        res.trace_hash  // trace_hash;
-    };
+    NwCompareRes calcVal {};
+    calcVal.align_cost = res.align_cost;
+    calcVal.score_hash = res.score_hash;
+    calcVal.trace_hash = res.trace_hash;
 
     // if this is the first time the two sequences have been aligned
     auto compareRes = compareMap.find(key);
@@ -407,8 +410,8 @@ struct NwCmdArgs
     std::optional<int> warmupPerAlign;
     std::optional<int> samplesPerAlign;
 
-    std::optional<bool> fCalcTrace;     // TODO: use
-    std::optional<bool> fCalcScoreHash; // TODO: use
+    std::optional<bool> fCalcTrace;
+    std::optional<bool> fCalcScoreHash;
     std::optional<bool> fWriteProgress;
     std::optional<std::string> debugPath; // TODO
     std::optional<bool> fPrintScore;      // TODO
@@ -794,11 +797,11 @@ int main(const int argc, const char* argv[])
                                 res.errstep = 2;
                             }
                         }
-                        if (!res.errstep && NwStat::success != (res.stat = alg.hash(nw, res)))
+                        if (cmdArgs.fCalcScoreHash.value() && !res.errstep && NwStat::success != (res.stat = alg.hash(nw, res)))
                         {
                             res.errstep = 3;
                         }
-                        if (!res.errstep && NwStat::success != (res.stat = alg.trace(nw, res)))
+                        if (cmdArgs.fCalcTrace.value() && !res.errstep && NwStat::success != (res.stat = alg.trace(nw, res)))
                         {
                             res.errstep = 4;
                         }
