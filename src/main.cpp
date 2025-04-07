@@ -396,23 +396,23 @@ struct NwCmdArgs
     std::optional<std::string> substPath;
     std::optional<std::string> algParamPath;
     std::optional<std::string> seqPath;
-    std::optional<std::string> pairPath;
+    std::optional<std::string> pairPath; // TODO: parse and use
     std::optional<std::string> resPath;
 
     std::optional<std::string> substName;
     std::optional<int> gapoCost;
     std::optional<int> gapeCost;
-    std::optional<std::vector<std::string>> algName;
-    std::optional<std::string> refAlgName;
+    std::optional<std::vector<std::string>> algName; // TODO: 
+    std::optional<std::string> refAlgName;           // TODO
     std::optional<int> warmupPerAlign;
     std::optional<int> samplesPerAlign;
 
-    std::optional<bool> fCalcTrace;
-    std::optional<bool> fCalcScoreHash;
+    std::optional<bool> fCalcTrace;     // TODO: use
+    std::optional<bool> fCalcScoreHash; // TODO: use
     std::optional<bool> fWriteProgress;
-    std::optional<std::string> debugPath;
-    std::optional<bool> fPrintScore;
-    std::optional<bool> fPrintTrace;
+    std::optional<std::string> debugPath; // TODO
+    std::optional<bool> fPrintScore;      // TODO
+    std::optional<bool> fPrintTrace;      // TODO
 };
 
 NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
@@ -550,7 +550,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
     setDefaultIfArgEmpty(cmdArgs.fCalcTrace, false);
     setDefaultIfArgEmpty(cmdArgs.fCalcScoreHash, false);
     setDefaultIfArgEmpty(cmdArgs.fWriteProgress, false);
-    setDefaultIfArgEmpty(cmdArgs.debugPath, std::string {}); // TODO: required ako ima fPrintScore ili fPrintTrace
+    setDefaultIfArgEmpty(cmdArgs.debugPath, std::string {});
     setDefaultIfArgEmpty(cmdArgs.fPrintScore, false);
     setDefaultIfArgEmpty(cmdArgs.fPrintTrace, false);
 
@@ -570,6 +570,7 @@ struct NwCmdData
 
 NwStat initCmdData(const int argc, const char* argv[], NwCmdData& cmdData)
 {
+    // TODO
     return NwStat::success;
 }
 

@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+// TODO: order maps by insertion order, not by string
 struct NwSubstData
 {
     std::map<std::string, int> letterMap;

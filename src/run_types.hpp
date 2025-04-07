@@ -81,7 +81,6 @@ struct NwAlgInput
     int substsz;
     int adjrows;
     int adjcols;
-    // TODO: rename
     int gapoCost;
     // sparse representation of the score matrix
     int tileHdrMatRows;
@@ -104,8 +103,10 @@ struct NwAlgInput
 // results which the Needleman-Wunsch algorithm variant returns
 struct NwAlgResult
 {
+    // TODO: all to camel case
     std::string algName;
     std::map<std::string, int> algParams;
+    // TODO: string
     int iY;
     int iX;
 
