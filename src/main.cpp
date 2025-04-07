@@ -245,12 +245,12 @@ NwStat setStringArgOnce(
 {
     if (arg.has_value())
     {
-        std::cerr << "error: parameter already set: \"" << arg_name << "\"";
+        std::cerr << "error: parameter already set: \"" << arg_name << "\"\n";
         return NwStat::errorInvalidValue;
     }
     if (i + 1 >= argc)
     {
-        std::cerr << "error: expected parameter value: \"" << arg_name << "\"";
+        std::cerr << "error: expected parameter value: \"" << arg_name << "\"\n";
         return NwStat::errorInvalidValue;
     }
 
@@ -267,7 +267,7 @@ NwStat setStringVectArg(
 {
     if (i + 1 >= argc)
     {
-        std::cerr << "error: expected parameter value: \"" << arg_name << "\"";
+        std::cerr << "error: expected parameter value: \"" << arg_name << "\"\n";
         return NwStat::errorInvalidValue;
     }
 
@@ -289,12 +289,12 @@ NwStat setIntArgOnce(
 {
     if (arg.has_value())
     {
-        std::cerr << "error: parameter already set: \"" << arg_name << "\"";
+        std::cerr << "error: parameter already set: \"" << arg_name << "\"\n";
         return NwStat::errorInvalidValue;
     }
     if (i + 1 >= argc)
     {
-        std::cerr << "error: expected parameter value: \"" << arg_name << "\"";
+        std::cerr << "error: expected parameter value: \"" << arg_name << "\"\n";
         return NwStat::errorInvalidValue;
     }
 
@@ -304,12 +304,12 @@ NwStat setIntArgOnce(
     }
     catch (const std::invalid_argument&)
     {
-        std::cerr << "error: parameter value should be int: \"" << arg_name << "\"";
+        std::cerr << "error: parameter value should be int: \"" << arg_name << "\"\n";
         return NwStat::errorInvalidValue;
     }
     catch (const std::out_of_range&)
     {
-        std::cerr << "error: parameter value is out-of-range for int: \"" << arg_name << "\"";
+        std::cerr << "error: parameter value is out-of-range for int: \"" << arg_name << "\"\n";
         return NwStat::errorInvalidValue;
     }
 
@@ -322,7 +322,7 @@ NwStat setSwitchArgOnce(
 {
     if (arg.has_value())
     {
-        std::cerr << "error: parameter already set: \"" << arg_name << "\"";
+        std::cerr << "error: parameter already set: \"" << arg_name << "\"\n";
         return NwStat::errorInvalidValue;
     }
 
@@ -335,7 +335,7 @@ NwStat expectNonEmptyArg(std::optional<T>& arg, const std::string& arg_name)
 {
     if (!arg.has_value())
     {
-        std::cerr << "error: expected parameter: \"" << arg_name << "\"";
+        std::cerr << "error: expected parameter: \"" << arg_name << "\"\n";
         return NwStat::errorInvalidValue;
     }
     return NwStat::success;
@@ -420,7 +420,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
     if (argc == 1)
     {
         print_cmd_usage(std::cout);
-        std::cerr << "error: expected command parameters";
+        std::cerr << "error: expected command parameters\n";
         return NwStat::errorInvalidValue;
     }
 
@@ -473,7 +473,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
             ZIG_TRY(NwStat::success, setIntArgOnce(argc, argv, i, cmdArgs.warmupPerAlign, arg));
             if (cmdArgs.warmupPerAlign.value() < 0)
             {
-                std::cerr << "error: parameter must be nonnegative integer: \"" << arg << "\"";
+                std::cerr << "error: parameter must be nonnegative integer: \"" << arg << "\"\n";
                 NwStat::errorInvalidValue;
             }
         }
@@ -482,7 +482,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
             ZIG_TRY(NwStat::success, setIntArgOnce(argc, argv, i, cmdArgs.samplesPerAlign, arg));
             if (cmdArgs.samplesPerAlign.value() <= 0)
             {
-                std::cerr << "error: parameter must be positive integer: \"" << arg << "\"";
+                std::cerr << "error: parameter must be positive integer: \"" << arg << "\"\n";
                 NwStat::errorInvalidValue;
             }
         }
@@ -517,7 +517,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
         }
         else
         {
-            std::cerr << "error: unknown parameter: \"" << arg << "\"";
+            std::cerr << "error: unknown parameter: \"" << arg << "\"\n";
             return NwStat::errorInvalidValue;
         }
     }
@@ -639,7 +639,7 @@ int main(const int argc, const char* argv[])
     cudaDeviceProp deviceProps {};
     if (auto cudaStatus = cudaGetDeviceProperties(&deviceProps, 0 /*deviceId*/); cudaSuccess != cudaStatus)
     {
-        std::cerr << "error: could not get device properties";
+        std::cerr << "error: could not get device properties\n";
         return -1;
     }
 
@@ -703,14 +703,14 @@ int main(const int argc, const char* argv[])
         }
         catch (const std::exception&)
         {
-            std::cerr << "error: could not reserve space for the substitution matrix in the gpu";
+            std::cerr << "error: could not reserve space for the substitution matrix in the gpu\n";
             return -1;
         }
 
         // transfer the substitution matrix to the gpu global memory
         if (auto cudaStatus = memTransfer(nw.subst_gpu, nw.subst, nw.substsz * nw.substsz); cudaSuccess != cudaStatus)
         {
-            std::cerr << "error: could not transfer substitution matrix to the gpu";
+            std::cerr << "error: could not transfer substitution matrix to the gpu\n";
             return -1;
         }
     }
@@ -858,7 +858,7 @@ int main(const int argc, const char* argv[])
                         // Since sticky errors cannot be cleared, so repeat twice.
                         if (auto cudaStatus = (cudaGetLastError(), cudaGetLastError()); cudaStatus != cudaSuccess)
                         {
-                            std::cerr << "error: corrupted cuda context";
+                            std::cerr << "error: corrupted cuda context\n";
                             return -1;
                         }
                     }
@@ -900,7 +900,7 @@ int main(const int argc, const char* argv[])
     // print the number of calculation errors
     if (compareData.calcErrors > 0)
     {
-        std::cerr << "error: " << compareData.calcErrors << " calculation error(s)";
+        std::cerr << "error: " << compareData.calcErrors << " calculation error(s)\n";
         return -1;
     }
 }
