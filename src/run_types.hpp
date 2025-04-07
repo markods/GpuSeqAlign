@@ -106,23 +106,25 @@ struct NwAlgResult
     std::string algName;
     std::map<std::string, int> algParams;
 
-    size_t seqX_len;
-    size_t seqY_len;
-
     int iX;
     int iY;
     int reps;
 
-    Stopwatch sw_align;
-    Stopwatch sw_hash;
-    Stopwatch sw_trace;
-
-    unsigned score_hash;
-    unsigned trace_hash;
+    size_t seqX_len;
+    size_t seqY_len;
 
     int errstep;          // 0 for success
     NwStat stat;          // 0 for success
     cudaError_t cudaStat; // 0 for success
+
+    unsigned align_cost;
+
+    unsigned score_hash;
+    unsigned trace_hash;
+
+    Stopwatch sw_align;
+    Stopwatch sw_hash;
+    Stopwatch sw_trace;
 };
 
 #endif // INCLUDE_RUN_TYPES_HPP

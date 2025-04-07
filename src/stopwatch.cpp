@@ -47,7 +47,7 @@ void Stopwatch::start()
 void Stopwatch::lap(std::string lap_name)
 {
     auto curr = Clock::now();
-    float diff = float(std::chrono::duration_cast<std::chrono::nanoseconds>(curr - _start).count()) / 1000;
+    float diff = float(std::chrono::duration_cast<std::chrono::nanoseconds>(curr - _start).count()) / 1000000;
     _start = curr;
 
     _laps.insert_or_assign(lap_name, diff);

@@ -175,80 +175,102 @@ void to_json(nlohmann::ordered_json& j, const NwSeqData& seqData)
     j["seqList"] = seqData.seqList;
 }
 
-static void lapTimeToTsv(std::ostream& os, float lapTime)
-{
-    FormatFlagsGuard fg {os};
-
-    os << std::fixed << std::setprecision(3) << lapTime;
-}
-
 // conversion to tsv from object
-void writeResultHeaderToTsv(std::ostream& os)
+void writeResultHeaderToTsv(std::ostream& os,
+    bool fPrintScoreStats,
+    bool fPrintTraceStats)
 {
     FormatFlagsGuard fg {os};
     os.fill(' ');
 
-    os << "algName" << "\t";
-    os << "iY" << "\t";
-    os << "iX" << "\t";
-    os << "reps" << "\t";
+    os << "alg_name";
+    os << "\t" << "iY";
+    os << "\t" << "iX";
+    os << "\t" << "reps";
 
-    os << "lenY" << "\t";
-    os << "lenX" << "\t";
+    os << "\t" << "seqY_len";
+    os << "\t" << "seqX_len";
 
-    os << "algParams" << "\t";
+    os << "\t" << "alg_params";
 
-    os << "step" << "\t";
-    os << "stat" << "\t";
-    os << "cuda" << "\t";
+    os << "\t" << "err_step";
+    os << "\t" << "nw_stat";
+    os << "\t" << "cuda_stat";
 
-    os << "score_hash" << "\t";
-    os << "trace_hash" << "\t";
+    os << "\t" << "align_cost";
+    if (fPrintScoreStats)
+    {
+        os << "\t" << "score_hash";
+    }
+    if (fPrintTraceStats)
+    {
+        os << "\t" << "trace_hash";
+    }
 
-    os << "align.alloc" << "\t";
-    os << "align.cpy_dev" << "\t";
-    os << "align.init_hdr" << "\t";
-    os << "align.calc_init" << "\t";
-    os << "align.calc" << "\t";
-    os << "align.cpy_host" << "\t";
-
-    os << "hash.calc" << "\t";
-
-    os << "trace.alloc" << "\t";
-    os << "trace.calc" << "\t";
+    os << "\t" << "align.alloc";
+    os << "\t" << "align.cpy_dev";
+    os << "\t" << "align.init_hdr";
+    os << "\t" << "align.calc_init";
+    os << "\t" << "align.calc";
+    os << "\t" << "align.cpy_host";
+    if (fPrintScoreStats)
+    {
+        os << "\t" << "hash.calc";
+    }
+    if (fPrintTraceStats)
+    {
+        os << "\t" << "trace.alloc";
+        os << "\t" << "trace.calc";
+    }
 
     os << '\n';
 }
-void writeResultLineToTsv(std::ostream& os, const NwAlgResult& res)
+
+static void lapTimeToTsv(std::ostream& os, float lapTime)
+{
+    os << std::fixed << std::setprecision(4) << lapTime;
+}
+
+void writeResultLineToTsv(
+    std::ostream& os,
+    const NwAlgResult& res,
+    bool fPrintScoreStats,
+    bool fPrintTraceStats)
 {
     FormatFlagsGuard fg {os};
+
+    os << res.algName;
+
+    os << "\t" << res.iY;
+    os << "\t" << res.iX;
+    os << "\t" << res.reps;
+
+    os << "\t" << res.seqY_len;
+    os << "\t" << res.seqX_len;
+
+    nlohmann::ordered_json algParamsJson = res.algParams;
+    os << "\t" << algParamsJson.dump();
+
+    os << "\t" << res.errstep;
+    os << "\t" << int(res.stat);
+    os << "\t" << int(res.cudaStat);
+
+    os << "\t" << res.align_cost;
+
+    if (fPrintScoreStats)
     {
-        os.fill(' ');
-
-        os << res.algName << "\t";
-        os << res.iY << "\t";
-        os << res.iX << "\t";
-        os << res.reps << "\t";
-
-        os << res.seqY_len << "\t";
-        os << res.seqX_len << "\t";
-
-        nlohmann::ordered_json algParamsJson = res.algParams;
-
-        os << algParamsJson.dump() << "\t";
-
-        os << res.errstep << "\t";
-        os << int(res.stat) << "\t";
-        os << int(res.cudaStat) << "\t";
-
-        // TODO: print align score
-
         os.fill('0');
-        os << std::setw(10) << res.score_hash << "\t";
-        os << std::setw(10) << res.trace_hash << "\t";
+        os << "\t" << std::setw(10) << res.score_hash;
     }
+    if (fPrintTraceStats)
+    {
+        os.fill('0');
+        os << "\t" << std::setw(10) << res.trace_hash;
+    }
+
     fg.restore();
 
+    os << "\t";
     lapTimeToTsv(os, res.sw_align.get_or_default("align.alloc"));
     os << "\t";
     lapTimeToTsv(os, res.sw_align.get_or_default("align.cpy_dev"));
@@ -260,16 +282,22 @@ void writeResultLineToTsv(std::ostream& os, const NwAlgResult& res)
     lapTimeToTsv(os, res.sw_align.get_or_default("align.calc"));
     os << "\t";
     lapTimeToTsv(os, res.sw_align.get_or_default("align.cpy_host"));
-    os << "\t";
 
-    // TODO: only print if requested
-    lapTimeToTsv(os, res.sw_hash.get_or_default("hash.calc"));
-    os << "\t";
+    if (fPrintScoreStats)
+    {
+        os << "\t";
+        lapTimeToTsv(os, res.sw_hash.get_or_default("hash.calc"));
+    }
 
-    lapTimeToTsv(os, res.sw_trace.get_or_default("trace.alloc"));
-    os << "\t";
-    lapTimeToTsv(os, res.sw_trace.get_or_default("trace.calc"));
-    os << "\t";
+    if (fPrintTraceStats)
+    {
+        os << "\t";
+        lapTimeToTsv(os, res.sw_trace.get_or_default("trace.alloc"));
+        os << "\t";
+        lapTimeToTsv(os, res.sw_trace.get_or_default("trace.calc"));
+    }
+
+    os << "\n";
 }
 
 // convert the sequence string to a vector using a character map
@@ -409,71 +437,6 @@ NwAlgResult combineResults(std::vector<NwAlgResult>& resList)
     return res;
 }
 
-void print_cmd_usage(std::ostream& os)
-{
-    os << "nw --algParamPath \"path\" --seqPath \"path\" [params]\n"
-          "\n"
-          "Parameters:\n"
-          "-b, --substPath <path>     Path of JSON substitution matrices file, defaults to \"./resrc/subst.json\".\n"
-          "-r, --algParamPath <path>  Path of JSON algorithm parameters file.\n"
-          "-s, --seqPath <path>       Path of FASTA file with sequences to be aligned.\n"
-          "-p, --pairPath <path>      Path of TXT file with sequence pairs to be aligned. Each line is in the format\n"
-          "                           \"seqA[0:42] seqB\", where \"seqA\" and \"seqB\" are sequence ids, and \"[a:b]\" specifies the\n"
-          "                           substring starting from element \"a\" (inclusive) until element \"b\" (exclusive).\n"
-          "                           It's possible to omit the start/end of the interval, like so: \"[a:b]\", \"[a:]\", \"[:b]\".\n"
-          "                           If the TXT file is not specified, then all sequences in the FASTA file except the first\n"
-          "                           are aligned to the first sequence. If there is only one sequence in the FASTA file,\n"
-          "                           it's aligned with itself.\n"
-          "-o, --resPath <path>       Path of JSON test bench results file, defaults to \"./logs/<datetime>.json\".\n"
-          "\n"
-          "--substName <name>         Specify which substitution matrix from the \"subst\" file will be used. Defaults to\n"
-          "                           \"blosum62\".\n"
-          "--gapoCost <cost>          Gap open cost. Nonnegative integer, defaults to 11.\n"
-          "--gapeCost <cost>          Unused. Gap extend cost. Nonnegative integer, defaults to 0.\n"
-          "--algName <name>           Specify which algorithm from the \"algParam\" JSON file will be used. Can be specified\n"
-          "                           multiple times, in which case those algorithms will be used, in that order.\n"
-          "                           If not specified, all algorithms in the \"algParam\" JSON file are used, in that order.\n"
-          "--refAlgName <name>        Specify the algorithm name which should be considered as the source of truth.\n"
-          "                           If not specified, defaults to the first algorithm in the \"algParam\" JSON file.\n"
-          "--warmupPerAlign <num>     Number of warmup runs per alignments. Nonnegative integer, defaults to 0.\n"
-          "--samplesPerAlign <num>    Number of runs per alignment. Nonnegative integer, defaults to 1.\n"
-          "\n"
-          "--fCalcTrace               Should the trace be calculated. Defaults to false.\n"
-          "--fCalcScoreHash           Should the score matrix hash be calculated. Used to verify correctness with the reference\n"
-          "                           algorithm implementation. Defaults to false.\n"
-          "--fWriteProgress           Should progress be printed on stdout. Defaults to false.\n"
-          "--debugPath <path>         For debug purposes, path of the TXT file where score matrices/traces will be\n"
-          "                           written to, once per alignment. Defaults to \"\".\n"
-          "--fPrintScore              Should the score matrix be printed. Defaults to false.\n"
-          "--fPrintTrace              Should the trace be printed. Defaults to false.\n"
-          "\n"
-          "-h, --help                 Print help and exit.\n";
-}
-
-struct NwCmdArgs
-{
-    std::optional<std::string> substPath;
-    std::optional<std::string> algParamPath;
-    std::optional<std::string> seqPath;
-    std::optional<std::string> pairPath;
-    std::optional<std::string> resPath;
-
-    std::optional<std::string> substName;
-    std::optional<int> gapoCost;
-    std::optional<int> gapeCost;
-    std::optional<std::vector<std::string>> algName;
-    std::optional<std::string> refAlgName;
-    std::optional<int> warmupPerAlign;
-    std::optional<int> samplesPerAlign;
-
-    std::optional<bool> fCalcTrace;
-    std::optional<bool> fCalcScoreHash;
-    std::optional<bool> fWriteProgress;
-    std::optional<std::string> debugPath;
-    std::optional<bool> fPrintScore;
-    std::optional<bool> fPrintTrace;
-};
-
 NwStat setStringArgOnce(
     const int argc,
     const char* argv[],
@@ -588,6 +551,71 @@ void setDefaultIfArgEmpty(std::optional<T>& arg, const T& value)
     }
 }
 
+void print_cmd_usage(std::ostream& os)
+{
+    os << "nw --algParamPath \"path\" --seqPath \"path\" [params]\n"
+          "\n"
+          "Parameters:\n"
+          "-b, --substPath <path>     Path of JSON substitution matrices file, defaults to \"./resrc/subst.json\".\n"
+          "-r, --algParamPath <path>  Path of JSON algorithm parameters file.\n"
+          "-s, --seqPath <path>       Path of FASTA file with sequences to be aligned.\n"
+          "-p, --pairPath <path>      Path of TXT file with sequence pairs to be aligned. Each line is in the format\n"
+          "                           \"seqA[0:42] seqB\", where \"seqA\" and \"seqB\" are sequence ids, and \"[a:b]\" specifies the\n"
+          "                           substring starting from element \"a\" (inclusive) until element \"b\" (exclusive).\n"
+          "                           It's possible to omit the start/end of the interval, like so: \"[a:b]\", \"[a:]\", \"[:b]\".\n"
+          "                           If the TXT file is not specified, then all sequences in the FASTA file except the first\n"
+          "                           are aligned to the first sequence. If there is only one sequence in the FASTA file,\n"
+          "                           it's aligned with itself.\n"
+          "-o, --resPath <path>       Path of JSON test bench results file, defaults to \"./logs/<datetime>.json\".\n"
+          "\n"
+          "--substName <name>         Specify which substitution matrix from the \"subst\" file will be used. Defaults to\n"
+          "                           \"blosum62\".\n"
+          "--gapoCost <cost>          Gap open cost. Nonnegative integer, defaults to 11.\n"
+          "--gapeCost <cost>          Unused. Gap extend cost. Nonnegative integer, defaults to 0.\n"
+          "--algName <name>           Specify which algorithm from the \"algParam\" JSON file will be used. Can be specified\n"
+          "                           multiple times, in which case those algorithms will be used, in that order.\n"
+          "                           If not specified, all algorithms in the \"algParam\" JSON file are used, in that order.\n"
+          "--refAlgName <name>        Specify the algorithm name which should be considered as the source of truth.\n"
+          "                           If not specified, defaults to the first algorithm in the \"algParam\" JSON file.\n"
+          "--warmupPerAlign <num>     Number of warmup runs per alignments. Nonnegative integer, defaults to 0.\n"
+          "--samplesPerAlign <num>    Number of runs per alignment. Nonnegative integer, defaults to 1.\n"
+          "\n"
+          "--fCalcTrace               Should the trace be calculated. Defaults to false.\n"
+          "--fCalcScoreHash           Should the score matrix hash be calculated. Used to verify correctness with the reference\n"
+          "                           algorithm implementation. Defaults to false.\n"
+          "--fWriteProgress           Should progress be printed on stdout. Defaults to false.\n"
+          "--debugPath <path>         For debug purposes, path of the TXT file where score matrices/traces will be\n"
+          "                           written to, once per alignment. Defaults to \"\".\n"
+          "--fPrintScore              Should the score matrix be printed. Defaults to false.\n"
+          "--fPrintTrace              Should the trace be printed. Defaults to false.\n"
+          "\n"
+          "-h, --help                 Print help and exit.\n";
+}
+
+struct NwCmdArgs
+{
+    std::optional<std::string> substPath;
+    std::optional<std::string> algParamPath;
+    std::optional<std::string> seqPath;
+    std::optional<std::string> pairPath;
+    std::optional<std::string> resPath;
+
+    std::optional<std::string> substName;
+    std::optional<int> gapoCost;
+    std::optional<int> gapeCost;
+    std::optional<std::vector<std::string>> algName;
+    std::optional<std::string> refAlgName;
+    std::optional<int> warmupPerAlign;
+    std::optional<int> samplesPerAlign;
+
+    std::optional<bool> fCalcTrace;
+    std::optional<bool> fCalcScoreHash;
+    std::optional<bool> fWriteProgress;
+    std::optional<std::string> debugPath;
+    std::optional<bool> fPrintScore;
+    std::optional<bool> fPrintTrace;
+};
+
 NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
 {
     if (argc == 1)
@@ -649,15 +677,15 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
         {
             ZIG_TRY(NwStat::success, setIntArgOnce(argc, argv, i, cmdArgs.samplesPerAlign, arg));
         }
-        else if (arg == "--calcTrace")
+        else if (arg == "--fCalcTrace")
         {
             ZIG_TRY(NwStat::success, setSwitchArgOnce(cmdArgs.fCalcTrace, arg));
         }
-        else if (arg == "--calcScoreHash")
+        else if (arg == "--fCalcScoreHash")
         {
             ZIG_TRY(NwStat::success, setSwitchArgOnce(cmdArgs.fCalcScoreHash, arg));
         }
-        else if (arg == "--writeProgress")
+        else if (arg == "--fWriteProgress")
         {
             ZIG_TRY(NwStat::success, setSwitchArgOnce(cmdArgs.fWriteProgress, arg));
         }
@@ -665,11 +693,11 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
         {
             ZIG_TRY(NwStat::success, setStringArgOnce(argc, argv, i, cmdArgs.debugPath, arg));
         }
-        else if (arg == "--printScore")
+        else if (arg == "--fPrintScore")
         {
             ZIG_TRY(NwStat::success, setSwitchArgOnce(cmdArgs.fPrintScore, arg));
         }
-        else if (arg == "--printTrace")
+        else if (arg == "--fPrintTrace")
         {
             ZIG_TRY(NwStat::success, setSwitchArgOnce(cmdArgs.fPrintTrace, arg));
         }
@@ -685,23 +713,24 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
         }
     }
 
+    setDefaultIfArgEmpty(cmdArgs.substPath, std::string("./resrc/subst.json"));
     ZIG_TRY(NwStat::success, expectNonEmptyArg(cmdArgs.algParamPath, "--algParamPath"));
     ZIG_TRY(NwStat::success, expectNonEmptyArg(cmdArgs.seqPath, "--seqPath"));
-
-    setDefaultIfArgEmpty(cmdArgs.substPath, std::string("./resrc/subst.json"));
+    setDefaultIfArgEmpty(cmdArgs.pairPath, std::string {});
     setDefaultIfArgEmpty(cmdArgs.resPath, std::string("./logs/") + isoDatetimeAsString() + std::string(".tsv"));
 
     setDefaultIfArgEmpty(cmdArgs.substName, std::string("blosum62"));
     setDefaultIfArgEmpty(cmdArgs.gapoCost, 11);
     setDefaultIfArgEmpty(cmdArgs.gapeCost, 0);
+    cmdArgs.algName;    // TODO
     cmdArgs.refAlgName; // TODO
     setDefaultIfArgEmpty(cmdArgs.warmupPerAlign, 0);
-    setDefaultIfArgEmpty(cmdArgs.samplesPerAlign, 0);
+    setDefaultIfArgEmpty(cmdArgs.samplesPerAlign, 1);
 
     setDefaultIfArgEmpty(cmdArgs.fCalcTrace, false);
     setDefaultIfArgEmpty(cmdArgs.fCalcScoreHash, false);
     setDefaultIfArgEmpty(cmdArgs.fWriteProgress, false);
-    cmdArgs.debugPath = std::nullopt;
+    setDefaultIfArgEmpty(cmdArgs.debugPath, std::string {}); // TODO: required ako ima fPrintScore ili fPrintTrace
     setDefaultIfArgEmpty(cmdArgs.fPrintScore, false);
     setDefaultIfArgEmpty(cmdArgs.fPrintTrace, false);
 
@@ -793,7 +822,7 @@ int main(const int argc, const char* argv[])
         // seqX_gpu;    <-- algorithm-reserved
         // seqY_gpu;    <-- algorithm-reserved
         // score_gpu;   <-- algorithm-reserved
-        // // sparse representation of the score matrix
+        ////// sparse representation of the score matrix
         // tileHrowMat_gpu;   <-- algorithm-reserved
         // tileHcolMat_gpu;   <-- algorithm-reserved
 
@@ -802,7 +831,7 @@ int main(const int argc, const char* argv[])
         // adjrows;   <-- loop-inited
         // adjcols;   <-- loop-inited
         // indel;   <-- once
-        // // sparse representation of the score matrix
+        ////// sparse representation of the score matrix
         // tileHdrMatRows;   <-- algorithm-reserved
         // tileHdrMatCols;   <-- algorithm-reserved
         // tileHrowLen;   <-- algorithm-reserved
@@ -819,7 +848,7 @@ int main(const int argc, const char* argv[])
     nw.warpsz = warpsz;
     nw.maxThreadsPerBlock = maxThreadsPerBlock;
 
-    auto defer3 = make_defer([&]() noexcept
+    auto defer1 = make_defer([&]() noexcept
     {
         nw.resetAllocsBenchmarkEnd();
     });
@@ -865,8 +894,12 @@ int main(const int argc, const char* argv[])
     NwCompareData compareData {};
 
     // write the tsv file's header
-    writeResultHeaderToTsv(ofsRes);
-    ofsRes.flush();
+    writeResultHeaderToTsv(ofsRes, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
+    if (cmdArgs.fWriteProgress.value())
+    {
+        // When we write to progress immediately, then write to file immediately.
+        ofsRes.flush();
+    }
 
     // for all algorithms which have parameters in the param map
     for (auto& paramTuple : paramData.paramMap)
@@ -878,7 +911,10 @@ int main(const int argc, const char* argv[])
             continue;
         }
 
-        std::cout << algName << ":";
+        if (cmdArgs.fWriteProgress.value())
+        {
+            std::cout << algName << ":";
+        }
 
         // get the current algorithm and initialize its parameters
         NwAlgorithm& alg = algMap[algName];
@@ -887,8 +923,11 @@ int main(const int argc, const char* argv[])
         // for all Y sequences + for all X sequences (also compare every sequence with itself)
         for (int iY = 0; iY < seqList.size(); iY++)
         {
-            std::cout << std::endl
-                      << "|";
+            if (cmdArgs.fWriteProgress.value())
+            {
+                std::cout << std::endl
+                          << "|";
+            }
 
             for (int iX = iY; iX < seqList.size(); iX++)
             {
@@ -918,36 +957,23 @@ int main(const int argc, const char* argv[])
                     // for all requested repeats
                     for (int iR = 0; iR < seqData.repeat; iR++)
                     {
-                        // initialize the result in the result list
-                        resList.push_back(NwAlgResult {
-                            algName,              // algName;
-                            alg.alignPr().copy(), // algParams;
-
-                            nw.seqX.size(), // seqX_len;
-                            nw.seqY.size(), // seqY_len;
-
-                            iX,             // iX;
-                            iY,             // iY;
-                            seqData.repeat, // reps;
-
-                            {}, // sw_align;
-                            {}, // sw_hash;
-                            {}, // sw_trace;
-
-                            {}, // score_hash;
-                            {}, // trace_hash;
-
-                            {}, // errstep;   // 0 for success
-                            {}, // stat;      // 0 for success
-                            {}, // cudaerr;   // 0 for success
-                        });
-                        // get the result from the list
-                        NwAlgResult& res = resList.back();
-
-                        auto defer4 = make_defer([&]() noexcept
+                        auto defer2 = make_defer([&]() noexcept
                         {
                             nw.resetAllocsBenchmarkCycle();
                         });
+
+                        resList.push_back(NwAlgResult {});
+                        NwAlgResult& res = resList.back();
+
+                        res.algName = algName;
+                        res.algParams = alg.alignPr().copy();
+                        //
+                        res.iX = iX;
+                        res.iY = iY;
+                        res.reps = seqData.repeat;
+                        //
+                        res.seqX_len = nw.seqX.size();
+                        res.seqY_len = nw.seqY.size();
 
                         // compare the sequences, hash and trace the score matrices, and verify the soundness of the results
                         if (!res.errstep && NwStat::success != (res.stat = alg.align(nw, res)))
@@ -975,14 +1001,17 @@ int main(const int argc, const char* argv[])
                             compareData.calcErrors++;
                         }
 
-                        // if the result is successful, print a dot, otherwise an x
-                        if (res.stat == NwStat::success)
+                        if (cmdArgs.fWriteProgress.value())
                         {
-                            std::cout << '.' << std::flush;
-                        }
-                        else
-                        {
-                            std::cout << res.errstep << std::flush;
+                            // if the result is successful, print a dot, otherwise an x
+                            if (res.stat == NwStat::success)
+                            {
+                                std::cout << '.' << std::flush;
+                            }
+                            else
+                            {
+                                std::cout << res.errstep << std::flush;
+                            }
                         }
 
                         // clear cuda non-sticky errors and get possible cuda sticky errors
@@ -1003,22 +1032,31 @@ int main(const int argc, const char* argv[])
                     resList.clear();
 
                     // print the result as a tsv line to the tsv output file
-                    writeResultLineToTsv(ofsRes, res);
-                    ofsRes << '\n';
-                    ofsRes.flush();
+                    writeResultLineToTsv(ofsRes, res, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
+                    if (cmdArgs.fWriteProgress.value())
+                    {
+                        // When we write to progress immediately, then write to file immediately.
+                        ofsRes.flush();
+                    }
                 }
 
                 // reset the algorithm parameters
                 alg.alignPr().reset();
 
-                // seqX-seqY comparison separator
-                std::cout << '|' << std::flush;
+                if (cmdArgs.fWriteProgress.value())
+                {
+                    // seqX-seqY comparison separator
+                    std::cout << '|' << std::flush;
+                }
             }
         }
 
-        // algorithm separator
-        std::cout << std::endl
-                  << std::endl;
+        if (cmdArgs.fWriteProgress.value())
+        {
+            // algorithm separator
+            std::cout << std::endl
+                      << std::endl;
+        }
     }
 
     // print the number of calculation errors
