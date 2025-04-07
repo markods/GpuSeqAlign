@@ -60,6 +60,8 @@ void writeResultHeaderToTsv(std::ostream& os,
 
     os << "\t" << "seqY_len";
     os << "\t" << "seqX_len";
+    os << "\t" << "subst_name";
+    os << "\t" << "gapo_cost";
     os << "\t" << "warmup_runs";
     os << "\t" << "sample_runs";
 
@@ -117,6 +119,8 @@ void writeResultLineToTsv(
 
     os << "\t" << res.seqY_len;
     os << "\t" << res.seqX_len;
+    os << "\t" << res.substName;
+    os << "\t" << res.gapoCost;
     os << "\t" << res.warmup_runs;
     os << "\t" << res.sample_runs;
 

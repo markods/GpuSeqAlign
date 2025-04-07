@@ -369,8 +369,8 @@ void print_cmd_usage(std::ostream& os)
           "\n"
           "--substName <name>         Specify which substitution matrix from the \"subst\" file will be used. Defaults to\n"
           "                           \"blosum62\".\n"
-          "--gapoCost <cost>          Gap open cost. Nonnegative integer, defaults to -11.\n"
-          "--gapeCost <cost>          Unused. Gap extend cost. Nonnegative integer, defaults to 0.\n"
+          "--gapoCost <cost>          Gap open cost. Integer, defaults to -11.\n"
+          "--gapeCost <cost>          Unused. Gap extend cost. Integer, defaults to 0.\n"
           "--algName <name>           Specify which algorithm from the \"algParam\" JSON file will be used. Can be specified\n"
           "                           multiple times, in which case those algorithms will be used, in that order.\n"
           "                           If not specified, all algorithms in the \"algParam\" JSON file are used, in that order.\n"
@@ -471,10 +471,20 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
         else if (arg == "--warmupPerAlign")
         {
             ZIG_TRY(NwStat::success, setIntArgOnce(argc, argv, i, cmdArgs.warmupPerAlign, arg));
+            if (cmdArgs.warmupPerAlign.value() < 0)
+            {
+                std::cerr << "error: parameter must be nonnegative integer: \"" << arg << "\"";
+                NwStat::errorInvalidValue;
+            }
         }
         else if (arg == "--samplesPerAlign")
         {
             ZIG_TRY(NwStat::success, setIntArgOnce(argc, argv, i, cmdArgs.samplesPerAlign, arg));
+            if (cmdArgs.samplesPerAlign.value() <= 0)
+            {
+                std::cerr << "error: parameter must be positive integer: \"" << arg << "\"";
+                NwStat::errorInvalidValue;
+            }
         }
         else if (arg == "--fCalcTrace")
         {
@@ -793,7 +803,8 @@ int main(const int argc, const char* argv[])
                         //
                         res.seqX_len = nw.seqX.size();
                         res.seqY_len = nw.seqY.size();
-                        //
+                        res.substName = cmdArgs.substName.value();
+                        res.gapoCost = cmdArgs.gapoCost.value();
                         res.warmup_runs = cmdArgs.warmupPerAlign.value();
                         res.sample_runs = cmdArgs.samplesPerAlign.value();
 

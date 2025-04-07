@@ -115,6 +115,8 @@ struct NwAlgResult
 
     size_t seqY_len;
     size_t seqX_len;
+    std::string substName;
+    int gapoCost;
     int warmup_runs;
     int sample_runs;
 
