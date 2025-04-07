@@ -713,17 +713,28 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
         }
     }
 
-    setDefaultIfArgEmpty(cmdArgs.substPath, std::string("./resrc/subst.json"));
+    // Required.
     ZIG_TRY(NwStat::success, expectNonEmptyArg(cmdArgs.algParamPath, "--algParamPath"));
     ZIG_TRY(NwStat::success, expectNonEmptyArg(cmdArgs.seqPath, "--seqPath"));
+    if (cmdArgs.fPrintScore.has_value() || cmdArgs.fPrintTrace.has_value())
+    {
+        ZIG_TRY(NwStat::success, expectNonEmptyArg(cmdArgs.debugPath, "--debugPath"));
+    }
+
+    // Defaults.
+    setDefaultIfArgEmpty(cmdArgs.substPath, std::string("./resrc/subst.json"));
+    cmdArgs.algParamPath;
+    cmdArgs.seqPath;
     setDefaultIfArgEmpty(cmdArgs.pairPath, std::string {});
     setDefaultIfArgEmpty(cmdArgs.resPath, std::string("./logs/") + isoDatetimeAsString() + std::string(".tsv"));
 
     setDefaultIfArgEmpty(cmdArgs.substName, std::string("blosum62"));
     setDefaultIfArgEmpty(cmdArgs.gapoCost, 11);
     setDefaultIfArgEmpty(cmdArgs.gapeCost, 0);
-    cmdArgs.algName;    // TODO
-    cmdArgs.refAlgName; // TODO
+    // TODO
+    // Handled when the algParam file is read.
+    cmdArgs.algName;
+    cmdArgs.refAlgName;
     setDefaultIfArgEmpty(cmdArgs.warmupPerAlign, 0);
     setDefaultIfArgEmpty(cmdArgs.samplesPerAlign, 1);
 
