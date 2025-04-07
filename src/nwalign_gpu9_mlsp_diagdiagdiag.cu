@@ -14,7 +14,7 @@ __global__ static void Nw_Gpu9_KernelA(
     const int tcols,
     const int tileBx,
     const int tileBy,
-    const int indel)
+    const int gapoCost)
 {
     int tid = (blockDim.x * blockIdx.x + threadIdx.x);
 
@@ -33,7 +33,7 @@ __global__ static void Nw_Gpu9_KernelA(
             int kHrow = tcols * iTile + jTile;
             int kHrowElem = kHrow * (1 + tileBx) + 0 + jTileElem;
 
-            tileHrowMat_gpu[kHrowElem] = j * indel;
+            tileHrowMat_gpu[kHrowElem] = j * gapoCost;
         }
     }
 
@@ -52,7 +52,7 @@ __global__ static void Nw_Gpu9_KernelA(
             int kHcol = tcols * iTile + jTile; // row-major
             int kHcolElem = kHcol * (1 + tileBy) + 0 + iTileElem;
 
-            tileHcolMat_gpu[kHcolElem] = i * indel;
+            tileHcolMat_gpu[kHcolElem] = i * gapoCost;
         }
     }
 }
@@ -69,7 +69,7 @@ __global__ static void Nw_Gpu9_KernelB(
     int* const tileHcolMat_gpu,
     const int* const subst_gpu,
     const int substsz,
-    const int indel,
+    const int gapoCost,
     // params related to tile B
     const int trows,
     const int tcols,
@@ -285,8 +285,8 @@ __global__ static void Nw_Gpu9_KernelB(
         if (/*i >= 0 && i < tileBy && */ j >= 0 && j < tileBx)
         {
             curr = upleft + el(subst, substsz, seqY[i], seqX[j]); // MOVE DOWN-RIGHT
-            curr = max(curr, up + indel);                         // MOVE DOWN
-            curr = max(curr, left + indel);                       // MOVE RIGHT
+            curr = max(curr, up + gapoCost);                      // MOVE DOWN
+            curr = max(curr, left + gapoCost);                    // MOVE RIGHT
 
             if (j == tileBx - 1)
             {
@@ -497,7 +497,7 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResu
             &tcols,
             &tileBx,
             &tileBy,
-            &nw.indel};
+            &nw.gapoCost};
 
         if (cudaSuccess != (res.cudaStat = cudaLaunchKernel((void*)Nw_Gpu9_KernelA, gridDim, blockDim, kargs, shmemByteSize, cudaStreamDefault)))
         {
@@ -590,7 +590,7 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResu
                 &tileHcolMat_gpu,
                 &subst_gpu,
                 &nw.substsz,
-                &nw.indel,
+                &nw.gapoCost,
                 // params related to tile B
                 &trows,
                 &tcols,

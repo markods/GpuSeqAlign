@@ -14,7 +14,7 @@ __global__ static void Nw_Gpu6_KernelA(
     const int adjrows,
     const int adjcols,
     const int substsz,
-    const int indel,
+    const int gapoCost,
     const int tileAx,
     const int tileAy)
 {
@@ -104,13 +104,13 @@ __global__ static void Nw_Gpu6_KernelA(
             // +   increase the value by insert delete cost, since then the formula for calculating the actual element value in kernel B becomes simpler
             if (ipos > 0 && jpos > 0)
             {
-                elem = el(subst, substsz, seqY[i], seqX[j]) - indel;
+                elem = el(subst, substsz, seqY[i], seqX[j]) - gapoCost;
             }
             // otherwise, if the current thread is in the first row or column
             // +   update the score matrix element using the insert delete cost
             else
             {
-                elem = (ipos | jpos) * indel;
+                elem = (ipos | jpos) * gapoCost;
             }
 
             // update the corresponding element in global memory
@@ -135,7 +135,7 @@ __global__ static void Nw_Gpu6_KernelA(
 // +   the given matrix minus the padding (zeroth row and column) must be evenly divisible by the tile B
 __global__ static void Nw_Gpu6_KernelB(
     int* const score_gpu,
-    const int indel,
+    const int gapoCost,
     const int trows,
     const int tcols,
     const int tileBx,
@@ -231,7 +231,7 @@ __global__ static void Nw_Gpu6_KernelB(
                         // +   always subtract the insert delete cost from the result, since the kernel A added that value to each element of the score matrix
                         int temp1 = el(tile, 1 + tileBx, i - 1, j - 1) + el(tile, 1 + tileBx, i, j);
                         int temp2 = max(el(tile, 1 + tileBx, i - 1, j), el(tile, 1 + tileBx, i, j - 1));
-                        el(tile, 1 + tileBx, i, j) = max(temp1, temp2) + indel;
+                        el(tile, 1 + tileBx, i, j) = max(temp1, temp2) + gapoCost;
                     }
 
                     // all threads in this warp should finish calculating the tile's current diagonal
@@ -403,7 +403,7 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwAlgParams& pr, NwAlgInput& nw, NwAlgRes
             &adjrows,
             &adjcols,
             &nw.substsz,
-            &nw.indel,
+            &nw.gapoCost,
             &tileAx,
             &tileAy};
 
@@ -463,7 +463,7 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwAlgParams& pr, NwAlgInput& nw, NwAlgRes
         // group arguments to be passed to kernel B
         void* kargs[] {
             &score_gpu,
-            &nw.indel,
+            &nw.gapoCost,
             &trows,
             &tcols,
             &tileBx,

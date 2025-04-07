@@ -9,19 +9,19 @@ __global__ static void Nw_Gpu3_KernelA(
     int* const score_gpu,
     const int adjrows,
     const int adjcols,
-    const int indel)
+    const int gapoCost)
 {
     int j = (blockDim.x * blockIdx.x + threadIdx.x);
     if (j < adjcols)
     {
-        el(score_gpu, adjcols, 0, j) = j * indel;
+        el(score_gpu, adjcols, 0, j) = j * gapoCost;
     }
 
     // skip the zeroth element in the zeroth column, since it is already initialized
     int i = 1 + j;
     if (i < adjrows)
     {
-        el(score_gpu, adjcols, i, 0) = i * indel;
+        el(score_gpu, adjcols, i, 0) = i * gapoCost;
     }
 }
 
@@ -35,7 +35,7 @@ __global__ static void Nw_Gpu3_KernelB(
     // const int adjrows,   // can be calculated as 1 + trows*tileBy
     // const int adjcols,   // can be calculated as 1 + tcols*tileBx
     const int substsz,
-    const int indel,
+    const int gapoCost,
     // tile size
     const int trows,
     const int tcols,
@@ -185,7 +185,7 @@ __global__ static void Nw_Gpu3_KernelB(
         {
             // use the substitution matrix to partially calculate the score matrix element value
             // +   increase the value by insert delete cost, since then the formula for calculating the actual element value later on becomes simpler
-            el(tile, 1 + tileBx, 1 + i, 1 + j) = el(subst, substsz, seqY[i], seqX[j]) - indel;
+            el(tile, 1 + tileBx, 1 + i, 1 + j) = el(subst, substsz, seqY[i], seqX[j]) - gapoCost;
 
             // map the current thread to the next tile element
             i += di;
@@ -235,7 +235,7 @@ __global__ static void Nw_Gpu3_KernelB(
                 // +   always subtract the insert delete cost from the result, since the kernel A added that value to each element of the score matrix
                 int temp1 = el(tile, 1 + tileBx, i - 1, j - 1) + el(tile, 1 + tileBx, i, j);
                 int temp2 = max(el(tile, 1 + tileBx, i - 1, j), el(tile, 1 + tileBx, i, j - 1));
-                el(tile, 1 + tileBx, i, j) = max(temp1, temp2) + indel;
+                el(tile, 1 + tileBx, i, j) = max(temp1, temp2) + gapoCost;
             }
 
             // all threads in this warp should finish calculating the tile's current diagonal
@@ -387,7 +387,7 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& re
             &score_gpu,
             &adjrows,
             &adjcols,
-            &nw.indel};
+            &nw.gapoCost};
 
         // launch the kernel A in the given stream (don't statically allocate shared memory)
         if (cudaSuccess != (res.cudaStat = cudaLaunchKernel((void*)Nw_Gpu3_KernelA, gridA, blockA, kargs, shmemsz, cudaStreamDefault)))
@@ -489,7 +489,7 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& re
                 /*&adjrows,*/
                 /*&adjcols,*/
                 &nw.substsz,
-                &nw.indel,
+                &nw.gapoCost,
                 &trows,
                 &tcols,
                 &tileBx,

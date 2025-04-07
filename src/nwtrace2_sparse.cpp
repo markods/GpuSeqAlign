@@ -48,8 +48,8 @@ static void NwLoadHeaderAndAlignTile(std::vector<int>& tile, const NwAlgInput& n
                 }
 
                 int p1 = el(tile, nw.tileHrowLen, i - 1, j - 1) + el(nw.subst, nw.substsz, nw.seqY[ibeg + i], nw.seqX[jbeg + j]); // MOVE DOWN-RIGHT
-                int p2 = el(tile, nw.tileHrowLen, i - 1, j) + nw.indel;                                                           // MOVE DOWN
-                int p3 = el(tile, nw.tileHrowLen, i, j - 1) + nw.indel;                                                           // MOVE RIGHT
+                int p2 = el(tile, nw.tileHrowLen, i - 1, j) + nw.gapoCost;                                                        // MOVE DOWN
+                int p3 = el(tile, nw.tileHrowLen, i, j - 1) + nw.gapoCost;                                                        // MOVE RIGHT
                 el(tile, nw.tileHrowLen, i, j) = max3(p1, p2, p3);
             }
         }
@@ -280,17 +280,17 @@ NwStat NwHash2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
             else if (i > 0 && j > 0)
             {
                 int p1 = prevRow[/*i - 1,*/ j - 1] + el(nw.subst, nw.substsz, nw.seqY[i], nw.seqX[j]); // MOVE DOWN-RIGHT
-                int p2 = prevRow[/*i - 1,*/ j] + nw.indel;                                             // MOVE DOWN
-                int p3 = currRow[/*i,*/ j - 1] + nw.indel;                                             // MOVE RIGHT
+                int p2 = prevRow[/*i - 1,*/ j] + nw.gapoCost;                                          // MOVE DOWN
+                int p3 = currRow[/*i,*/ j - 1] + nw.gapoCost;                                          // MOVE RIGHT
                 currElem = max3(p1, p2, p3);
             }
             else if (i > 0)
             {
-                currElem = prevRow[/*i - 1,*/ j] + nw.indel; // MOVE DOWN
+                currElem = prevRow[/*i - 1,*/ j] + nw.gapoCost; // MOVE DOWN
             }
             else if (j > 0)
             {
-                currElem = currRow[/*i,*/ j - 1] + nw.indel; // MOVE RIGHT
+                currElem = currRow[/*i,*/ j - 1] + nw.gapoCost; // MOVE RIGHT
             }
 
             currRow[j] = currElem;
@@ -389,17 +389,17 @@ NwStat NwPrint2_Sparse(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res)
             else if (i > 0 && j > 0)
             {
                 int p1 = prevRow[/*i - 1,*/ j - 1] + el(nw.subst, nw.substsz, nw.seqY[i], nw.seqX[j]); // MOVE DOWN-RIGHT
-                int p2 = prevRow[/*i - 1,*/ j] + nw.indel;                                             // MOVE DOWN
-                int p3 = currRow[/*i,*/ j - 1] + nw.indel;                                             // MOVE RIGHT
+                int p2 = prevRow[/*i - 1,*/ j] + nw.gapoCost;                                          // MOVE DOWN
+                int p3 = currRow[/*i,*/ j - 1] + nw.gapoCost;                                          // MOVE RIGHT
                 currElem = max3(p1, p2, p3);
             }
             else if (i > 0)
             {
-                currElem = prevRow[/*i - 1,*/ j] + nw.indel; // MOVE DOWN
+                currElem = prevRow[/*i - 1,*/ j] + nw.gapoCost; // MOVE DOWN
             }
             else if (j > 0)
             {
-                currElem = currRow[/*i,*/ j - 1] + nw.indel; // MOVE RIGHT
+                currElem = currRow[/*i,*/ j - 1] + nw.gapoCost; // MOVE RIGHT
             }
 
             currRow[j] = currElem;

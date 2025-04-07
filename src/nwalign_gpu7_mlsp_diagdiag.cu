@@ -14,7 +14,7 @@ __global__ static void Nw_Gpu7_KernelA(
     const int tcols,
     const int tileBx,
     const int tileBy,
-    const int indel)
+    const int gapoCost)
 {
     int tid = (blockDim.x * blockIdx.x + threadIdx.x);
 
@@ -33,7 +33,7 @@ __global__ static void Nw_Gpu7_KernelA(
             int kHrow = tcols * iTile + jTile;
             int kHrowElem = kHrow * (1 + tileBx) + 0 + jTileElem;
 
-            tileHrowMat_gpu[kHrowElem] = j * indel;
+            tileHrowMat_gpu[kHrowElem] = j * gapoCost;
         }
     }
 
@@ -52,7 +52,7 @@ __global__ static void Nw_Gpu7_KernelA(
             int kHcol = tcols * iTile + jTile; // row-major
             int kHcolElem = kHcol * (1 + tileBy) + 0 + iTileElem;
 
-            tileHcolMat_gpu[kHcolElem] = i * indel;
+            tileHcolMat_gpu[kHcolElem] = i * gapoCost;
         }
     }
 }
@@ -69,7 +69,7 @@ __global__ static void Nw_Gpu7_KernelB(
     int* const tileHcolMat_gpu,
     const int* const subst_gpu,
     const int substsz,
-    const int indel,
+    const int gapoCost,
     // params related to tile B
     const int trows,
     const int tcols,
@@ -180,7 +180,7 @@ __global__ static void Nw_Gpu7_KernelB(
 
         while (i < tileBy)
         {
-            el(tile, 1 + tileBx, 1 + i, 1 + j) = el(subst, substsz, seqY[i], seqX[j]) - indel;
+            el(tile, 1 + tileBx, 1 + i, 1 + j) = el(subst, substsz, seqY[i], seqX[j]) - gapoCost;
 
             i += di;
             j += dj;
@@ -228,7 +228,7 @@ __global__ static void Nw_Gpu7_KernelB(
                 // Subtract the insert delete cost from the result, since the kernel A added that value in all movement directions implicitly.
                 int temp1 = el(tile, 1 + tileBx, i - 1, j - 1) + el(tile, 1 + tileBx, i, j);
                 int temp2 = max(el(tile, 1 + tileBx, i - 1, j), el(tile, 1 + tileBx, i, j - 1));
-                el(tile, 1 + tileBx, i, j) = max(temp1, temp2) + indel;
+                el(tile, 1 + tileBx, i, j) = max(temp1, temp2) + gapoCost;
             }
 
             // Warp should finish calculating the current element diagonal.
@@ -403,7 +403,7 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
             &tcols,
             &tileBx,
             &tileBy,
-            &nw.indel};
+            &nw.gapoCost};
 
         if (cudaSuccess != (res.cudaStat = cudaLaunchKernel((void*)Nw_Gpu7_KernelA, gridDim, blockDim, kargs, shmemByteSize, cudaStreamDefault)))
         {
@@ -498,7 +498,7 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
                 &tileHcolMat_gpu,
                 &subst_gpu,
                 &nw.substsz,
-                &nw.indel,
+                &nw.gapoCost,
                 // params related to tile B
                 &trows,
                 &tcols,

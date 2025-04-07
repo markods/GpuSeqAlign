@@ -1,12 +1,12 @@
 #include "run_types.hpp"
 
 // update the score given the current score matrix and position
-// NOTE: indel and most elements in the substitution matrix are negative, therefore find the maximum of them (instead of the minimum)
+// NOTE: gapoCost and most elements in the substitution matrix are negative, therefore find the maximum of them (instead of the minimum)
 static void UpdateScore(NwAlgInput& nw, int i, int j) noexcept
 {
     int p1 = el(nw.score, nw.adjcols, i - 1, j - 1) + el(nw.subst, nw.substsz, nw.seqY[i], nw.seqX[j]); // MOVE DOWN-RIGHT
-    int p2 = el(nw.score, nw.adjcols, i - 1, j) + nw.indel;                                             // MOVE DOWN
-    int p3 = el(nw.score, nw.adjcols, i, j - 1) + nw.indel;                                             // MOVE RIGHT
+    int p2 = el(nw.score, nw.adjcols, i - 1, j) + nw.gapoCost;                                          // MOVE DOWN
+    int p3 = el(nw.score, nw.adjcols, i, j - 1) + nw.gapoCost;                                          // MOVE RIGHT
     el(nw.score, nw.adjcols, i, j) = max3(p1, p2, p3);
 }
 
@@ -55,11 +55,11 @@ NwStat NwAlign_Cpu3_St_DiagRow(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res
     // initialize the first row and column of the score matrix
     for (int i = 0; i < nw.adjrows; i++)
     {
-        el(nw.score, nw.adjcols, i, 0) = i * nw.indel;
+        el(nw.score, nw.adjcols, i, 0) = i * nw.gapoCost;
     }
     for (int j = 0; j < nw.adjcols; j++)
     {
-        el(nw.score, nw.adjcols, 0, j) = j * nw.indel;
+        el(nw.score, nw.adjcols, 0, j) = j * nw.gapoCost;
     }
 
     // measure header initialization time

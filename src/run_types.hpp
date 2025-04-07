@@ -82,7 +82,7 @@ struct NwAlgInput
     int adjrows;
     int adjcols;
     // TODO: rename
-    int indel;
+    int gapoCost;
     // sparse representation of the score matrix
     int tileHdrMatRows;
     int tileHdrMatCols;

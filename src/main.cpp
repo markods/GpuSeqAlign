@@ -657,7 +657,7 @@ int main(const int argc, const char* argv[])
         // substsz;   <-- once
         // adjrows;   <-- loop-inited
         // adjcols;   <-- loop-inited
-        // indel;   <-- once
+        // gapoCost;   <-- once
         ////// sparse representation of the score matrix
         // tileHdrMatRows;   <-- algorithm-reserved
         // tileHdrMatCols;   <-- algorithm-reserved
@@ -704,8 +704,8 @@ int main(const int argc, const char* argv[])
         }
     }
 
-    // initialize the indel cost
-    nw.indel = cmdArgs.gapoCost.value();
+    // initialize the gapoCost cost
+    nw.gapoCost = cmdArgs.gapoCost.value();
     // initialize the letter map
     std::map<std::string, int>& letterMap = substData.letterMap;
 

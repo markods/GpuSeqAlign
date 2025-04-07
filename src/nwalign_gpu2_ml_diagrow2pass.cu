@@ -9,19 +9,19 @@ __global__ static void Nw_Gpu2_KernelA(
     int* const score_gpu,
     const int adjrows,
     const int adjcols,
-    const int indel)
+    const int gapoCost)
 {
     int j = (blockDim.x * blockIdx.x + threadIdx.x);
     if (j < adjcols)
     {
-        el(score_gpu, adjcols, 0, j) = j * indel;
+        el(score_gpu, adjcols, 0, j) = j * gapoCost;
     }
 
     // skip the zeroth element in the zeroth column, since it is already initialized
     int i = 1 + j;
     if (i < adjrows)
     {
-        el(score_gpu, adjcols, i, 0) = i * indel;
+        el(score_gpu, adjcols, i, 0) = i * gapoCost;
     }
 }
 
@@ -34,7 +34,7 @@ __global__ static void Nw_Gpu2_KernelB(
     // const int adjrows,   // can be calculated as 1 + trows*tileAy
     // const int adjcols,   // can be calculated as 1 + tcols*tileAx
     const int substsz,
-    const int indel,
+    const int gapoCost,
     // tile size
     const int trows,
     const int tcols,
@@ -97,12 +97,12 @@ __global__ static void Nw_Gpu2_KernelB(
             {
                 // calculate the current element's value
                 // +   always subtract the insert delete cost from the result, since that value was added to the initial temporary
-                int p0 = el(subst, substsz, seqY_gpu[i], seqX_gpu[j]) - indel;
+                int p0 = el(subst, substsz, seqY_gpu[i], seqX_gpu[j]) - gapoCost;
 
                 int p1 = el(score_gpu, adjcols, i - 1, j - 1) + p0; // MOVE DOWN-RIGHT
                 int p2 = max(el(score_gpu, adjcols, i - 1, j), p1); // MOVE DOWN
                 int p3 = max(el(score_gpu, adjcols, i, j - 1), p2); // MOVE RIGHT
-                el(score_gpu, adjcols, i, j) = p3 + indel;
+                el(score_gpu, adjcols, i, j) = p3 + gapoCost;
             }
         }
     }
@@ -217,7 +217,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult
             &score_gpu,
             &adjrows,
             &adjcols,
-            &nw.indel};
+            &nw.gapoCost};
 
         // launch the kernel A in the given stream (don't statically allocate shared memory)
         if (cudaSuccess != (res.cudaStat = cudaLaunchKernel((void*)Nw_Gpu2_KernelA, gridA, blockA, kargs, shmemsz, cudaStreamDefault)))
@@ -311,7 +311,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult
                 /*&adjrows,*/
                 /*&adjcols,*/
                 &nw.substsz,
-                &nw.indel,
+                &nw.gapoCost,
                 &trows,
                 &tcols,
                 &tileBx,
