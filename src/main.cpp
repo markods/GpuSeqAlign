@@ -369,7 +369,7 @@ void print_cmd_usage(std::ostream& os)
           "\n"
           "--substName <name>         Specify which substitution matrix from the \"subst\" file will be used. Defaults to\n"
           "                           \"blosum62\".\n"
-          "--gapoCost <cost>          Gap open cost. Nonnegative integer, defaults to 11.\n"
+          "--gapoCost <cost>          Gap open cost. Nonnegative integer, defaults to -11.\n"
           "--gapeCost <cost>          Unused. Gap extend cost. Nonnegative integer, defaults to 0.\n"
           "--algName <name>           Specify which algorithm from the \"algParam\" JSON file will be used. Can be specified\n"
           "                           multiple times, in which case those algorithms will be used, in that order.\n"
@@ -528,7 +528,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
     setDefaultIfArgEmpty(cmdArgs.resPath, std::string("./logs/") + isoDatetimeAsString() + std::string(".tsv"));
 
     setDefaultIfArgEmpty(cmdArgs.substName, std::string("blosum62"));
-    setDefaultIfArgEmpty(cmdArgs.gapoCost, 11);
+    setDefaultIfArgEmpty(cmdArgs.gapoCost, -11);
     setDefaultIfArgEmpty(cmdArgs.gapeCost, 0);
     // TODO
     // Handled when the algParam file is read.
