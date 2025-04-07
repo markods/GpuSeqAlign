@@ -402,8 +402,8 @@ struct NwCmdArgs
     std::optional<std::string> substName;
     std::optional<int> gapoCost;
     std::optional<int> gapeCost;
-    std::optional<std::vector<std::string>> algName; // TODO: 
-    std::optional<std::string> refAlgName;           // TODO
+    std::optional<std::vector<std::string>> algNames; // TODO
+    std::optional<std::string> refAlgName;            // TODO
     std::optional<int> warmupPerAlign;
     std::optional<int> samplesPerAlign;
 
@@ -462,7 +462,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
         }
         else if (arg == "--algName")
         {
-            ZIG_TRY(NwStat::success, setStringVectArg(argc, argv, i, cmdArgs.algName, arg));
+            ZIG_TRY(NwStat::success, setStringVectArg(argc, argv, i, cmdArgs.algNames, arg));
         }
         else if (arg == "--refAlgName")
         {
@@ -542,7 +542,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
     setDefaultIfArgEmpty(cmdArgs.gapeCost, 0);
     // TODO
     // Handled when the algParam file is read.
-    cmdArgs.algName;
+    cmdArgs.algNames;
     cmdArgs.refAlgName;
     setDefaultIfArgEmpty(cmdArgs.warmupPerAlign, 0);
     setDefaultIfArgEmpty(cmdArgs.samplesPerAlign, 1);
@@ -560,7 +560,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
 struct NwCmdData
 {
     NwSubstData substData;
-    NwAlgParams algParamsData;
+    NwParamData algParamsData;
     NwSeqData seqData;
     // NwPairData pairData; // TODO
     std::ofstream resOfs;
@@ -568,9 +568,35 @@ struct NwCmdData
     std::ofstream debugOfs;
 };
 
-NwStat initCmdData(const int argc, const char* argv[], NwCmdData& cmdData)
+NwStat initCmdData(const NwCmdArgs& cmdArgs, NwCmdData& cmdData)
 {
-    // TODO
+    if (NwStat::success != readFromJsonFile(cmdArgs.substPath.value(), cmdData.substData))
+    {
+        std::cerr << "error: could not open/parse json from substPath: \"" << cmdArgs.substPath.value() << "\"\n";
+        return NwStat::errorIoStream;
+    }
+    if (NwStat::success != readFromJsonFile(cmdArgs.algParamPath.value(), cmdData.algParamsData))
+    {
+        std::cerr << "error: could not open/parse json from algParamPath: \"" << cmdArgs.algParamPath.value() << "\"\n";
+        return NwStat::errorIoStream;
+    }
+    if (NwStat::success != readFromJsonFile(cmdArgs.seqPath.value(), cmdData.seqData))
+    {
+        std::cerr << "error: could not open/parse json from seqPath: \"" << cmdArgs.seqPath.value() << "\"\n";
+        return NwStat::errorIoStream;
+    }
+    if (NwStat::success != openOutFile(cmdArgs.resPath.value(), cmdData.resOfs))
+    {
+        std::cerr << "error: could not open resPath: \"" << cmdArgs.resPath.value() << "\"\n";
+        return NwStat::errorIoStream;
+    }
+
+    if (cmdArgs.debugPath.value() != "" && NwStat::success != openOutFile(cmdArgs.debugPath.value(), cmdData.debugOfs))
+    {
+        std::cerr << "error: could not open debugPath: \"" << cmdArgs.debugPath.value() << "\"\n";
+        return NwStat::errorIoStream;
+    }
+
     return NwStat::success;
 }
 
@@ -587,8 +613,10 @@ int main(const int argc, const char* argv[])
     }
 
     NwCmdData cmdData {};
-
-    std::ofstream ofsRes {};
+    if (NwStat stat = initCmdData(cmdArgs, cmdData); stat != NwStat::success)
+    {
+        return -1;
+    }
 
     std::vector<NwAlgResult> resultList {};
     std::map<std::string, NwAlgorithm> algMap {
@@ -609,32 +637,6 @@ int main(const int argc, const char* argv[])
                      },
     };
 
-    NwSubstData substData {};
-    NwParamData paramData {};
-    NwSeqData seqData {};
-
-    if (NwStat::success != readFromJsonFile(cmdArgs.substPath.value(), substData))
-    {
-        std::cerr << "error: could not open/read json from substs file";
-        return -1;
-    }
-    if (NwStat::success != readFromJsonFile(cmdArgs.algParamPath.value(), paramData))
-    {
-        std::cerr << "error: could not open/read json from params file";
-        return -1;
-    }
-    if (NwStat::success != readFromJsonFile(cmdArgs.seqPath.value(), seqData))
-    {
-        std::cerr << "error: could not open/read json from seqs file";
-        return -1;
-    }
-
-    if (NwStat::success != openOutFile(cmdArgs.resPath.value(), ofsRes))
-    {
-        std::cerr << "error: could not open tsv results file";
-        return -1;
-    }
-
     // get the device properties
     cudaDeviceProp deviceProps {};
     if (auto cudaStatus = cudaGetDeviceProperties(&deviceProps, 0 /*deviceId*/); cudaSuccess != cudaStatus)
@@ -648,52 +650,23 @@ int main(const int argc, const char* argv[])
     const int warpsz = deviceProps.warpSize;
     const int maxThreadsPerBlock = deviceProps.maxThreadsPerBlock;
 
-    NwAlgInput nw {
-        ////// host specific memory
-        // subst;   <-- once
-        // seqX;    <-- loop-inited
-        // seqY;    <-- loop-inited
-        // score;   <-- algorithm-reserved
+    NwAlgInput nw {};
+    auto defer1 = make_defer([&]() noexcept
+    {
+        nw.resetAllocsBenchmarkEnd();
+    });
 
-        ////// device specific memory
-        // subst_gpu;   <-- once
-        // seqX_gpu;    <-- algorithm-reserved
-        // seqY_gpu;    <-- algorithm-reserved
-        // score_gpu;   <-- algorithm-reserved
-        ////// sparse representation of the score matrix
-        // tileHrowMat_gpu;   <-- algorithm-reserved
-        // tileHcolMat_gpu;   <-- algorithm-reserved
-
-        ////// alignment parameters
-        // substsz;   <-- once
-        // adjrows;   <-- loop-inited
-        // adjcols;   <-- loop-inited
-        // gapoCost;   <-- once
-        ////// sparse representation of the score matrix
-        // tileHdrMatRows;   <-- algorithm-reserved
-        // tileHdrMatCols;   <-- algorithm-reserved
-        // tileHrowLen;   <-- algorithm-reserved
-        // tileHcolLen;   <-- algorithm-reserved
-
-        ////// device parameters
-        // sm_count;
-        // warpsz;
-        // maxThreadsPerBlock;
-    };
+    // TODO
+    nw.initBenchmarkStart();
 
     // initialize the device parameters
     nw.sm_count = sm_count;
     nw.warpsz = warpsz;
     nw.maxThreadsPerBlock = maxThreadsPerBlock;
 
-    auto defer1 = make_defer([&]() noexcept
-    {
-        nw.resetAllocsBenchmarkEnd();
-    });
-
     // initialize the substitution matrix on the cpu and gpu
     {
-        nw.subst = substData.substMap[cmdArgs.substName.value()];
+        nw.subst = cmdData.substData.substMap[cmdArgs.substName.value()];
         nw.substsz = (int)std::sqrt(nw.subst.size());
 
         // reserve space in the gpu global memory
@@ -718,11 +691,11 @@ int main(const int argc, const char* argv[])
     // initialize the gapoCost cost
     nw.gapoCost = cmdArgs.gapoCost.value();
     // initialize the letter map
-    std::map<std::string, int>& letterMap = substData.letterMap;
+    std::map<std::string, int>& letterMap = cmdData.substData.letterMap;
 
     // initialize the sequence map
     std::vector<std::vector<int>> seqList {};
-    for (auto& charSeq : seqData.seqList)
+    for (auto& charSeq : cmdData.seqData.seqList)
     {
         auto seq = seqStrToVect(charSeq, letterMap, true /*addHeader*/);
         seqList.push_back(seq);
@@ -732,15 +705,15 @@ int main(const int argc, const char* argv[])
     NwCompareData compareData {};
 
     // write the tsv file's header
-    writeResultHeaderToTsv(ofsRes, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
+    writeResultHeaderToTsv(cmdData.resOfs, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
     if (cmdArgs.fWriteProgress.value())
     {
         // Since we write to progress immediately, write to file immediately as well.
-        ofsRes.flush();
+        cmdData.resOfs.flush();
     }
 
     // for all algorithms which have parameters in the param map
-    for (auto& paramTuple : paramData.paramMap)
+    for (auto& paramTuple : cmdData.algParamsData.paramMap)
     {
         // if the current algorithm doesn't exist, skip it
         const std::string& algName = paramTuple.first;
@@ -870,11 +843,11 @@ int main(const int argc, const char* argv[])
                     resList.clear();
 
                     // print the result as a tsv line to the tsv output file
-                    writeResultLineToTsv(ofsRes, res, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
+                    writeResultLineToTsv(cmdData.resOfs, res, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
                     if (cmdArgs.fWriteProgress.value())
                     {
                         // Since we write to progress immediately, write to file immediately as well.
-                        ofsRes.flush();
+                        cmdData.resOfs.flush();
                     }
                 }
 
