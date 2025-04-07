@@ -405,17 +405,17 @@ struct NwCmdArgs
     std::optional<std::string> substName;
     std::optional<int> gapoCost;
     std::optional<int> gapeCost;
-    std::optional<std::vector<std::string>> algNames; // TODO
-    std::optional<std::string> refAlgName;            // TODO
+    std::optional<std::vector<std::string>> algNames; // TODO: check
+    std::optional<std::string> refAlgName;            // TODO: first one from algNames by default
     std::optional<int> warmupPerAlign;
     std::optional<int> samplesPerAlign;
 
     std::optional<bool> fCalcTrace;
     std::optional<bool> fCalcScoreHash;
     std::optional<bool> fWriteProgress;
-    std::optional<std::string> debugPath; // TODO
-    std::optional<bool> fPrintScore;      // TODO
-    std::optional<bool> fPrintTrace;      // TODO
+    std::optional<std::string> debugPath; // TODO: use
+    std::optional<bool> fPrintScore;      // TODO: use
+    std::optional<bool> fPrintTrace;      // TODO: use
 };
 
 NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
