@@ -57,6 +57,9 @@
     <ClCompile Include="src\stopwatch.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\io.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\run_types.hpp">
@@ -87,6 +90,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\json_fwd.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\io.hpp">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

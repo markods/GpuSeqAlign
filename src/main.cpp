@@ -1,13 +1,11 @@
 #include "defer.hpp"
 #include "fmt_guard.hpp"
+#include "io.hpp"
 #include "json.hpp"
 #include "nwalign.hpp"
 #include "print_mat.hpp"
 #include "run_types.hpp"
-#include <chrono>
-#include <ctime>
 #include <cuda_runtime.h>
-#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -15,88 +13,6 @@
 #include <optional>
 #include <sstream>
 #include <string>
-
-// get the current time as an ISO string
-std::string isoDatetimeAsString()
-{
-    auto now = std::chrono::system_clock::now();
-    auto time = std::chrono::system_clock::to_time_t(now);
-
-    std::tm tm_struct {};
-    if (localtime_s(&tm_struct, &time) != 0)
-    {
-        throw std::runtime_error("Failed to get local time.");
-    }
-
-    std::stringstream strs;
-    strs << std::put_time(&tm_struct, "%Y%m%d_%H%M%S");
-    return strs.str();
-}
-
-// open output file stream
-NwStat openOutFile(const std::string& path, std::ofstream& ofs)
-{
-    try
-    {
-        // Create directories if they don't exist
-        std::filesystem::create_directories(std::filesystem::path(path).parent_path());
-
-        ofs.open(path, std::ios_base::out);
-        ofs.exceptions(std::ios_base::goodbit);
-        if (!ofs)
-        {
-            return NwStat::errorIoStream;
-        }
-    }
-    catch (const std::exception&)
-    {
-        return NwStat::errorIoStream;
-    }
-
-    return NwStat::success;
-}
-
-// read a json file into a variable
-template <typename T>
-NwStat readFromJsonFile(const std::string& path, T& res)
-{
-    std::ifstream ifs;
-
-    ifs.open(path, std::ios_base::in);
-    ifs.exceptions(std::ios_base::goodbit);
-    if (!ifs)
-    {
-        return NwStat::errorIoStream;
-    }
-
-    auto defer1 = make_defer([&]() noexcept
-    {
-        ifs.close();
-    });
-
-    // NOTE: the parser doesn't allow for trailing commas
-    auto json = nlohmann::ordered_json::parse(
-        ifs,
-        /*callback*/ nullptr,
-        /*allow_exceptions*/ false,
-        /*ignore_comments*/ true);
-
-    if (json.is_discarded())
-    {
-        return NwStat::errorInvalidFormat;
-    }
-
-    try
-    {
-        res = json;
-    }
-    catch (const std::exception&)
-    {
-        return NwStat::errorInvalidFormat;
-    }
-
-    return NwStat::success;
-}
 
 // the Needleman-Wunsch algorithm implementations
 class NwAlgorithm
@@ -851,10 +767,6 @@ int main(const int argc, const char* argv[])
         std::cerr << "error: could not open tsv results file";
         return -1;
     }
-    auto defer1 = make_defer([&]() noexcept
-    {
-        ofsRes.close();
-    });
 
     // get the device properties
     cudaDeviceProp deviceProps {};
