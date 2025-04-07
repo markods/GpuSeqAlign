@@ -409,7 +409,7 @@ NwStat NwPrint2_Sparse(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res)
         }
 
         std::swap(currRow, prevRow);
-        os << std::endl;
+        os << "\n";
     }
 
     return NwStat::success;

@@ -925,7 +925,8 @@ int main(const int argc, const char* argv[])
         {
             if (cmdArgs.fWriteProgress.value())
             {
-                std::cout << std::endl
+                std::cout << "\n"
+                          << std::flush
                           << "|";
             }
 
@@ -1054,8 +1055,8 @@ int main(const int argc, const char* argv[])
         if (cmdArgs.fWriteProgress.value())
         {
             // algorithm separator
-            std::cout << std::endl
-                      << std::endl;
+            std::cout << "\n\n"
+                      << std::flush;
         }
     }
 
