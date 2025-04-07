@@ -1,4 +1,5 @@
 #include "defer.hpp"
+#include "file_formats.hpp"
 #include "fmt_guard.hpp"
 #include "io.hpp"
 #include "json.hpp"
@@ -6,12 +7,9 @@
 #include "print_mat.hpp"
 #include "run_types.hpp"
 #include <cuda_runtime.h>
-#include <fstream>
-#include <iomanip>
 #include <iostream>
 #include <map>
 #include <optional>
-#include <sstream>
 #include <string>
 
 // the Needleman-Wunsch algorithm implementations
@@ -99,205 +97,6 @@ NwStat NwAlgorithm::hash(const NwAlgInput& nw, NwAlgResult& res)
 NwStat NwAlgorithm::print(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res)
 {
     return _printFn(os, nw, res);
-}
-
-// input file formats
-struct NwSubstData
-{
-    std::map<std::string, int> letterMap;
-    std::map<std::string, std::vector<int>> substMap;
-};
-
-struct NwParamData
-{
-    std::map<std::string, NwAlgParams> paramMap;
-};
-
-struct NwSeqData
-{
-    std::string substName;
-    int indel = 0;
-    // repeat each comparison this many times
-    int repeat = 0;
-    // each sequence will be an int vector and have a header (zeroth) element
-    std::vector<std::string> seqList;
-};
-
-// conversion to object from json
-void from_json(const nlohmann::ordered_json& j, NwSubstData& substData)
-{
-    j.at("letterMap").get_to(substData.letterMap);
-    j.at("substMap").get_to(substData.substMap);
-}
-void from_json(const nlohmann::ordered_json& j, NwAlgParam& param)
-{
-    j.get_to(param._values);
-}
-void from_json(const nlohmann::ordered_json& j, NwAlgParams& params)
-{
-    j.get_to(params._params);
-}
-void from_json(const nlohmann::ordered_json& j, NwParamData& paramData)
-{
-    j.get_to(paramData.paramMap);
-}
-void from_json(const nlohmann::ordered_json& j, NwSeqData& seqData)
-{
-    j.at("substName").get_to(seqData.substName);
-    j.at("indel").get_to(seqData.indel);
-    j.at("repeat").get_to(seqData.repeat);
-    j.at("seqList").get_to(seqData.seqList);
-}
-
-// conversion to json from object
-void to_json(nlohmann::ordered_json& j, const NwSubstData& substData)
-{
-    j["letterMap"] = substData.letterMap;
-    j["substMap"] = substData.substMap;
-}
-void to_json(nlohmann::ordered_json& j, const NwAlgParam& param)
-{
-    j = param._values;
-}
-void to_json(nlohmann::ordered_json& j, const NwAlgParams& params)
-{
-    j = params._params;
-}
-void to_json(nlohmann::ordered_json& j, const NwParamData& paramData)
-{
-    j["paramMap"] = paramData.paramMap;
-}
-void to_json(nlohmann::ordered_json& j, const NwSeqData& seqData)
-{
-    j["substName"] = seqData.substName;
-    j["indel"] = seqData.indel;
-    j["repeat"] = seqData.repeat;
-    j["seqList"] = seqData.seqList;
-}
-
-// conversion to tsv from object
-void writeResultHeaderToTsv(std::ostream& os,
-    bool fPrintScoreStats,
-    bool fPrintTraceStats)
-{
-    FormatFlagsGuard fg {os};
-    os.fill(' ');
-
-    os << "alg_name";
-    os << "\t" << "iY";
-    os << "\t" << "iX";
-    os << "\t" << "reps";
-
-    os << "\t" << "seqY_len";
-    os << "\t" << "seqX_len";
-
-    os << "\t" << "alg_params";
-
-    os << "\t" << "err_step";
-    os << "\t" << "nw_stat";
-    os << "\t" << "cuda_stat";
-
-    os << "\t" << "align_cost";
-    if (fPrintScoreStats)
-    {
-        os << "\t" << "score_hash";
-    }
-    if (fPrintTraceStats)
-    {
-        os << "\t" << "trace_hash";
-    }
-
-    os << "\t" << "align.alloc";
-    os << "\t" << "align.cpy_dev";
-    os << "\t" << "align.init_hdr";
-    os << "\t" << "align.calc_init";
-    os << "\t" << "align.calc";
-    os << "\t" << "align.cpy_host";
-    if (fPrintScoreStats)
-    {
-        os << "\t" << "hash.calc";
-    }
-    if (fPrintTraceStats)
-    {
-        os << "\t" << "trace.alloc";
-        os << "\t" << "trace.calc";
-    }
-
-    os << '\n';
-}
-
-static void lapTimeToTsv(std::ostream& os, float lapTime)
-{
-    os << std::fixed << std::setprecision(4) << lapTime;
-}
-
-void writeResultLineToTsv(
-    std::ostream& os,
-    const NwAlgResult& res,
-    bool fPrintScoreStats,
-    bool fPrintTraceStats)
-{
-    FormatFlagsGuard fg {os};
-
-    os << res.algName;
-
-    os << "\t" << res.iY;
-    os << "\t" << res.iX;
-    os << "\t" << res.reps;
-
-    os << "\t" << res.seqY_len;
-    os << "\t" << res.seqX_len;
-
-    nlohmann::ordered_json algParamsJson = res.algParams;
-    os << "\t" << algParamsJson.dump();
-
-    os << "\t" << res.errstep;
-    os << "\t" << int(res.stat);
-    os << "\t" << int(res.cudaStat);
-
-    os << "\t" << res.align_cost;
-
-    if (fPrintScoreStats)
-    {
-        os.fill('0');
-        os << "\t" << std::setw(10) << res.score_hash;
-    }
-    if (fPrintTraceStats)
-    {
-        os.fill('0');
-        os << "\t" << std::setw(10) << res.trace_hash;
-    }
-
-    fg.restore();
-
-    os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("align.alloc"));
-    os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("align.cpy_dev"));
-    os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("align.init_hdr"));
-    os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("align.calc_init"));
-    os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("align.calc"));
-    os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("align.cpy_host"));
-
-    if (fPrintScoreStats)
-    {
-        os << "\t";
-        lapTimeToTsv(os, res.sw_hash.get_or_default("hash.calc"));
-    }
-
-    if (fPrintTraceStats)
-    {
-        os << "\t";
-        lapTimeToTsv(os, res.sw_trace.get_or_default("trace.alloc"));
-        os << "\t";
-        lapTimeToTsv(os, res.sw_trace.get_or_default("trace.calc"));
-    }
-
-    os << "\n";
 }
 
 // convert the sequence string to a vector using a character map

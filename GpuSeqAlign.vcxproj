@@ -15,6 +15,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\file_formats.cpp" />
     <ClCompile Include="src\io.cpp" />
     <ClCompile Include="src\run_types.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -27,6 +28,7 @@
     <ClCompile Include="src\stopwatch.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\file_formats.hpp" />
     <ClInclude Include="src\io.hpp" />
     <ClInclude Include="src\json_fwd.hpp" />
     <ClInclude Include="src\math.hpp" />
