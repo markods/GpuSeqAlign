@@ -484,9 +484,9 @@ NwAlgResult combineResults(std::vector<NwAlgResult>& resList)
     // +   take the last result since it might have an error (if it errored it is definitely the last result)
     NwAlgResult res = resList[resList.size() - 1];
     // combine the stopwatches from many repeats into one
-    res.sw_align = Stopwatch::combineStopwatches(swAlignList);
-    res.sw_hash = Stopwatch::combineStopwatches(swHashList);
-    res.sw_trace = Stopwatch::combineStopwatches(swTraceList);
+    res.sw_align = Stopwatch::combine(swAlignList);
+    res.sw_hash = Stopwatch::combine(swHashList);
+    res.sw_trace = Stopwatch::combine(swTraceList);
 
     return res;
 }

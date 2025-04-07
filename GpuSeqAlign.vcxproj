@@ -23,6 +23,7 @@
     <ClCompile Include="src\nwalign_cpu4_mt_diagrow.cpp" />
     <ClCompile Include="src\nwtrace1_plain.cpp" />
     <ClCompile Include="src\nwtrace2_sparse.cpp" />
+    <ClCompile Include="src\stopwatch.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\json_fwd.hpp" />
