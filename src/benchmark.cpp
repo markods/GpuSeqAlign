@@ -143,13 +143,9 @@ static NwAlgResult combineResults(std::vector<NwAlgResult>& resList)
     return res;
 }
 
-NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkData& benchData)
+static NwStat initNwInput(const NwCmdArgs& cmdArgs, const NwCmdData& cmdData, NwAlgInput& nw)
 {
-    std::map<NwCompareKey, NwCompareRes> compareMap {};
-    std::map<std::string, NwAlgorithm> algMap {};
-    getNwAlgorithmMap(algMap);
-
-    // get the device properties
+    // initialize the device parameters
     cudaDeviceProp deviceProps {};
     if (auto cudaStatus = cudaGetDeviceProperties(&deviceProps, 0 /*deviceId*/); cudaSuccess != cudaStatus)
     {
@@ -157,48 +153,59 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
         return NwStat::errorCudaGeneral;
     }
 
-    // number of streaming multiprocessors (sm-s) and threads in a warp
-    const int sm_count = deviceProps.multiProcessorCount;
-    const int warpsz = deviceProps.warpSize;
-    const int maxThreadsPerBlock = deviceProps.maxThreadsPerBlock;
+    nw.sm_count = deviceProps.multiProcessorCount;
+    nw.warpsz = deviceProps.warpSize;
+    nw.maxThreadsPerBlock = deviceProps.maxThreadsPerBlock;
+
+    // initialize the substitution matrix on the cpu and gpu
+    try
+    {
+        nw.subst = cmdData.substData.substMap.at(cmdArgs.substName.value());
+        nw.substsz = (int)std::sqrt(nw.subst.size());
+    }
+    catch (const std::exception&)
+    {
+        std::cerr << "error: unknown substitution matrix name\n";
+        return NwStat::errorInvalidValue;
+    }
+
+    // reserve space in the gpu global memory
+    try
+    {
+        nw.subst_gpu.init(nw.substsz * nw.substsz);
+    }
+    catch (const std::exception&)
+    {
+        std::cerr << "error: could not reserve space for the substitution matrix in the gpu\n";
+        return NwStat::errorMemoryAllocation;
+    }
+
+    // transfer the substitution matrix to the gpu global memory
+    if (auto cudaStatus = memTransfer(nw.subst_gpu, nw.subst, nw.substsz * nw.substsz); cudaSuccess != cudaStatus)
+    {
+        std::cerr << "error: could not transfer substitution matrix to the gpu\n";
+        return NwStat::errorMemoryTransfer;
+    }
+
+    // initialize the gapoCost cost
+    nw.gapoCost = cmdArgs.gapoCost.value();
+
+    return NwStat::success;
+}
+
+NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkData& benchData)
+{
+    std::map<NwCompareKey, NwCompareRes> compareMap {};
+    std::map<std::string, NwAlgorithm> algMap {};
+    getNwAlgorithmMap(algMap);
 
     NwAlgInput nw {};
     auto defer1 = make_defer([&]() noexcept
     {
         nw.resetAllocsBenchmarkEnd();
     });
+    initNwInput(cmdArgs, cmdData, nw);
 
-    // initialize the device parameters
-    nw.sm_count = sm_count;
-    nw.warpsz = warpsz;
-    nw.maxThreadsPerBlock = maxThreadsPerBlock;
-
-    // initialize the substitution matrix on the cpu and gpu
-    {
-        nw.subst = cmdData.substData.substMap[cmdArgs.substName.value()];
-        nw.substsz = (int)std::sqrt(nw.subst.size());
-
-        // reserve space in the gpu global memory
-        try
-        {
-            nw.subst_gpu.init(nw.substsz * nw.substsz);
-        }
-        catch (const std::exception&)
-        {
-            std::cerr << "error: could not reserve space for the substitution matrix in the gpu\n";
-            return NwStat::errorMemoryAllocation;
-        }
-
-        // transfer the substitution matrix to the gpu global memory
-        if (auto cudaStatus = memTransfer(nw.subst_gpu, nw.subst, nw.substsz * nw.substsz); cudaSuccess != cudaStatus)
-        {
-            std::cerr << "error: could not transfer substitution matrix to the gpu\n";
-            return NwStat::errorMemoryTransfer;
-        }
-    }
-
-    // initialize the gapoCost cost
-    nw.gapoCost = cmdArgs.gapoCost.value();
     // initialize the letter map
     std::map<std::string, int>& letterMap = cmdData.substData.letterMap;
 
@@ -209,9 +216,6 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
         auto seq = seqStrToVect(charSeq, letterMap, true /*addHeader*/);
         seqList.push_back(seq);
     }
-
-    // initialize the gold result map (as calculated by the first algorithm)
-    NwBenchmarkData compareData {};
 
     // write the tsv file's header
     writeResultHeaderToTsv(cmdData.resOfs, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
@@ -314,7 +318,7 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                         if (!res.errstep && NwStat::success != (res.stat = setOrVerifyResult(res, compareMap)))
                         {
                             res.errstep = 5;
-                            compareData.calcErrors++;
+                            benchData.calcErrors++;
                         }
 
                         if (iR < 0)
@@ -380,9 +384,9 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
     }
 
     // print the number of calculation errors
-    if (compareData.calcErrors > 0)
+    if (benchData.calcErrors > 0)
     {
-        std::cerr << "error: " << compareData.calcErrors << " calculation error(s)\n";
+        std::cerr << "error: " << benchData.calcErrors << " calculation error(s)\n";
         return NwStat::errorInvalidResult;
     }
 
