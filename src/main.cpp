@@ -139,11 +139,6 @@ struct NwCompareRes
     friend bool operator==(const NwCompareRes& l, const NwCompareRes& r);
     friend bool operator!=(const NwCompareRes& l, const NwCompareRes& r);
 };
-struct NwCompareData
-{
-    std::map<NwCompareKey, NwCompareRes> compareMap;
-    int calcErrors;
-};
 
 // structs used to verify that the algorithms' results are correct
 bool operator<(const NwCompareKey& l, const NwCompareKey& r)
@@ -172,9 +167,8 @@ bool operator!=(const NwCompareRes& l, const NwCompareRes& r)
 }
 
 // check that the result hashes match the hashes calculated by the first algorithm (the gold standard)
-NwStat setOrVerifyResult(const NwAlgResult& res, NwCompareData& compareData)
+NwStat setOrVerifyResult(const NwAlgResult& res, std::map<NwCompareKey, NwCompareRes>& compareMap)
 {
-    std::map<NwCompareKey, NwCompareRes>& compareMap = compareData.compareMap;
     NwCompareKey key {
         res.iY, // iY;
         res.iX  // iX;
@@ -236,25 +230,16 @@ NwAlgResult combineResults(std::vector<NwAlgResult>& resList)
     return res;
 }
 
-int main(const int argc, const char* argv[])
+struct NwBenchmarkData
 {
-    NwCmdArgs cmdArgs {};
-    if (NwStat stat = parseCmdArgs(argc, argv, cmdArgs); stat != NwStat::success)
-    {
-        if (stat == NwStat::helpMenuRequested)
-        {
-            return 0;
-        }
-        return -1;
-    }
+    std::vector<NwAlgResult> resultList;
+    int calcErrors;
+};
 
-    NwCmdData cmdData {};
-    if (NwStat stat = initCmdData(cmdArgs, cmdData); stat != NwStat::success)
-    {
-        return -1;
-    }
+NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkData& benchData)
+{
+    std::map<NwCompareKey, NwCompareRes> compareMap;
 
-    std::vector<NwAlgResult> resultList {};
     std::map<std::string, NwAlgorithm> algMap {
         /*algMap:*/ {
                      {"NwAlign_Cpu1_St_Row", {NwAlign_Cpu1_St_Row, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
@@ -278,7 +263,7 @@ int main(const int argc, const char* argv[])
     if (auto cudaStatus = cudaGetDeviceProperties(&deviceProps, 0 /*deviceId*/); cudaSuccess != cudaStatus)
     {
         std::cerr << "error: could not get device properties\n";
-        return -1;
+        return NwStat::errorCudaGeneral;
     }
 
     // number of streaming multiprocessors (sm-s) and threads in a warp
@@ -310,14 +295,14 @@ int main(const int argc, const char* argv[])
         catch (const std::exception&)
         {
             std::cerr << "error: could not reserve space for the substitution matrix in the gpu\n";
-            return -1;
+            return NwStat::errorMemoryAllocation;
         }
 
         // transfer the substitution matrix to the gpu global memory
         if (auto cudaStatus = memTransfer(nw.subst_gpu, nw.subst, nw.substsz * nw.substsz); cudaSuccess != cudaStatus)
         {
             std::cerr << "error: could not transfer substitution matrix to the gpu\n";
-            return -1;
+            return NwStat::errorMemoryTransfer;
         }
     }
 
@@ -335,7 +320,7 @@ int main(const int argc, const char* argv[])
     }
 
     // initialize the gold result map (as calculated by the first algorithm)
-    NwCompareData compareData {};
+    NwBenchmarkData compareData {};
 
     // write the tsv file's header
     writeResultHeaderToTsv(cmdData.resOfs, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
@@ -435,7 +420,7 @@ int main(const int argc, const char* argv[])
                         {
                             res.errstep = 4;
                         }
-                        if (!res.errstep && NwStat::success != (res.stat = setOrVerifyResult(res, compareData)))
+                        if (!res.errstep && NwStat::success != (res.stat = setOrVerifyResult(res, compareMap)))
                         {
                             res.errstep = 5;
                             compareData.calcErrors++;
@@ -465,13 +450,13 @@ int main(const int argc, const char* argv[])
                         if (auto cudaStatus = (cudaGetLastError(), cudaGetLastError()); cudaStatus != cudaSuccess)
                         {
                             std::cerr << "error: corrupted cuda context\n";
-                            return -1;
+                            return NwStat::errorCudaGeneral;
                         }
                     }
 
                     // add the result to the results list
-                    resultList.push_back(combineResults(resList));
-                    NwAlgResult& res = resultList.back();
+                    benchData.resultList.push_back(combineResults(resList));
+                    NwAlgResult& res = benchData.resultList.back();
                     // reset the multiple repetition list
                     resList.clear();
 
@@ -507,6 +492,33 @@ int main(const int argc, const char* argv[])
     if (compareData.calcErrors > 0)
     {
         std::cerr << "error: " << compareData.calcErrors << " calculation error(s)\n";
+        return NwStat::errorInvalidResult;
+    }
+
+    return NwStat::success;
+}
+
+int main(const int argc, const char* argv[])
+{
+    NwCmdArgs cmdArgs {};
+    if (NwStat stat = parseCmdArgs(argc, argv, cmdArgs); stat != NwStat::success)
+    {
+        if (stat == NwStat::helpMenuRequested)
+        {
+            return 0;
+        }
+        return -1;
+    }
+
+    NwCmdData cmdData {};
+    if (NwStat stat = initCmdData(cmdArgs, cmdData); stat != NwStat::success)
+    {
+        return -1;
+    }
+
+    NwBenchmarkData benchData {};
+    if (NwStat stat = benchmarkAlgs(cmdArgs, cmdData, benchData); stat != NwStat::success)
+    {
         return -1;
     }
 }

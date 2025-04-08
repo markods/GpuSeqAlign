@@ -12,6 +12,7 @@ enum class NwStat : int
 {
     success,
     helpMenuRequested,
+    errorCudaGeneral,
     errorMemoryAllocation,
     errorMemoryTransfer,
     errorKernelFailure,
