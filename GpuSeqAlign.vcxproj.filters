@@ -92,7 +92,7 @@
     <ClInclude Include="src\stopwatch.hpp">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\nwalign.hpp">
+    <ClInclude Include="src\nw_fns.hpp">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\json_fwd.hpp">

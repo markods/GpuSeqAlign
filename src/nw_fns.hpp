@@ -1,5 +1,5 @@
-#ifndef INCLUDE_NWALIGN_HPP
-#define INCLUDE_NWALIGN_HPP
+#ifndef INCLUDE_NW_FNS_HPP
+#define INCLUDE_NW_FNS_HPP
 
 #include "run_types.hpp"
 #include <vector>
@@ -36,4 +36,4 @@ NwStat NwPrint2_Sparse(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res)
 void NwTrace2_AlignTile(std::vector<int>& tile, const NwAlgInput& nw, int iTile, int jTile);
 void NwTrace2_GetTileAndElemIJ(const NwAlgInput& nw, int i, int j, TileAndElemIJ& co);
 
-#endif // INCLUDE_NWALIGN_HPP
+#endif // INCLUDE_NW_FNS_HPP

@@ -1,5 +1,5 @@
 #include "fmt_guard.hpp"
-#include "nwalign.hpp"
+#include "nw_fns.hpp"
 #include "run_types.hpp"
 #include <limits>
 

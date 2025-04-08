@@ -1,7 +1,7 @@
 #include "cmd_parser.hpp"
 #include "defer.hpp"
 #include "fmt_guard.hpp"
-#include "nwalign.hpp"
+#include "nw_fns.hpp"
 #include "run_types.hpp"
 #include <cuda_runtime.h>
 #include <iostream>
