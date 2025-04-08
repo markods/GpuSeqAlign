@@ -63,6 +63,9 @@
     <ClCompile Include="src\file_formats.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\cmd_parser.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\run_types.hpp">
@@ -99,6 +102,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\file_formats.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\cmd_parser.hpp">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
