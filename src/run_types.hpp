@@ -106,9 +106,8 @@ struct NwAlgResult
 {
     std::string algName;
     std::map<std::string, int> algParams;
-    // TODO: string
-    int iY;
-    int iX;
+    std::string seqY_id;
+    std::string seqX_id;
 
     int errstep;          // 0 for success
     NwStat stat;          // 0 for success

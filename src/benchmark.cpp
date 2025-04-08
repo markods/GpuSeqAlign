@@ -38,8 +38,8 @@ static std::vector<int> seqStrToVect(const std::string& str, const std::map<std:
 // structs used to verify that the algorithms' results are correct
 struct NwCompareKey
 {
-    int iY;
-    int iX;
+    std::string seqY_id;
+    std::string seqX_id;
 
     friend bool operator<(const NwCompareKey& l, const NwCompareKey& r);
 };
@@ -57,8 +57,8 @@ struct NwCompareRes
 bool operator<(const NwCompareKey& l, const NwCompareKey& r)
 {
     bool res =
-        (l.iY < r.iY) ||
-        (l.iY == r.iY && l.iX < r.iX);
+        (l.seqY_id < r.seqY_id) ||
+        (l.seqY_id == r.seqY_id && l.seqX_id < r.seqX_id);
     return res;
 }
 
@@ -82,10 +82,10 @@ bool operator!=(const NwCompareRes& l, const NwCompareRes& r)
 // check that the result hashes match the hashes calculated by the first algorithm (the gold standard)
 static NwStat setOrVerifyResult(const NwAlgResult& res, std::map<NwCompareKey, NwCompareRes>& compareMap)
 {
-    NwCompareKey key {
-        res.iY, // iY;
-        res.iX  // iX;
-    };
+    NwCompareKey key;
+    key.seqY_id = res.seqY_id;
+    key.seqX_id = res.seqX_id;
+
     NwCompareRes calcVal {};
     calcVal.align_cost = res.align_cost;
     calcVal.score_hash = res.score_hash;
@@ -285,11 +285,11 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
 
                         res.algName = algName;
                         res.algParams = alg.alignPr().copy();
-                        res.iX = iX;
-                        res.iY = iY;
+                        res.seqY_id = std::to_string(iY);
+                        res.seqX_id = std::to_string(iX);
                         //
-                        res.seqX_len = nw.seqX.size();
                         res.seqY_len = nw.seqY.size();
+                        res.seqX_len = nw.seqX.size();
                         res.substName = cmdArgs.substName.value();
                         res.gapoCost = cmdArgs.gapoCost.value();
                         res.warmup_runs = cmdArgs.warmupPerAlign.value();

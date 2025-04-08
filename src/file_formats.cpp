@@ -122,8 +122,8 @@ void writeResultLineToTsv(
     FormatFlagsGuard fg {os};
 
     os << res.algName;
-    os << "\t" << res.iY;
-    os << "\t" << res.iX;
+    os << "\t" << res.seqY_id;
+    os << "\t" << res.seqX_id;
 
     os << "\t" << res.seqY_len;
     os << "\t" << res.seqX_len;
