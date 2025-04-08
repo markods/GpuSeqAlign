@@ -563,7 +563,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
 struct NwCmdData
 {
     NwSubstData substData;
-    NwParamData algParamsData;
+    NwAlgParamsData algParamsData;
     NwSeqData seqData;
     // NwPairData pairData; // TODO
     std::ofstream resOfs;

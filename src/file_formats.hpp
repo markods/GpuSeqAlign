@@ -8,14 +8,14 @@
 #include <string>
 #include <vector>
 
-// TODO: order maps by insertion order, not by string
 struct NwSubstData
 {
     std::map<std::string, int> letterMap;
     std::map<std::string, std::vector<int>> substMap;
 };
 
-struct NwParamData
+// TODO: order maps by insertion order, not by string
+struct NwAlgParamsData
 {
     std::map<std::string, NwAlgParams> paramMap;
 };
@@ -29,7 +29,7 @@ struct NwSeqData
 void from_json(const nlohmann::ordered_json& j, NwSubstData& substData);
 void from_json(const nlohmann::ordered_json& j, NwAlgParam& param);
 void from_json(const nlohmann::ordered_json& j, NwAlgParams& params);
-void from_json(const nlohmann::ordered_json& j, NwParamData& paramData);
+void from_json(const nlohmann::ordered_json& j, NwAlgParamsData& paramData);
 void from_json(const nlohmann::ordered_json& j, NwSeqData& seqData);
 
 void writeResultHeaderToTsv(std::ostream& os, bool fPrintScoreStats, bool fPrintTraceStats);

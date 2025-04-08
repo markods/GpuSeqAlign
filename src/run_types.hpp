@@ -103,7 +103,6 @@ struct NwAlgInput
 // results which the Needleman-Wunsch algorithm variant returns
 struct NwAlgResult
 {
-    // TODO: all to camel case
     std::string algName;
     std::map<std::string, int> algParams;
     // TODO: string

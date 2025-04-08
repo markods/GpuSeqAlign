@@ -18,7 +18,7 @@ void from_json(const nlohmann::ordered_json& j, NwAlgParams& params)
 {
     j.get_to(params._params);
 }
-void from_json(const nlohmann::ordered_json& j, NwParamData& paramData)
+void from_json(const nlohmann::ordered_json& j, NwAlgParamsData& paramData)
 {
     j.get_to(paramData.paramMap);
 }
@@ -45,7 +45,7 @@ void to_json(nlohmann::ordered_json& j, const NwAlgParams& params)
 {
     j = params._params;
 }
-void to_json(nlohmann::ordered_json& j, const NwParamData& paramData)
+void to_json(nlohmann::ordered_json& j, const NwAlgParamsData& paramData)
 {
     j["paramMap"] = paramData.paramMap;
 }
