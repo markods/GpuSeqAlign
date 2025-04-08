@@ -69,6 +69,9 @@
     <ClCompile Include="src\nw_algorithm.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\benchmark.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\run_types.hpp">
@@ -111,6 +114,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\nw_algorithm.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\benchmark.hpp">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

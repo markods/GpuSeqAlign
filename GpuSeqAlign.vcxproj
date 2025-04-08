@@ -15,6 +15,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\benchmark.cpp" />
     <ClCompile Include="src\cmd_parser.cpp" />
     <ClCompile Include="src\file_formats.cpp" />
     <ClCompile Include="src\io.cpp" />
@@ -30,6 +31,7 @@
     <ClCompile Include="src\stopwatch.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\benchmark.hpp" />
     <ClInclude Include="src\cmd_parser.hpp" />
     <ClInclude Include="src\file_formats.hpp" />
     <ClInclude Include="src\io.hpp" />
