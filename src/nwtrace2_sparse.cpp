@@ -117,43 +117,15 @@ NwStat NwTrace2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
     // Measure allocation time.
     sw.lap("trace.alloc");
 
-    // ---------------
-    // |h  h  h  h  h| h
-    // |h  .  .  .  .| .
-    // |h  .  .  .  .| .
-    // ---------------
-    //  h  .  .  .  .  .
-    // We're using the same tiles as before (the '.' in the schematic), which we extend with their header row and column,
-    // but subtract their last row and column. Meaning the tile dimensions stay the same.
-    // The last row and column are in fact the header row/column of the neighbouring tile, so no need to calculate them.
-
-    // TODO
-    // Don't subtract header element from i and j!
-    int iTile = (nw.adjrows - 1) / (nw.tileHcolLen - 1);
-    int jTile = (nw.adjcols - 1) / (nw.tileHrowLen - 1);
-    int i = (nw.adjrows - 1) % (nw.tileHcolLen - 1);
-    int j = (nw.adjcols - 1) % (nw.tileHrowLen - 1);
-
-    // Small adjustment for the last score matrix row and column:
-    // saturate iTile and jTile, so that we don't end up with impossible tile coordinates.
-    if (iTile == nw.tileHdrMatRows)
-    {
-        iTile -= 1;
-        i += (nw.tileHcolLen - 1);
-    }
-    if (jTile == nw.tileHdrMatCols)
-    {
-        jTile -= 1;
-        j += (nw.tileHrowLen - 1);
-    }
-
     // Load last tile.
-    NwTrace2_AlignTile(tile, nw, iTile, jTile);
+    TileAndElemIJ co;
+    NwTrace2_GetTileAndElemIJ(nw, nw.adjrows - 1 /*last valid i pos*/, nw.adjcols - 1 /*last valid j pos*/, co);
+    NwTrace2_AlignTile(tile, nw, co.iTile, co.jTile);
 
     // While there are elements on one of the optimal paths.
     while (true)
     {
-        int currElem = el(tile, nw.tileHrowLen, i, j);
+        int currElem = el(tile, nw.tileHrowLen, co.iTileElem, co.jTileElem);
         trace.push_back(currElem);
 
         int max = std::numeric_limits<int>::min();
@@ -161,48 +133,48 @@ NwStat NwTrace2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
         int dj = 0;
 
         // Up-left movement if possible and better.
-        if (i > 0 && j > 0 && max < el(tile, nw.tileHrowLen, i - 1, j - 1))
+        if (co.iTileElem > 0 && co.jTileElem > 0 && max < el(tile, nw.tileHrowLen, co.iTileElem - 1, co.jTileElem - 1))
         {
-            max = el(tile, nw.tileHrowLen, i - 1, j - 1);
+            max = el(tile, nw.tileHrowLen, co.iTileElem - 1, co.jTileElem - 1);
             di = -1;
             dj = -1;
         }
         // Up movement if possible and better.
-        if (i > 0 && max < el(tile, nw.tileHrowLen, i - 1, j))
+        if (co.iTileElem > 0 && max < el(tile, nw.tileHrowLen, co.iTileElem - 1, co.jTileElem))
         {
-            max = el(tile, nw.tileHrowLen, i - 1, j);
+            max = el(tile, nw.tileHrowLen, co.iTileElem - 1, co.jTileElem);
             di = -1;
             dj = 0;
         }
         // Left movement if possible and better.
-        if (j > 0 && max < el(tile, nw.tileHrowLen, i, j - 1))
+        if (co.jTileElem > 0 && max < el(tile, nw.tileHrowLen, co.iTileElem, co.jTileElem - 1))
         {
-            max = el(tile, nw.tileHrowLen, i, j - 1);
+            max = el(tile, nw.tileHrowLen, co.iTileElem, co.jTileElem - 1);
             di = 0;
             dj = -1;
         }
-        i += di;
-        j += dj;
+        co.iTileElem += di;
+        co.jTileElem += dj;
 
         // Load up / left / up-left tile if possible and we ended up in the header row / header column / intersection of the header row and header column.
-        int diTile = -(i == 0 && iTile > 0);
-        int djTile = -(j == 0 && jTile > 0);
+        int diTile = -(co.iTileElem == 0 && co.iTile > 0);
+        int djTile = -(co.jTileElem == 0 && co.jTile > 0);
         if (diTile != 0 || djTile != 0)
         {
-            iTile += diTile;
-            jTile += djTile;
+            co.iTile += diTile;
+            co.jTile += djTile;
 
             // If we are in the tile header row/column, set coordinates as if we're in the next tile's last row/column.
-            if (i == 0 && di != 0)
+            if (co.iTileElem == 0 && di != 0)
             {
-                i = nw.tileHcolLen - 1;
+                co.iTileElem = nw.tileHcolLen - 1;
             }
-            if (j == 0 && dj != 0)
+            if (co.jTileElem == 0 && dj != 0)
             {
-                j = nw.tileHrowLen - 1;
+                co.jTileElem = nw.tileHrowLen - 1;
             }
 
-            NwTrace2_AlignTile(tile, nw, iTile, jTile);
+            NwTrace2_AlignTile(tile, nw, co.iTile, co.jTile);
         }
 
         if (di == 0 && dj == 0)
@@ -267,50 +239,23 @@ NwStat NwHash2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
     {
         for (int j = 0; j < nw.adjcols; j++)
         {
-            // ---------------
-            // |h  h  h  h  h| h
-            // |h  .  .  .  .| .
-            // |h  .  .  .  .| .
-            // ---------------
-            //  h  .  .  .  .  .
-            // We're using the same tiles as before (the '.' in the schematic), which we extend with their header row and column,
-            // but subtract their last row and column. Meaning the tile dimensions stay the same.
-            // The last row and column are in fact the header row/column of the neighbouring tile, so no need to calculate them.
-
-            // TODO
-            // Don't subtract header element from i and j!
-            int iTile = i / (nw.tileHcolLen - 1);
-            int jTile = j / (nw.tileHrowLen - 1);
-            int iTileElem = i % (nw.tileHcolLen - 1);
-            int jTileElem = j % (nw.tileHrowLen - 1);
-
-            // Small adjustment for the last score matrix row and column:
-            // saturate iTile and jTile, so that we don't end up with impossible tile coordinates.
-            if (iTile == nw.tileHdrMatRows)
-            {
-                iTile -= 1;
-                iTileElem += (nw.tileHcolLen - 1);
-            }
-            if (jTile == nw.tileHdrMatCols)
-            {
-                jTile -= 1;
-                jTileElem += (nw.tileHrowLen - 1);
-            }
+            TileAndElemIJ co;
+            NwTrace2_GetTileAndElemIJ(nw, nw.adjrows - 1 /*last valid i pos*/, nw.adjcols - 1 /*last valid j pos*/, co);
 
             int currElem = 0;
             // Load the header row element instead of calculating it.
             // Don't attempt to load the last header row, since it isn't stored in the tile header row matrix.
-            if (iTileElem == 0 && i != nw.adjrows - 1)
+            if (co.iTileElem == 0 && i != nw.adjrows - 1)
             {
-                int kHrowElemBeg = (nw.tileHdrMatCols * iTile + jTile) * nw.tileHrowLen + 0;
-                currElem = nw.tileHrowMat[kHrowElemBeg + jTileElem];
+                int kHrowElemBeg = (nw.tileHdrMatCols * co.iTile + co.jTile) * nw.tileHrowLen + 0;
+                currElem = nw.tileHrowMat[kHrowElemBeg + co.jTileElem];
             }
             // Load the header column element instead of calculating it.
             // Don't attempt to load the last header column, since it isn't stored in the tile header column matrix.
-            else if (jTileElem == 0 && j != nw.adjcols - 1)
+            else if (co.jTileElem == 0 && j != nw.adjcols - 1)
             {
-                int kHcolElemBeg = (nw.tileHdrMatCols * iTile + jTile) * nw.tileHcolLen + 0;
-                currElem = nw.tileHcolMat[kHcolElemBeg + iTileElem];
+                int kHcolElemBeg = (nw.tileHdrMatCols * co.iTile + co.jTile) * nw.tileHcolLen + 0;
+                currElem = nw.tileHcolMat[kHcolElemBeg + co.iTileElem];
             }
             else if (i > 0 && j > 0)
             {
@@ -377,50 +322,23 @@ NwStat NwPrint2_Sparse(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res)
     {
         for (int j = 0; j < nw.adjcols; j++)
         {
-            // ---------------
-            // |h  h  h  h  h| h
-            // |h  .  .  .  .| .
-            // |h  .  .  .  .| .
-            // ---------------
-            //  h  .  .  .  .  .
-            // We're using the same tiles as before (the '.' in the schematic), which we extend with their header row and column,
-            // but subtract their last row and column. Meaning the tile dimensions stay the same.
-            // The last row and column are in fact the header row/column of the neighbouring tile, so no need to calculate them.
-
-            // TODO
-            // Don't subtract header element from i and j!
-            int iTile = i / (nw.tileHcolLen - 1);
-            int jTile = j / (nw.tileHrowLen - 1);
-            int iTileElem = i % (nw.tileHcolLen - 1);
-            int jTileElem = j % (nw.tileHrowLen - 1);
-
-            // Small adjustment for the last score matrix row and column:
-            // saturate iTile and jTile, so that we don't end up in impossible tile coordinates.
-            if (iTile == nw.tileHdrMatRows)
-            {
-                iTile -= 1;
-                iTileElem += (nw.tileHcolLen - 1);
-            }
-            if (jTile == nw.tileHdrMatCols)
-            {
-                jTile -= 1;
-                jTileElem += (nw.tileHrowLen - 1);
-            }
+            TileAndElemIJ co;
+            NwTrace2_GetTileAndElemIJ(nw, nw.adjrows - 1 /*last valid i pos*/, nw.adjcols - 1 /*last valid j pos*/, co);
 
             int currElem = 0;
             // Load the header row element instead of calculating it.
             // Don't attempt to load the last header row, since it isn't stored in the tile header row matrix.
-            if (iTileElem == 0 && i != nw.adjrows - 1)
+            if (co.iTileElem == 0 && i != nw.adjrows - 1)
             {
-                int kHrowElemBeg = (nw.tileHdrMatCols * iTile + jTile) * nw.tileHrowLen + 0;
-                currElem = nw.tileHrowMat[kHrowElemBeg + jTileElem];
+                int kHrowElemBeg = (nw.tileHdrMatCols * co.iTile + co.jTile) * nw.tileHrowLen + 0;
+                currElem = nw.tileHrowMat[kHrowElemBeg + co.jTileElem];
             }
             // Load the header column element instead of calculating it.
             // Don't attempt to load the last header colum, since it isn't stored in the tile header column matrix.
-            else if (jTileElem == 0 && j != nw.adjcols - 1)
+            else if (co.jTileElem == 0 && j != nw.adjcols - 1)
             {
-                int kHcolElemBeg = (nw.tileHdrMatCols * iTile + jTile) * nw.tileHcolLen + 0;
-                currElem = nw.tileHcolMat[kHcolElemBeg + iTileElem];
+                int kHcolElemBeg = (nw.tileHdrMatCols * co.iTile + co.jTile) * nw.tileHcolLen + 0;
+                currElem = nw.tileHcolMat[kHcolElemBeg + co.iTileElem];
             }
             else if (i > 0 && j > 0)
             {
