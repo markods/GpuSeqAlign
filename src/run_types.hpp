@@ -120,7 +120,7 @@ struct NwAlgResult
     int warmup_runs;
     int sample_runs;
 
-    unsigned align_cost; // TODO: set value
+    int align_cost;
     unsigned score_hash;
     unsigned trace_hash;
 

@@ -93,6 +93,8 @@ NwStat NwAlign_Cpu3_St_DiagRow(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res
         }
     }
 
+    res.align_cost = el(nw.score, nw.adjcols, nw.adjrows - 1, nw.adjcols - 1);
+
     // measure calculation time
     sw.lap("align.calc");
 

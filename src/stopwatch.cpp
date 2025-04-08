@@ -1,6 +1,6 @@
 #include "stopwatch.hpp"
 
-// combine many stopwatches into one
+// Combine many stopwatches into one.
 Stopwatch Stopwatch::combine(std::vector<Stopwatch>& swList)
 {
     // if the stopwatch list is empty, return a default initialized stopwatch
@@ -44,13 +44,14 @@ void Stopwatch::start()
 {
     _start = Clock::now();
 }
+// If the lap time with the specified name already exists, increment it.
 void Stopwatch::lap(std::string lap_name)
 {
     auto curr = Clock::now();
     float diff = float(std::chrono::duration_cast<std::chrono::nanoseconds>(curr - _start).count()) / 1000000;
     _start = curr;
 
-    _laps.insert_or_assign(lap_name, diff);
+    _laps[lap_name] = _laps[lap_name] + diff;
 }
 void Stopwatch::reset() noexcept
 {

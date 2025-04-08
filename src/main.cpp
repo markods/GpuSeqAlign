@@ -135,7 +135,7 @@ struct NwCompareKey
 };
 struct NwCompareRes
 {
-    unsigned align_cost;
+    int align_cost;
     unsigned score_hash;
     unsigned trace_hash;
 
@@ -660,7 +660,7 @@ int main(const int argc, const char* argv[])
     });
 
     // TODO
-    nw.initBenchmarkStart();
+    // nw.initBenchmarkStart();
 
     // initialize the device parameters
     nw.sm_count = sm_count;

@@ -6,15 +6,16 @@
 #include <string>
 #include <vector>
 
-// measure time between events in milliseconds
+// Measure time between events in milliseconds.
 class Stopwatch
 {
 public:
-    // combine many stopwatches into one
+    // Combine many stopwatches into one.
     static Stopwatch combine(std::vector<Stopwatch>& swList);
 
 public:
     void start();
+    // If the lap time with the specified name already exists, increment it.
     void lap(std::string lap_name);
     void reset() noexcept;
 

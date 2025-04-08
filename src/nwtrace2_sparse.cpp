@@ -1,8 +1,41 @@
 #include "fmt_guard.hpp"
+#include "nwalign.hpp"
 #include "run_types.hpp"
 #include <limits>
 
-static void NwLoadHeaderAndAlignTile(std::vector<int>& tile, const NwAlgInput& nw, int iTile, int jTile)
+void NwTrace2_GetTileAndElemIJ(const NwAlgInput& nw, int i, int j, TileAndElemIJ& co)
+{
+    // ---------------
+    // |h  h  h  h  h| h
+    // |h  .  .  .  .| .
+    // |h  .  .  .  .| .
+    // ---------------
+    //  h  .  .  .  .  .
+    // We're using the same tiles as before (the '.' in the schematic), which we extend with their header row and column,
+    // but subtract their last row and column. Meaning the tile dimensions stay the same.
+    // The last row and column are in fact the header row/column of the neighbouring tile, so no need to calculate them.
+
+    // Don't subtract header element from i and j!
+    co.iTile = i / (nw.tileHcolLen - 1);
+    co.jTile = j / (nw.tileHrowLen - 1);
+    co.iTileElem = i % (nw.tileHcolLen - 1);
+    co.jTileElem = j % (nw.tileHrowLen - 1);
+
+    // Small adjustment for the last score matrix row and column:
+    // saturate iTile and jTile, so that we don't end up in impossible tile coordinates.
+    if (co.iTile == nw.tileHdrMatRows)
+    {
+        co.iTile -= 1;
+        co.iTileElem += (nw.tileHcolLen - 1);
+    }
+    if (co.jTile == nw.tileHdrMatCols)
+    {
+        co.jTile -= 1;
+        co.jTileElem += (nw.tileHrowLen - 1);
+    }
+}
+
+void NwTrace2_AlignTile(std::vector<int>& tile, const NwAlgInput& nw, int iTile, int jTile)
 {
     //  x x x x x x
     //  x / / / / /
@@ -94,7 +127,8 @@ NwStat NwTrace2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
     // but subtract their last row and column. Meaning the tile dimensions stay the same.
     // The last row and column are in fact the header row/column of the neighbouring tile, so no need to calculate them.
 
-    // Don't subtract 1 from i and j like so: "(i-1)/..." or "(j-1)/..." !
+    // TODO
+    // Don't subtract header element from i and j!
     int iTile = (nw.adjrows - 1) / (nw.tileHcolLen - 1);
     int jTile = (nw.adjcols - 1) / (nw.tileHrowLen - 1);
     int i = (nw.adjrows - 1) % (nw.tileHcolLen - 1);
@@ -114,7 +148,7 @@ NwStat NwTrace2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
     }
 
     // Load last tile.
-    NwLoadHeaderAndAlignTile(tile, nw, iTile, jTile);
+    NwTrace2_AlignTile(tile, nw, iTile, jTile);
 
     // While there are elements on one of the optimal paths.
     while (true)
@@ -168,7 +202,7 @@ NwStat NwTrace2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
                 j = nw.tileHrowLen - 1;
             }
 
-            NwLoadHeaderAndAlignTile(tile, nw, iTile, jTile);
+            NwTrace2_AlignTile(tile, nw, iTile, jTile);
         }
 
         if (di == 0 && dj == 0)
@@ -243,7 +277,8 @@ NwStat NwHash2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
             // but subtract their last row and column. Meaning the tile dimensions stay the same.
             // The last row and column are in fact the header row/column of the neighbouring tile, so no need to calculate them.
 
-            // Don't subtract 1 from i and j like so: "(i-1)/..." or "(j-1)/..." !
+            // TODO
+            // Don't subtract header element from i and j!
             int iTile = i / (nw.tileHcolLen - 1);
             int jTile = j / (nw.tileHrowLen - 1);
             int iTileElem = i % (nw.tileHcolLen - 1);
@@ -352,7 +387,8 @@ NwStat NwPrint2_Sparse(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res)
             // but subtract their last row and column. Meaning the tile dimensions stay the same.
             // The last row and column are in fact the header row/column of the neighbouring tile, so no need to calculate them.
 
-            // Don't subtract 1 from i and j like so: "(i-1)/..." or "(j-1)/..." !
+            // TODO
+            // Don't subtract header element from i and j!
             int iTile = i / (nw.tileHcolLen - 1);
             int jTile = j / (nw.tileHrowLen - 1);
             int iTileElem = i % (nw.tileHcolLen - 1);

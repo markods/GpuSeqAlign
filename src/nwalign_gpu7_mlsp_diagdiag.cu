@@ -1,4 +1,5 @@
 #include "defer.hpp"
+#include "nwalign.hpp"
 #include "run_types.hpp"
 #include <cuda_runtime.h>
 #include <stdexcept>
@@ -323,6 +324,8 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
     // The number of tiles per row and column of the score matrix.
     int trows = (int)ceil(float(adjrows - 1) / tileBy);
     int tcols = (int)ceil(float(adjcols - 1) / tileBx);
+    // Space for aligning single tile.
+    std::vector<int> tile;
 
     // Start the timer.
     Stopwatch& sw = res.sw_align;
@@ -338,6 +341,9 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
 
         nw.tileHrowMat.init(trows * tcols * (1 + tileBx));
         nw.tileHcolMat.init(trows * tcols * (1 + tileBy));
+
+        std::vector<int> tmpTile((1 + tileBy) * (1 + tileBx), 0);
+        std::swap(tile, tmpTile);
     }
     catch (const std::exception&)
     {
@@ -561,6 +567,14 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
 
     // Measure memory transfer time.
     sw.lap("align.cpy_host");
+
+    TileAndElemIJ co;
+    NwTrace2_GetTileAndElemIJ(nw, nw.adjrows - 1 /*last valid i pos*/, nw.adjcols - 1 /*last valid j pos*/, co);
+    NwTrace2_AlignTile(tile, nw, co.iTile, co.jTile);
+    res.align_cost = el(tile, 1 + tileBx, co.iTileElem, co.jTileElem);
+
+    // Increment calculation time.
+    sw.lap("align.calc");
 
     return NwStat::success;
 }

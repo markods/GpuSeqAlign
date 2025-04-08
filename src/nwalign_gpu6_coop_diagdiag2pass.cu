@@ -491,6 +491,8 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(NwAlgParams& pr, NwAlgInput& nw, NwAlgRes
         return NwStat::errorMemoryTransfer;
     }
 
+    res.align_cost = el(nw.score, nw.adjcols, nw.adjrows - 1, nw.adjcols - 1);
+
     // measure memory transfer time
     sw.lap("align.cpy_host");
 
