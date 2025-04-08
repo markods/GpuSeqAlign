@@ -285,7 +285,6 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
     setDefaultIfArgEmpty(cmdArgs.substName, std::string("blosum62"));
     setDefaultIfArgEmpty(cmdArgs.gapoCost, -11);
     setDefaultIfArgEmpty(cmdArgs.gapeCost, 0);
-    // TODO
     // Handled when the algParam file is read.
     cmdArgs.algNames;
     cmdArgs.refAlgName;
@@ -330,6 +329,10 @@ NwStat initCmdData(const NwCmdArgs& cmdArgs, NwCmdData& cmdData)
         std::cerr << "error: could not open debugPath: \"" << cmdArgs.debugPath.value() << "\"\n";
         return NwStat::errorIoStream;
     }
+
+    // TODO: handle after the algParam file is read
+    // cmdArgs.algNames; -- check if all are valid. if none specified, default is all available algorithms
+    // cmdArgs.refAlgName; -- first one from algNames by default
 
     return NwStat::success;
 }
