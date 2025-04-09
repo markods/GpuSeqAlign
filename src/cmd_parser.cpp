@@ -135,7 +135,7 @@ static void print_cmd_usage(std::ostream& os)
           "                           It's possible to omit the start/end of the interval, like so: \"[a:b]\", \"[a:]\", \"[:b]\".\n"
           "                           If the TXT file is not specified, then all sequences in the FASTA file except the first\n"
           "                           are aligned to the first sequence. There must be at least two sequences in the FASTA file.\n"
-          "-o, --resPath <path>       Path of JSON test bench results file, defaults to \"./logs/<datetime>.json\".\n"
+          "-o, --resPath <path>       Path of TSV test bench results file, defaults to \"./logs/${datetime}.tsv\".\n"
           "\n"
           "--substName <name>         Specify which substitution matrix from the \"subst\" file will be used. Defaults to\n"
           "                           \"blosum62\".\n"
@@ -154,7 +154,8 @@ static void print_cmd_usage(std::ostream& os)
           "                           algorithm implementation. Defaults to false.\n"
           "--fWriteProgress           Should progress be printed on stdout. Defaults to false.\n"
           "--debugPath <path>         For debug purposes, path of the TXT file where score matrices/traces will be\n"
-          "                           written to, once per alignment. Defaults to \"\".\n"
+          "                           written to, once per alignment. Defaults to \"${datetime}_debug.txt\" if\n"
+          "                           fPrintScore or fPrintTrace are passed, otherwise \"\".\n"
           "--fPrintScore              Should the score matrix be printed. Defaults to false.\n"
           "--fPrintTrace              Should the trace be printed. Defaults to false.\n"
           "\n"
@@ -163,6 +164,8 @@ static void print_cmd_usage(std::ostream& os)
 
 NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
 {
+    cmdArgs.isoDateTime = isoDatetimeAsString();
+
     if (argc == 1)
     {
         print_cmd_usage(std::cout);
@@ -273,9 +276,9 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
     // Required.
     ZIG_TRY(NwStat::success, expectNonEmptyArg(cmdArgs.algParamPath, "--algParamPath"));
     ZIG_TRY(NwStat::success, expectNonEmptyArg(cmdArgs.seqPath, "--seqPath"));
-    if (cmdArgs.fPrintScore.has_value() || cmdArgs.fPrintTrace.has_value())
+    if ((cmdArgs.fPrintScore.has_value() || cmdArgs.fPrintTrace.has_value()) && !cmdArgs.debugPath.has_value())
     {
-        ZIG_TRY(NwStat::success, expectNonEmptyArg(cmdArgs.debugPath, "--debugPath"));
+        setDefaultIfArgEmpty(cmdArgs.debugPath, std::string("./logs/") + cmdArgs.isoDateTime + std::string("_debug.txt"));
     }
 
     // Defaults.
@@ -284,7 +287,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
     cmdArgs.algParamPath;
     cmdArgs.seqPath;
     setDefaultIfArgEmpty(cmdArgs.pairPath, std::string {});
-    setDefaultIfArgEmpty(cmdArgs.resPath, std::string("./logs/") + isoDatetimeAsString() + std::string(".tsv"));
+    setDefaultIfArgEmpty(cmdArgs.resPath, std::string("./logs/") + cmdArgs.isoDateTime + std::string(".tsv"));
 
     setDefaultIfArgEmpty(cmdArgs.substName, std::string("blosum62"));
     setDefaultIfArgEmpty(cmdArgs.gapoCost, -11);

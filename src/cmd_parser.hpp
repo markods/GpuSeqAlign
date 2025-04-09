@@ -26,6 +26,8 @@ struct NwCmdArgs
     std::optional<std::string> debugPath;
     std::optional<bool> fPrintScore;
     std::optional<bool> fPrintTrace;
+
+    std::string isoDateTime; // TODO: regex replace ${datetime} in output filenames
 };
 
 struct NwCmdData

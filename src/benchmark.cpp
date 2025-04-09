@@ -414,13 +414,13 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
 
                                 if (cmdArgs.fPrintTrace.value())
                                 {
-                                    cmdData.debugOfs << ">edit trace\n";
+                                    cmdData.debugOfs << "+\n>edit trace\n";
                                     alg.printTrace(cmdData.debugOfs, nw, resCombined);
                                 }
 
                                 if (cmdArgs.fPrintScore.value())
                                 {
-                                    cmdData.debugOfs << ">score matrix\n";
+                                    cmdData.debugOfs << "+\n>score matrix\n";
                                     alg.printScore(cmdData.debugOfs, nw, resCombined);
                                 }
 
