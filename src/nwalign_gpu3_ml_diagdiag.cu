@@ -282,7 +282,7 @@ __global__ static void Nw_Gpu3_KernelB(
 }
 
 // parallel gpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Gpu3_Ml_DiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
+NwStat NwAlign_Gpu3_Ml_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
 {
     // tile size for the kernel
     int tileBx = {};
@@ -293,8 +293,8 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& re
     // get the parameter values
     try
     {
-        threadsPerBlockA = pr["threadsPerBlockA"].curr();
-        tileBx = pr["tileBx"].curr();
+        threadsPerBlockA = pr.at("threadsPerBlockA").curr();
+        tileBx = pr.at("tileBx").curr();
     }
     catch (const std::out_of_range&)
     {

@@ -275,7 +275,7 @@ __global__ static void Nw_Gpu4_KernelB(
 }
 
 // parallel gpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
+NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
 {
     // tile sizes for kernels A and B
     // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
@@ -288,9 +288,9 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(NwAlgParams& pr, NwAlgInput& nw, NwAlgResul
     // get the parameter values
     try
     {
-        tileAx = pr["tileAx"].curr();
-        tileAy = pr["tileAy"].curr();
-        tileBx = pr["tileBx"].curr();
+        tileAx = pr.at("tileAx").curr();
+        tileAy = pr.at("tileAy").curr();
+        tileBx = pr.at("tileBx").curr();
     }
     catch (const std::out_of_range&)
     {

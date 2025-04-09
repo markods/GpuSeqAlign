@@ -308,7 +308,7 @@ __global__ static void Nw_Gpu5_Kernel(
 }
 
 // parallel gpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Gpu5_Coop_DiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
+NwStat NwAlign_Gpu5_Coop_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
 {
     // tile size for the kernel
     // +   tile A must have one dimension fixed to the number of threads in a warp
@@ -318,7 +318,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
     // get the parameter values
     try
     {
-        tileAx = pr["tileAx"].curr();
+        tileAx = pr.at("tileAx").curr();
     }
     catch (const std::out_of_range&)
     {

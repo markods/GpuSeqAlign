@@ -307,7 +307,7 @@ __global__ static void Nw_Gpu8_KernelB(
 // + tile header column matrix.
 //
 // Assumes that the row sequence (X) is longer or equal in length to the column sequence (Y).
-NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
+NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
 {
     // Number of threads per block for kernel A.
     int threadsPerBlockA = {};
@@ -319,9 +319,9 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
 
     try
     {
-        threadsPerBlockA = pr["threadsPerBlockA"].curr();
-        tileBx = pr["tileBx"].curr();
-        warpDivFactorB = pr["warpDivFactorB"].curr();
+        threadsPerBlockA = pr.at("threadsPerBlockA").curr();
+        tileBx = pr.at("tileBx").curr();
+        warpDivFactorB = pr.at("warpDivFactorB").curr();
     }
     catch (const std::out_of_range&)
     {

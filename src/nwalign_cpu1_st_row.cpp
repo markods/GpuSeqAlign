@@ -11,7 +11,7 @@ static void UpdateScore(NwAlgInput& nw, int i, int j) noexcept
 }
 
 // sequential cpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Cpu1_St_Row(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
+NwStat NwAlign_Cpu1_St_Row(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
 {
     (void)pr;
 

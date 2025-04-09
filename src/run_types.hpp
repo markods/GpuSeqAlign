@@ -43,7 +43,8 @@ struct NwAlgParams
     NwAlgParams();
     NwAlgParams(Dict<std::string, NwAlgParam> params);
 
-    NwAlgParam& operator[](const std::string name);
+    NwAlgParam& at(const std::string name);
+    const NwAlgParam& at(const std::string name) const;
 
     bool hasCurr() const;
     // updates starting from the last parameter and so on

@@ -11,7 +11,7 @@ static void UpdateScore(NwAlgInput& nw, int i, int j) noexcept
 }
 
 // parallel cpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Cpu4_Mt_DiagRow(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
+NwStat NwAlign_Cpu4_Mt_DiagRow(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
 {
     // size of square block that will be a unit of work
     // +   8*(16 ints) on standard architectures, or 8 cache lines
@@ -20,7 +20,7 @@ NwStat NwAlign_Cpu4_Mt_DiagRow(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res
     // get the parameter values
     try
     {
-        blocksz = pr["blocksz"].curr();
+        blocksz = pr.at("blocksz").curr();
     }
     catch (const std::out_of_range&)
     {

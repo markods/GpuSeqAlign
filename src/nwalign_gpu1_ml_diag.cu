@@ -69,7 +69,7 @@ __global__ static void Nw_Gpu1_KernelA(
 }
 
 // parallel gpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Gpu1_Ml_Diag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
+NwStat NwAlign_Gpu1_Ml_Diag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
 {
     // number of threads per block
     // +   the tile is one-dimensional
@@ -78,7 +78,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
     // get the parameter values
     try
     {
-        threadsPerBlock = pr["threadsPerBlock"].curr();
+        threadsPerBlock = pr.at("threadsPerBlock").curr();
     }
     catch (const std::out_of_range&)
     {

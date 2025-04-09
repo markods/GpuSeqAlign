@@ -347,7 +347,8 @@ static NwStat verifyAndSetAlgNames(NwCmdArgs& cmdArgs, NwCmdData& cmdData)
             return NwStat::errorInvalidValue;
         }
 
-        if (std::find(providedAlgNames.cbegin(), providedAlgNames.cend(), algName) == providedAlgNames.cend())
+        auto selectedAlgNames = cmdArgs.algNames.value();
+        if (std::find(selectedAlgNames.cbegin(), selectedAlgNames.cend(), algName) == selectedAlgNames.cend())
         {
             std::cerr << "error: selected referent algorithm not present in algParam file: \"" << algName << "\"\n";
             return NwStat::errorInvalidValue;

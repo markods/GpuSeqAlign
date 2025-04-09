@@ -5,6 +5,7 @@
 #include "nw_algorithm.hpp"
 #include "nw_fns.hpp"
 #include "run_types.hpp"
+#include <algorithm>
 #include <cuda_runtime.h>
 #include <iostream>
 #include <string>
@@ -264,23 +265,23 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
     }
 
     // for all algorithms which have parameters in the param map
-    for (auto& paramTuple : cmdData.algParamsData.paramMap)
+    std::vector<std::string> algNames = cmdArgs.algNames.value();
+    std::string refAlgName = cmdArgs.refAlgName.value();
+    if (auto iter = std::find(algNames.begin(), algNames.end(), refAlgName); iter != algNames.end())
     {
-        // if the current algorithm doesn't exist, skip it
-        const std::string& algName = paramTuple.first;
-        if (algMap.find(algName) == algMap.end())
-        {
-            continue;
-        }
+        algNames.erase(iter);
+        algNames.insert(algNames.begin(), refAlgName);
+    }
 
+    for (auto& algName : algNames)
+    {
         if (cmdArgs.fWriteProgress.value())
         {
             std::cout << algName << ":";
         }
 
-        // get the current algorithm and initialize its parameters
         NwAlgorithm& alg = algMap[algName];
-        alg.init(paramTuple.second /*algParams*/);
+        NwAlgParams algParams = cmdData.algParamsData.paramMap.at(algName);
 
         // for all Y sequences + for all X sequences (also compare every sequence with itself)
         for (int iY = 0; iY < seqList.size(); iY++)
@@ -305,7 +306,7 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                 nw.adjcols = (int)nw.seqX.size();
 
                 // for all parameter combinations
-                for (; alg.alignPr().hasCurr(); alg.alignPr().next())
+                for (; algParams.hasCurr(); algParams.next())
                 {
                     // results from multiple repetitions
                     std::vector<NwAlgResult> resList {};
@@ -322,7 +323,7 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                         NwAlgResult& res = resList.back();
 
                         res.algName = algName;
-                        res.algParams = alg.alignPr().copy();
+                        res.algParams = algParams.copy();
                         res.seqY_id = std::to_string(iY);
                         res.seqX_id = std::to_string(iX);
                         //
@@ -334,7 +335,7 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                         res.sample_runs = cmdArgs.samplesPerAlign.value();
 
                         // compare the sequences, hash and trace the score matrices, and verify the soundness of the results
-                        if (!res.errstep && NwStat::success != (res.stat = alg.align(nw, res)))
+                        if (!res.errstep && NwStat::success != (res.stat = alg.align(algParams, nw, res)))
                         {
                             if (res.stat == NwStat::errorInvalidValue)
                             {
@@ -403,7 +404,7 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                 }
 
                 // reset the algorithm parameters
-                alg.alignPr().reset();
+                algParams.reset();
 
                 if (cmdArgs.fWriteProgress.value())
                 {

@@ -40,7 +40,12 @@ NwAlgParams::NwAlgParams(Dict<std::string, NwAlgParam> params)
     _isEnd = false;
 }
 
-NwAlgParam& NwAlgParams::operator[](const std::string name)
+NwAlgParam& NwAlgParams::at(const std::string name)
+{
+    return _params.at(name);
+}
+
+const NwAlgParam& NwAlgParams::at(const std::string name) const
 {
     return _params.at(name);
 }

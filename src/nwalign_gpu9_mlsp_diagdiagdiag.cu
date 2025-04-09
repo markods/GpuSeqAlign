@@ -361,7 +361,7 @@ __global__ static void Nw_Gpu9_KernelB(
 // + tile header column matrix.
 //
 // Assumes that the row sequence (X) is longer or equal in length to the column sequence (Y).
-NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
+NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
 {
     // Number of threads per block for kernel A.
     int threadsPerBlockA = {};
@@ -376,10 +376,10 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(NwAlgParams& pr, NwAlgInput& nw, NwAlgResu
 
     try
     {
-        threadsPerBlockA = pr["threadsPerBlockA"].curr();
-        int subtileRows = pr["subtileRows"].curr();
-        int subtileCols = pr["subtileCols"].curr();
-        subtileBx = pr["subtileBx"].curr();
+        threadsPerBlockA = pr.at("threadsPerBlockA").curr();
+        int subtileRows = pr.at("subtileRows").curr();
+        int subtileCols = pr.at("subtileCols").curr();
+        subtileBx = pr.at("subtileBx").curr();
 
         // TileB is square, but the subtile is a parallelogram with a 45 degree bottom-left angle.
         tileBx = subtileCols * subtileBx;

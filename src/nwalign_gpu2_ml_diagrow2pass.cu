@@ -109,7 +109,7 @@ __global__ static void Nw_Gpu2_KernelB(
 }
 
 // parallel gpu implementation of the Needleman-Wunsch algorithm
-NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
+NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
 {
     // tile size for the kernel B
     int tileBx = {};
@@ -121,10 +121,10 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(NwAlgParams& pr, NwAlgInput& nw, NwAlgResult
     // get the parameter values
     try
     {
-        tileBx = pr["tileBx"].curr();
-        tileBy = pr["tileBy"].curr();
-        threadsPerBlockA = pr["threadsPerBlock"].curr();
-        threadsPerBlockB = pr["threadsPerBlock"].curr();
+        tileBx = pr.at("tileBx").curr();
+        tileBy = pr.at("tileBy").curr();
+        threadsPerBlockA = pr.at("threadsPerBlock").curr();
+        threadsPerBlockB = pr.at("threadsPerBlock").curr();
     }
     catch (const std::out_of_range&)
     {

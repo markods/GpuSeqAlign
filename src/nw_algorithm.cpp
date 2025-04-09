@@ -6,8 +6,7 @@ NwAlgorithm::NwAlgorithm()
     : _alignFn(),
       _traceFn(),
       _hashFn(),
-      _printFn(),
-      _alignPr()
+      _printFn()
 { }
 
 NwAlgorithm::NwAlgorithm(
@@ -18,23 +17,12 @@ NwAlgorithm::NwAlgorithm(
     : _alignFn(alignFn),
       _traceFn(traceFn),
       _hashFn(hashFn),
-      _printFn(printFn),
-      _alignPr()
+      _printFn(printFn)
 { }
 
-void NwAlgorithm::init(NwAlgParams& alignPr)
+NwStat NwAlgorithm::align(const NwAlgParams& algParams, NwAlgInput& nw, NwAlgResult& res)
 {
-    _alignPr = alignPr;
-}
-
-NwAlgParams& NwAlgorithm::alignPr()
-{
-    return _alignPr;
-}
-
-NwStat NwAlgorithm::align(NwAlgInput& nw, NwAlgResult& res)
-{
-    return _alignFn(_alignPr, nw, res);
+    return _alignFn(algParams, nw, res);
 }
 NwStat NwAlgorithm::trace(const NwAlgInput& nw, NwAlgResult& res)
 {
