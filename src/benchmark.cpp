@@ -1,17 +1,17 @@
 #include "benchmark.hpp"
 #include "defer.hpp"
+#include "dict.hpp"
 #include "file_formats.hpp"
 #include "nw_algorithm.hpp"
 #include "nw_fns.hpp"
 #include "run_types.hpp"
 #include <cuda_runtime.h>
 #include <iostream>
-#include <map>
 #include <string>
 
 // convert the sequence string to a vector using a character map
 // + NOTE: add the header (zeroth) element if requested
-static std::vector<int> seqStrToVect(const std::string& str, const std::map<std::string, int>& map, const bool addHeader)
+static std::vector<int> seqStrToVect(const std::string& str, const Dict<std::string, int>& map, const bool addHeader)
 {
     // preallocate the requred amount of elements
     std::vector<int> vect {};
@@ -34,13 +34,14 @@ static std::vector<int> seqStrToVect(const std::string& str, const std::map<std:
     return vect;
 }
 
-// algorithm map
-// structs used to verify that the algorithms' results are correct
+// Structs used to verify that the algorithms' results are correct.
 struct NwCompareKey
 {
     std::string seqY_id;
     std::string seqX_id;
 
+    friend bool operator==(const NwCompareKey& l, const NwCompareKey& r);
+    friend bool operator!=(const NwCompareKey& l, const NwCompareKey& r);
     friend bool operator<(const NwCompareKey& l, const NwCompareKey& r);
 };
 struct NwCompareRes
@@ -53,7 +54,6 @@ struct NwCompareRes
     friend bool operator!=(const NwCompareRes& l, const NwCompareRes& r);
 };
 
-// structs used to verify that the algorithms' results are correct
 bool operator<(const NwCompareKey& l, const NwCompareKey& r)
 {
     bool res =
@@ -61,6 +61,44 @@ bool operator<(const NwCompareKey& l, const NwCompareKey& r)
         (l.seqY_id == r.seqY_id && l.seqX_id < r.seqX_id);
     return res;
 }
+bool operator==(const NwCompareKey& l, const NwCompareKey& r)
+{
+    bool res =
+        l.seqY_id == r.seqY_id &&
+        l.seqX_id == r.seqX_id;
+    return res;
+}
+bool operator!=(const NwCompareKey& l, const NwCompareKey& r)
+{
+    bool res =
+        l.seqY_id != r.seqY_id ||
+        l.seqX_id != r.seqX_id;
+    return res;
+}
+
+namespace std
+{
+template <>
+struct hash<NwCompareKey>
+{
+    size_t operator()(const NwCompareKey& key) const
+    {
+        size_t h1 = std::hash<std::string> {}(key.seqY_id);
+        size_t h2 = std::hash<std::string> {}(key.seqX_id);
+
+        // Taken from boost.
+        if constexpr (sizeof(size_t) >= 8)
+        {
+            h1 ^= h2 + 0x517cc1b727220a95 + (h1 << 6) + (h1 >> 2);
+        }
+        else
+        {
+            h1 ^= h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2);
+        }
+        return h1;
+    }
+};
+} // namespace std
 
 bool operator==(const NwCompareRes& l, const NwCompareRes& r)
 {
@@ -80,7 +118,7 @@ bool operator!=(const NwCompareRes& l, const NwCompareRes& r)
 }
 
 // check that the result hashes match the hashes calculated by the first algorithm (the gold standard)
-static NwStat setOrVerifyResult(const NwAlgResult& res, std::map<NwCompareKey, NwCompareRes>& compareMap)
+static NwStat setOrVerifyResult(const NwAlgResult& res, Dict<NwCompareKey, NwCompareRes>& compareMap)
 {
     NwCompareKey key;
     key.seqY_id = res.seqY_id;
@@ -195,8 +233,8 @@ static NwStat initNwInput(const NwCmdArgs& cmdArgs, const NwCmdData& cmdData, Nw
 
 NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkData& benchData)
 {
-    std::map<NwCompareKey, NwCompareRes> compareMap {};
-    std::map<std::string, NwAlgorithm> algMap {};
+    Dict<NwCompareKey, NwCompareRes> compareMap {};
+    Dict<std::string, NwAlgorithm> algMap {};
     getNwAlgorithmMap(algMap);
 
     NwAlgInput nw {};
@@ -207,7 +245,7 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
     initNwInput(cmdArgs, cmdData, nw);
 
     // initialize the letter map
-    std::map<std::string, int>& letterMap = cmdData.substData.letterMap;
+    Dict<std::string, int>& letterMap = cmdData.substData.letterMap;
 
     // initialize the sequence map
     std::vector<std::vector<int>> seqList {};

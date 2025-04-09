@@ -1,8 +1,8 @@
 #ifndef INCLUDE_STOPWATCH_HPP
 #define INCLUDE_STOPWATCH_HPP
 
+#include "dict.hpp"
 #include <chrono>
-#include <map>
 #include <string>
 #include <vector>
 
@@ -22,14 +22,14 @@ public:
     float total() const;
 
     float get_or_default(const std::string& lap_name) const;
-    const std::map<std::string, float>& laps() const;
+    const Dict<std::string, float>& laps() const;
 
 private:
     using Clock = std::chrono::steady_clock;
     using TimePoint = std::chrono::time_point<Clock>;
 
     TimePoint _start;
-    std::map<std::string, float> _laps;
+    Dict<std::string, float> _laps;
 };
 
 #endif // INCLUDE_STOPWATCH_HPP

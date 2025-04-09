@@ -1,10 +1,10 @@
 #ifndef INCLUDE_RUN_TYPES_HPP
 #define INCLUDE_RUN_TYPES_HPP
 
+#include "dict.hpp"
 #include "math.hpp"
 #include "memory.hpp"
 #include "stopwatch.hpp"
-#include <map>
 #include <vector>
 
 // Needleman-Wunsch status
@@ -41,7 +41,7 @@ struct NwAlgParam
 struct NwAlgParams
 {
     NwAlgParams();
-    NwAlgParams(std::map<std::string, NwAlgParam> params);
+    NwAlgParams(Dict<std::string, NwAlgParam> params);
 
     NwAlgParam& operator[](const std::string name);
 
@@ -50,9 +50,9 @@ struct NwAlgParams
     void next();
     void reset();
 
-    std::map<std::string, int> copy() const;
+    Dict<std::string, int> copy() const;
 
-    std::map<std::string, NwAlgParam> _params;
+    Dict<std::string, NwAlgParam> _params;
     bool _isEnd;
 };
 
@@ -105,7 +105,7 @@ struct NwAlgInput
 struct NwAlgResult
 {
     std::string algName;
-    std::map<std::string, int> algParams;
+    Dict<std::string, int> algParams;
     std::string seqY_id;
     std::string seqX_id;
 

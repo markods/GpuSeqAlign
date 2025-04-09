@@ -33,7 +33,7 @@ NwAlgParams::NwAlgParams()
     _params = {};
     _isEnd = false;
 }
-NwAlgParams::NwAlgParams(std::map<std::string, NwAlgParam> params)
+NwAlgParams::NwAlgParams(Dict<std::string, NwAlgParam> params)
 {
     _params = params;
     // always allow the inital iteration, even if there are no params
@@ -74,9 +74,9 @@ void NwAlgParams::reset()
     _isEnd = false;
 }
 
-std::map<std::string, int> NwAlgParams::copy() const
+Dict<std::string, int> NwAlgParams::copy() const
 {
-    std::map<std::string, int> res;
+    Dict<std::string, int> res;
     for (const auto& paramTuple : _params)
     {
         const std::string& paramName = paramTuple.first;

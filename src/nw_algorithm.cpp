@@ -49,9 +49,9 @@ NwStat NwAlgorithm::print(std::ostream& os, const NwAlgInput& nw, NwAlgResult& r
     return _printFn(os, nw, res);
 }
 
-void getNwAlgorithmMap(std::map<std::string, NwAlgorithm>& algMap)
+void getNwAlgorithmMap(Dict<std::string, NwAlgorithm>& algMap)
 {
-    std::map<std::string, NwAlgorithm> algMapTmp {
+    Dict<std::string, NwAlgorithm> algMapTmp {
         /*algMap:*/ {
                      {"NwAlign_Cpu1_St_Row", {NwAlign_Cpu1_St_Row, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},
                      {"NwAlign_Cpu2_St_Diag", {NwAlign_Cpu2_St_Diag, NwTrace1_Plain, NwHash1_Plain, NwPrint1_Plain}},

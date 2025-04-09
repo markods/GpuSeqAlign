@@ -119,6 +119,9 @@
     <ClInclude Include="src\benchmark.hpp">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\dict.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">

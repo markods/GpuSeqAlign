@@ -12,7 +12,7 @@ Stopwatch Stopwatch::combine(std::vector<Stopwatch>& swList)
     // copy on purpose here -- don't modify the given stopwatch list
     Stopwatch res {};
     // the number of times the lap was found in the stopwatches
-    std::map<std::string, int> lapCount {};
+    Dict<std::string, int> lapCount {};
 
     // for all stopwatches + for all laps in a stopwatch, get the average lap time
     // +   for the average, don't count non-existent values in the denominator
@@ -80,7 +80,7 @@ float Stopwatch::get_or_default(const std::string& lap_name) const
         return 0;
     }
 }
-const std::map<std::string, float>& Stopwatch::laps() const
+const Dict<std::string, float>& Stopwatch::laps() const
 {
     return _laps;
 }

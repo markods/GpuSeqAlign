@@ -1,11 +1,10 @@
 #ifndef INCLUDE_NW_ALGORITHM_HPP
 #define INCLUDE_NW_ALGORITHM_HPP
 
+#include "dict.hpp"
 #include "run_types.hpp"
-#include <map>
 #include <string>
 
-// the Needleman-Wunsch algorithm implementations
 class NwAlgorithm
 {
 public:
@@ -41,6 +40,6 @@ private:
     NwAlgParams _alignPr;
 };
 
-void getNwAlgorithmMap(std::map<std::string, NwAlgorithm>& algMap);
+void getNwAlgorithmMap(Dict<std::string, NwAlgorithm>& algMap);
 
 #endif // INCLUDE_NW_ALGORITHM_HPP

@@ -1,7 +1,6 @@
 #include "io.hpp"
 #include <chrono>
 #include <filesystem>
-#include <map>
 #include <sstream>
 
 // get the current time as an ISO string
