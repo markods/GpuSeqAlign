@@ -15,8 +15,8 @@ struct NwCmdArgs
     std::optional<std::string> substName;
     std::optional<int> gapoCost;
     std::optional<int> gapeCost;
-    std::optional<std::vector<std::string>> algNames; // TODO: check
-    std::optional<std::string> refAlgName;            // TODO: first one from algNames by default
+    std::optional<std::vector<std::string>> algNames;
+    std::optional<std::string> refAlgName;
     std::optional<int> warmupPerAlign;
     std::optional<int> samplesPerAlign;
 
@@ -33,13 +33,13 @@ struct NwCmdData
     NwSubstData substData;
     NwAlgParamsData algParamsData;
     NwSeqData seqData;
-    // NwPairData pairData; // TODO
+    // NwPairData pairData;
     std::ofstream resOfs;
 
     std::ofstream debugOfs;
 };
 
 NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs);
-NwStat initCmdData(const NwCmdArgs& cmdArgs, NwCmdData& cmdData);
+NwStat initCmdData(NwCmdArgs& cmdArgs, NwCmdData& cmdData);
 
 #endif // INCLUDE_CMD_PARSER_HPP

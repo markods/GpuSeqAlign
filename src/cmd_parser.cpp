@@ -1,7 +1,9 @@
 #include "cmd_parser.hpp"
 #include "defer.hpp"
 #include "io.hpp"
+#include "nw_algorithm.hpp"
 #include "run_types.hpp"
+#include <algorithm>
 #include <iostream>
 #include <optional>
 
@@ -301,7 +303,62 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
     return NwStat::success;
 }
 
-NwStat initCmdData(const NwCmdArgs& cmdArgs, NwCmdData& cmdData)
+static NwStat verifyAndSetAlgNames(NwCmdArgs& cmdArgs, NwCmdData& cmdData)
+{
+    Dict<std::string, NwAlgorithm> algMap {};
+    getNwAlgorithmMap(algMap);
+
+    std::vector<std::string> providedAlgNames = cmdData.algParamsData.paramMap.keys();
+    for (const auto& algName : providedAlgNames)
+    {
+        if (algMap.find(algName) == algMap.cend())
+        {
+            std::cerr << "error: unknown algorithm in algParam file: \"" << algName << "\"\n";
+            return NwStat::errorInvalidValue;
+        }
+    }
+
+    if (cmdArgs.algNames.has_value())
+    {
+        std::vector<std::string> selectedAlgNames = cmdArgs.algNames.value();
+        for (const auto& algName : selectedAlgNames)
+        {
+            if (algMap.find(algName) == algMap.cend())
+            {
+                std::cerr << "error: unknown algorithm on command line: \"" << algName << "\"\n";
+                return NwStat::errorInvalidValue;
+            }
+
+            if (std::find(providedAlgNames.cbegin(), providedAlgNames.cend(), algName) == providedAlgNames.cend())
+            {
+                std::cerr << "error: selected algorithm not present in algParam file: \"" << algName << "\"\n";
+                return NwStat::errorInvalidValue;
+            }
+        }
+    }
+    setDefaultIfArgEmpty(cmdArgs.algNames, providedAlgNames);
+
+    if (cmdArgs.refAlgName.has_value())
+    {
+        std::string algName = cmdArgs.refAlgName.value();
+        if (algMap.find(algName) == algMap.cend())
+        {
+            std::cerr << "error: unknown referent algorithm on command line: \"" << algName << "\"\n";
+            return NwStat::errorInvalidValue;
+        }
+
+        if (std::find(providedAlgNames.cbegin(), providedAlgNames.cend(), algName) == providedAlgNames.cend())
+        {
+            std::cerr << "error: selected referent algorithm not present in algParam file: \"" << algName << "\"\n";
+            return NwStat::errorInvalidValue;
+        }
+    }
+    setDefaultIfArgEmpty(cmdArgs.refAlgName, cmdArgs.algNames.value()[0]);
+
+    return NwStat::success;
+}
+
+NwStat initCmdData(NwCmdArgs& cmdArgs, NwCmdData& cmdData)
 {
     if (NwStat::success != readFromJsonFile(cmdArgs.substPath.value(), cmdData.substData))
     {
@@ -330,9 +387,7 @@ NwStat initCmdData(const NwCmdArgs& cmdArgs, NwCmdData& cmdData)
         return NwStat::errorIoStream;
     }
 
-    // TODO: handle after the algParam file is read
-    // cmdArgs.algNames; -- check if all are valid. if none specified, default is all available algorithms
-    // cmdArgs.refAlgName; -- first one from algNames by default
+    ZIG_TRY(NwStat::success, verifyAndSetAlgNames(cmdArgs, cmdData));
 
     return NwStat::success;
 }

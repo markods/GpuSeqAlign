@@ -159,29 +159,31 @@ public:
         index.clear();
     }
 
-    class KeyIterator
+    std::vector<K> keys() const
     {
-    private:
-        Iterator it;
+        std::vector<K> result {};
+        result.reserve(entries.size());
 
-    public:
-        explicit KeyIterator(Iterator it)
-            : it(it)
-        { }
-        const K& operator*() const
+        for (const auto& entry : entries)
         {
-            return it->first;
+            result.push_back(entry.first);
         }
-        KeyIterator& operator++()
+
+        return result;
+    }
+
+    std::vector<V> values() const
+    {
+        std::vector<V> result {};
+        result.reserve(entries.size());
+
+        for (const auto& entry : entries)
         {
-            ++it;
-            return *this;
+            result.push_back(entry.second);
         }
-        bool operator!=(const KeyIterator& other) const
-        {
-            return it != other.it;
-        }
-    };
+
+        return result;
+    }
 
     auto begin() -> typename ListType::iterator
     {
