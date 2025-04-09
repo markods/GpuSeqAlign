@@ -12,7 +12,6 @@
 
 // convert the sequence string to a vector using a character map
 // + NOTE: add the header (zeroth) element if requested
-// TODO: if addHeader is true, then subtract 1 from sequence length in bench
 static std::vector<int> seqStrToVect(const std::string& str, const Dict<std::string, int>& map, const bool addHeader)
 {
     // preallocate the requred amount of elements
@@ -251,10 +250,11 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
     Dict<std::string, int>& letterMap = cmdData.substData.letterMap;
 
     // initialize the sequence map
+    bool addHeader = true;
     std::vector<std::vector<int>> seqList {};
     for (auto& charSeq : cmdData.seqData.seqList)
     {
-        auto seq = seqStrToVect(charSeq, letterMap, true /*addHeader*/);
+        auto seq = seqStrToVect(charSeq, letterMap, addHeader);
         seqList.push_back(seq);
     }
 
@@ -329,8 +329,8 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                         res.seqY_id = std::to_string(iY);
                         res.seqX_id = std::to_string(iX);
                         //
-                        res.seqY_len = nw.seqY.size();
-                        res.seqX_len = nw.seqX.size();
+                        res.seqY_len = nw.seqY.size() - addHeader;
+                        res.seqX_len = nw.seqX.size() - addHeader;
                         res.substName = cmdArgs.substName.value();
                         res.gapoCost = cmdArgs.gapoCost.value();
                         res.warmup_runs = cmdArgs.warmupPerAlign.value();
