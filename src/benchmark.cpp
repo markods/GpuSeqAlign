@@ -336,6 +336,14 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                         res.warmup_runs = cmdArgs.warmupPerAlign.value();
                         res.sample_runs = cmdArgs.samplesPerAlign.value();
 
+                        // Clear cuda non-sticky errors and get possible cuda sticky errors.
+                        // Since sticky errors cannot be cleared, so repeat twice.
+                        if (auto cudaStatus = (cudaGetLastError(), cudaGetLastError()); cudaStatus != cudaSuccess)
+                        {
+                            std::cerr << "error: corrupted cuda context\n";
+                            return NwStat::errorCudaGeneral;
+                        }
+
                         // compare the sequences, hash and trace the score matrices, and verify the soundness of the results
                         if (!res.errstep && NwStat::success != (res.stat = alg.align(algParams, nw, res)))
                         {
@@ -381,27 +389,50 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                             }
                         }
 
-                        // Clear cuda non-sticky errors and get possible cuda sticky errors.
-                        // Since sticky errors cannot be cleared, so repeat twice.
-                        if (auto cudaStatus = (cudaGetLastError(), cudaGetLastError()); cudaStatus != cudaSuccess)
+                        // Last iteration.
+                        if (iR == cmdArgs.samplesPerAlign.value() - 1)
                         {
-                            std::cerr << "error: corrupted cuda context\n";
-                            return NwStat::errorCudaGeneral;
+                            // add the result to the results list
+                            NwAlgResult resCombined {combineResults(resList)};
+                            resList.clear();
+                            benchData.resultList.push_back(resCombined);
+
+                            // print the result as a tsv line to the tsv output file
+                            writeResultLineToTsv(cmdData.resOfs, resCombined, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
+                            if (cmdArgs.fWriteProgress.value())
+                            {
+                                // Since we write to progress immediately, write to file immediately as well.
+                                cmdData.resOfs.flush();
+                            }
+
+                            // print the result as a tsv line to the debug output file
+                            if (cmdArgs.fPrintScore.value() || cmdArgs.fPrintTrace.value())
+                            {
+                                cmdData.debugOfs << ">results\n";
+                                writeResultHeaderToTsv(cmdData.debugOfs, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
+                                writeResultLineToTsv(cmdData.debugOfs, resCombined, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
+
+                                if (cmdArgs.fPrintTrace.value())
+                                {
+                                    cmdData.debugOfs << ">edit trace\n";
+                                    alg.printTrace(cmdData.debugOfs, nw, resCombined);
+                                }
+
+                                if (cmdArgs.fPrintScore.value())
+                                {
+                                    cmdData.debugOfs << ">score matrix\n";
+                                    alg.printScore(cmdData.debugOfs, nw, resCombined);
+                                }
+
+                                cmdData.debugOfs << "\n\n";
+
+                                if (cmdArgs.fWriteProgress.value())
+                                {
+                                    // Since we write to progress immediately, write to file immediately as well.
+                                    cmdData.debugOfs.flush();
+                                }
+                            }
                         }
-                    }
-
-                    // add the result to the results list
-                    benchData.resultList.push_back(combineResults(resList));
-                    NwAlgResult& res = benchData.resultList.back();
-                    // reset the multiple repetition list
-                    resList.clear();
-
-                    // print the result as a tsv line to the tsv output file
-                    writeResultLineToTsv(cmdData.resOfs, res, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
-                    if (cmdArgs.fWriteProgress.value())
-                    {
-                        // Since we write to progress immediately, write to file immediately as well.
-                        cmdData.resOfs.flush();
                     }
                 }
 

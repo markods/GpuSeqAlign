@@ -9,9 +9,10 @@ class NwAlgorithm
 {
 public:
     using NwAlignFn = NwStat (*)(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res);
-    using NwTraceFn = NwStat (*)(const NwAlgInput& nw, NwAlgResult& res);
+    using NwTraceFn = NwStat (*)(NwAlgInput& nw, NwAlgResult& res);
     using NwHashFn = NwStat (*)(const NwAlgInput& nw, NwAlgResult& res);
-    using NwPrintFn = NwStat (*)(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res);
+    using NwPrintScoreFn = NwStat (*)(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
+    using NwPrintTraceFn = NwStat (*)(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
 
 public:
     NwAlgorithm();
@@ -20,18 +21,21 @@ public:
         NwAlignFn alignFn,
         NwTraceFn traceFn,
         NwHashFn hashFn,
-        NwPrintFn printFn);
+        NwPrintScoreFn printScoreFn,
+        NwPrintTraceFn printTraceFn);
 
     NwStat align(const NwAlgParams& algParams, NwAlgInput& nw, NwAlgResult& res);
-    NwStat trace(const NwAlgInput& nw, NwAlgResult& res);
+    NwStat trace(NwAlgInput& nw, NwAlgResult& res);
     NwStat hash(const NwAlgInput& nw, NwAlgResult& res);
-    NwStat print(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res);
+    NwStat printScore(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
+    NwStat printTrace(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
 
 private:
     NwAlignFn _alignFn;
     NwTraceFn _traceFn;
     NwHashFn _hashFn;
-    NwPrintFn _printFn;
+    NwPrintScoreFn _printScoreFn;
+    NwPrintTraceFn _printTraceFn;
 };
 
 void getNwAlgorithmMap(Dict<std::string, NwAlgorithm>& algMap);

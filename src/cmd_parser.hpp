@@ -23,9 +23,9 @@ struct NwCmdArgs
     std::optional<bool> fCalcTrace;
     std::optional<bool> fCalcScoreHash;
     std::optional<bool> fWriteProgress;
-    std::optional<std::string> debugPath; // TODO: use
-    std::optional<bool> fPrintScore;      // TODO: use
-    std::optional<bool> fPrintTrace;      // TODO: use
+    std::optional<std::string> debugPath;
+    std::optional<bool> fPrintScore;
+    std::optional<bool> fPrintTrace;
 };
 
 struct NwCmdData

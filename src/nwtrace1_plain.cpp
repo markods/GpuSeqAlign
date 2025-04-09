@@ -3,14 +3,12 @@
 #include <limits>
 
 // get one of the optimal matching paths to a file
-NwStat NwTrace1_Plain(const NwAlgInput& nw, NwAlgResult& res)
+NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res)
 {
     // variable used to calculate the hash function
     // http://www.cse.yorku.ca/~oz/hash.html
     // the starting value is a magic constant
     unsigned hash = 5381;
-    // vector containing the trace
-    std::vector<int> trace;
 
     // start the timer
     Stopwatch& sw = res.sw_trace;
@@ -19,7 +17,7 @@ NwStat NwTrace1_Plain(const NwAlgInput& nw, NwAlgResult& res)
     // reserve space in the ram
     try
     {
-        trace.reserve(nw.adjrows - 1 + nw.adjcols);
+        nw.trace.reserve(nw.adjrows - 1 + nw.adjcols);
     }
     catch (const std::exception&)
     {
@@ -35,7 +33,7 @@ NwStat NwTrace1_Plain(const NwAlgInput& nw, NwAlgResult& res)
     {
         // add the current element to the trace
         int curr = el(nw.score, nw.adjcols, i, j);
-        trace.push_back(curr);
+        nw.trace.push_back(curr);
 
         int max = std::numeric_limits<int>::min(); // maximum value of the up, left and diagonal neighbouring elements
         int dir = '-';                             // the current movement direction is unknown
@@ -76,13 +74,13 @@ NwStat NwTrace1_Plain(const NwAlgInput& nw, NwAlgResult& res)
     }
 
     // reverse the trace, so it starts from the top-left corner of the matrix
-    std::reverse(trace.begin(), trace.end());
+    std::reverse(nw.trace.begin(), nw.trace.end());
 
     // measure trace time
     sw.lap("trace.calc");
 
     // calculate the hash value
-    for (auto& curr : trace)
+    for (auto& curr : nw.trace)
     {
         hash = ((hash << 5) + hash) ^ curr;
     }
@@ -125,9 +123,17 @@ NwStat NwHash1_Plain(const NwAlgInput& nw, NwAlgResult& res)
 }
 
 // print the score matrix
-NwStat NwPrint1_Plain(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res)
+NwStat NwPrintScore1_Plain(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res)
 {
     (void)res;
     NwPrintMat(os, nw.score.data(), nw.adjrows, nw.adjcols);
+    return NwStat::success;
+}
+
+// print the edit trace
+NwStat NwPrintTrace1_Plain(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res)
+{
+    (void)res;
+    NwPrintVect(os, nw.trace.data(), nw.trace.size());
     return NwStat::success;
 }

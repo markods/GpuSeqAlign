@@ -18,9 +18,10 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
 NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res);
 NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res);
 
-NwStat NwTrace1_Plain(const NwAlgInput& nw, NwAlgResult& res);
+NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res);
 NwStat NwHash1_Plain(const NwAlgInput& nw, NwAlgResult& res);
-NwStat NwPrint1_Plain(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res);
+NwStat NwPrintScore1_Plain(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
+NwStat NwPrintTrace1_Plain(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
 
 struct TileAndElemIJ
 {
@@ -30,9 +31,9 @@ struct TileAndElemIJ
     int jTileElem;
 };
 
-NwStat NwTrace2_Sparse(const NwAlgInput& nw, NwAlgResult& res);
+NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res);
 NwStat NwHash2_Sparse(const NwAlgInput& nw, NwAlgResult& res);
-NwStat NwPrint2_Sparse(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res);
+NwStat NwPrintScore2_Sparse(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
 void NwTrace2_AlignTile(std::vector<int>& tile, const NwAlgInput& nw, int iTile, int jTile);
 void NwTrace2_GetTileAndElemIJ(const NwAlgInput& nw, int i, int j, TileAndElemIJ& co);
 

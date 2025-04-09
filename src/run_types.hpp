@@ -65,6 +65,7 @@ struct NwAlgInput
     std::vector<int> seqX;
     std::vector<int> seqY;
     HostArray<int> score;
+    std::vector<int> trace; // TODO: char vector of Match/Mismatch, Insertion, Deletion
     // sparse representation of the score matrix
     HostArray<int> tileHrowMat;
     HostArray<int> tileHcolMat;

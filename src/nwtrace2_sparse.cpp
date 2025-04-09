@@ -93,9 +93,8 @@ void NwTrace2_AlignTile(std::vector<int>& tile, const NwAlgInput& nw, int iTile,
 // The score matrix is represented as two matrices (row-major order):
 // + tile header row matrix,
 // + tile header column matrix.
-NwStat NwTrace2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
+NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
 {
-    std::vector<int> trace;
     std::vector<int> tile;
 
     // Start the timer.
@@ -105,7 +104,6 @@ NwStat NwTrace2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
     // Allocate memory.
     try
     {
-        trace.reserve(nw.adjrows + nw.adjcols - 1);
         std::vector<int> tmpTile(nw.tileHcolLen * nw.tileHrowLen, 0);
         std::swap(tile, tmpTile);
     }
@@ -126,7 +124,7 @@ NwStat NwTrace2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
     while (true)
     {
         int currElem = el(tile, nw.tileHrowLen, co.iTileElem, co.jTileElem);
-        trace.push_back(currElem);
+        nw.trace.push_back(currElem);
 
         int max = std::numeric_limits<int>::min();
         int di = 0;
@@ -184,7 +182,7 @@ NwStat NwTrace2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
     }
 
     // Reverse the trace, so it starts from the top-left corner of the matrix instead of the bottom-right.
-    std::reverse(trace.begin(), trace.end());
+    std::reverse(nw.trace.begin(), nw.trace.end());
 
     // Measure trace time.
     sw.lap("trace.calc");
@@ -192,7 +190,7 @@ NwStat NwTrace2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
     // Calculate the trace hash.
     // http://www.cse.yorku.ca/~oz/hash.html
     unsigned hash = 5381;
-    for (auto& curr : trace)
+    for (auto& curr : nw.trace)
     {
         hash = ((hash << 5) + hash) ^ curr;
     }
@@ -295,7 +293,7 @@ NwStat NwHash2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
 // The score matrix is represented as two matrices (row-major order):
 // + tile header row matrix,
 // + tile header column matrix.
-NwStat NwPrint2_Sparse(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res)
+NwStat NwPrintScore2_Sparse(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res)
 {
     (void)res;
 

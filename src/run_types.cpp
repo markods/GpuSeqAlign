@@ -114,6 +114,8 @@ void NwAlgInput::resetAllocsBenchmarkCycle()
     // seqX.clear();
     // seqY.clear();
     score.clear();
+    trace.clear();
+    trace.shrink_to_fit();
     ////// sparse representation of score matrix
     tileHrowMat.clear();
     tileHcolMat.clear();
@@ -129,6 +131,9 @@ void NwAlgInput::resetAllocsBenchmarkEnd()
 
     ////// host specific memory
     subst.clear();
+    subst.shrink_to_fit();
     seqX.clear();
+    seqX.shrink_to_fit();
     seqY.clear();
+    seqY.shrink_to_fit();
 }

@@ -263,6 +263,8 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
         }
         else
         {
+            print_cmd_usage(std::cout);
+            std::cout << "\n";
             std::cerr << "error: unknown parameter: \"" << arg << "\"\n";
             return NwStat::errorInvalidValue;
         }
@@ -278,6 +280,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
 
     // Defaults.
     setDefaultIfArgEmpty(cmdArgs.substPath, std::string("./resrc/subst.json"));
+    // Required.
     cmdArgs.algParamPath;
     cmdArgs.seqPath;
     setDefaultIfArgEmpty(cmdArgs.pairPath, std::string {});
