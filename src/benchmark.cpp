@@ -12,6 +12,7 @@
 
 // convert the sequence string to a vector using a character map
 // + NOTE: add the header (zeroth) element if requested
+// TODO: if addHeader is true, then subtract 1 from sequence length in bench
 static std::vector<int> seqStrToVect(const std::string& str, const Dict<std::string, int>& map, const bool addHeader)
 {
     // preallocate the requred amount of elements
@@ -28,6 +29,7 @@ static std::vector<int> seqStrToVect(const std::string& str, const Dict<std::str
     {
         // add them to the vector
         std::string cs {c};
+        // TODO: check if cs is valid
         int val = map.at(cs);
         vect.push_back(val);
     }
