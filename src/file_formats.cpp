@@ -1,60 +1,6 @@
 #include "file_formats.hpp"
 #include "fmt_guard.hpp"
 
-void from_json(const nlohmann::ordered_json& j, NwSubstData& substData)
-{
-    if (j.size() != 2)
-    {
-        throw std::exception("Expected a JSON object with exactly two keys: \"letterMap\", \"substMap\"");
-    }
-    j.at("letterMap").get_to(substData.letterMap);
-    j.at("substMap").get_to(substData.substMap);
-}
-void from_json(const nlohmann::ordered_json& j, NwAlgParam& param)
-{
-    j.get_to(param._values);
-}
-void from_json(const nlohmann::ordered_json& j, NwAlgParams& params)
-{
-    j.get_to(params._params);
-}
-void from_json(const nlohmann::ordered_json& j, NwAlgParamsData& paramData)
-{
-    j.get_to(paramData.paramMap);
-}
-void from_json(const nlohmann::ordered_json& j, NwSeqData& seqData)
-{
-    if (j.size() != 1)
-    {
-        throw std::exception("Expected a JSON object with exactly one key: \"seqList\"");
-    }
-    j.at("seqList").get_to(seqData.seqList);
-}
-
-// conversion to json from object
-void to_json(nlohmann::ordered_json& j, const NwSubstData& substData)
-{
-    j["letterMap"] = substData.letterMap;
-    j["substMap"] = substData.substMap;
-}
-void to_json(nlohmann::ordered_json& j, const NwAlgParam& param)
-{
-    j = param._values;
-}
-void to_json(nlohmann::ordered_json& j, const NwAlgParams& params)
-{
-    j = params._params;
-}
-void to_json(nlohmann::ordered_json& j, const NwAlgParamsData& paramData)
-{
-    j["paramMap"] = paramData.paramMap;
-}
-void to_json(nlohmann::ordered_json& j, const NwSeqData& seqData)
-{
-    j["seqList"] = seqData.seqList;
-}
-
-// conversion to tsv from object
 void writeResultHeaderToTsv(std::ostream& os,
     bool fPrintScoreStats,
     bool fPrintTraceStats)

@@ -30,18 +30,6 @@ namespace nlohmann
 template <typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
 struct adl_serializer<Dict<K, V, Hash, KeyEqual, Allocator>>
 {
-    static void to_json(nlohmann::ordered_json& j, const Dict<K, V, Hash, KeyEqual, Allocator>& dict)
-    {
-        nlohmann::ordered_json json_entries = nlohmann::ordered_json::object();
-
-        for (const auto& entry : dict)
-        {
-            json_entries[entry.first] = entry.second;
-        }
-
-        j = json_entries;
-    }
-
     static void from_json(const nlohmann::ordered_json& j, Dict<K, V, Hash, KeyEqual, Allocator>& dict)
     {
         dict.clear();
@@ -53,20 +41,96 @@ struct adl_serializer<Dict<K, V, Hash, KeyEqual, Allocator>>
             dict.insert(std::move(key), std::move(value));
         }
     }
+
+    static void to_json(nlohmann::ordered_json& j, const Dict<K, V, Hash, KeyEqual, Allocator>& dict)
+    {
+        nlohmann::ordered_json json_entries = nlohmann::ordered_json::object();
+
+        for (const auto& entry : dict)
+        {
+            json_entries[entry.first] = entry.second;
+        }
+
+        j = json_entries;
+    }
 };
+
+template <>
+struct adl_serializer<NwSubstData>
+{
+    static void from_json(const nlohmann::ordered_json& j, NwSubstData& substData)
+    {
+        if (j.size() != 2)
+        {
+            throw std::exception("Expected a JSON object with exactly two keys: \"letterMap\", \"substMap\"");
+        }
+        j.at("letterMap").get_to(substData.letterMap);
+        j.at("substMap").get_to(substData.substMap);
+    }
+    static void to_json(nlohmann::ordered_json& j, const NwSubstData& substData)
+    {
+        j["letterMap"] = substData.letterMap;
+        j["substMap"] = substData.substMap;
+    }
+};
+
+template <>
+struct adl_serializer<NwAlgParam>
+{
+    static void from_json(const nlohmann::ordered_json& j, NwAlgParam& param)
+    {
+        j.get_to(param._values);
+    }
+    static void to_json(nlohmann::ordered_json& j, const NwAlgParam& param)
+    {
+        j = param._values;
+    }
+};
+
+template <>
+struct adl_serializer<NwAlgParams>
+{
+    static void from_json(const nlohmann::ordered_json& j, NwAlgParams& params)
+    {
+        j.get_to(params._params);
+    }
+    static void to_json(nlohmann::ordered_json& j, const NwAlgParams& params)
+    {
+        j = params._params;
+    }
+};
+
+template <>
+struct adl_serializer<NwAlgParamsData>
+{
+    static void from_json(const nlohmann::ordered_json& j, NwAlgParamsData& paramData)
+    {
+        j.get_to(paramData.paramMap);
+    }
+    static void to_json(nlohmann::ordered_json& j, const NwAlgParamsData& paramData)
+    {
+        j["paramMap"] = paramData.paramMap;
+    }
+};
+
+template <>
+struct adl_serializer<NwSeqData>
+{
+    static void from_json(const nlohmann::ordered_json& j, NwSeqData& seqData)
+    {
+        if (j.size() != 1)
+        {
+            throw std::exception("Expected a JSON object with exactly one key: \"seqList\"");
+        }
+        j.at("seqList").get_to(seqData.seqList);
+    }
+    static void to_json(nlohmann::ordered_json& j, const NwSeqData& seqData)
+    {
+        j["seqList"] = seqData.seqList;
+    }
+};
+
 } // namespace nlohmann
-
-void from_json(const nlohmann::ordered_json& j, NwSubstData& substData);
-void from_json(const nlohmann::ordered_json& j, NwAlgParam& param);
-void from_json(const nlohmann::ordered_json& j, NwAlgParams& params);
-void from_json(const nlohmann::ordered_json& j, NwAlgParamsData& paramData);
-void from_json(const nlohmann::ordered_json& j, NwSeqData& seqData);
-
-void to_json(nlohmann::ordered_json& j, const NwSubstData& substData);
-void to_json(nlohmann::ordered_json& j, const NwAlgParam& param);
-void to_json(nlohmann::ordered_json& j, const NwAlgParams& params);
-void to_json(nlohmann::ordered_json& j, const NwAlgParamsData& paramData);
-void to_json(nlohmann::ordered_json& j, const NwSeqData& seqData);
 
 void writeResultHeaderToTsv(std::ostream& os, bool fPrintScoreStats, bool fPrintTraceStats);
 void writeResultLineToTsv(std::ostream& os, const NwAlgResult& res, bool fPrintScoreStats, bool fPrintTraceStats);
