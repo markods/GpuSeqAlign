@@ -3,28 +3,24 @@
 #include "run_types.hpp"
 
 NwAlgorithm::NwAlgorithm()
-{
-    _alignFn = {};
-    _traceFn = {};
-    _hashFn = {};
-    _printFn = {};
-
-    _alignPr = {};
-}
+    : _alignFn(),
+      _traceFn(),
+      _hashFn(),
+      _printFn(),
+      _alignPr()
+{ }
 
 NwAlgorithm::NwAlgorithm(
     NwAlgorithm::NwAlignFn alignFn,
     NwAlgorithm::NwTraceFn traceFn,
     NwAlgorithm::NwHashFn hashFn,
     NwAlgorithm::NwPrintFn printFn)
-{
-    _alignFn = alignFn;
-    _traceFn = traceFn;
-    _hashFn = hashFn;
-    _printFn = printFn;
-
-    _alignPr = {};
-}
+    : _alignFn(alignFn),
+      _traceFn(traceFn),
+      _hashFn(hashFn),
+      _printFn(printFn),
+      _alignPr()
+{ }
 
 void NwAlgorithm::init(NwAlgParams& alignPr)
 {
