@@ -3,14 +3,14 @@
 
 #include <utility>
 
-#define ZIG_TRY(exp_res, expr)  \
-    do                      \
-    {                       \
-        auto res = (expr);  \
-        if (res != exp_res) \
-        {                   \
-            return res;     \
-        }                   \
+#define ZIG_TRY(exp_res, expr) \
+    do                         \
+    {                          \
+        auto res__ = (expr);   \
+        if (res__ != exp_res)  \
+        {                      \
+            return res__;      \
+        }                      \
     } while (false)
 
 // defer execution to scope exit

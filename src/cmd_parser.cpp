@@ -308,7 +308,39 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
     return NwStat::success;
 }
 
-static NwStat verifyAndSetAlgNames(NwCmdArgs& cmdArgs, NwCmdData& cmdData)
+static NwStat parseSubstFile(const std::string& substPath, NwSubstData& substData)
+{
+    if (NwStat::success != readFromJsonFile(substPath, substData))
+    {
+        std::cerr << "error: could not open/parse json from substPath: \"" << substPath << "\"\n";
+        return NwStat::errorIoStream;
+    }
+
+    int letter_cnt = (int)substData.letterMap.size();
+    for (const auto& substPair : substData.substMap)
+    {
+        if (substPair.second.size() != letter_cnt * letter_cnt)
+        {
+            std::cerr << "error: substitution matrix should have exactly letter_cnt^2 elements: \"" << substPair.first << "\"\n";
+            return NwStat::errorInvalidFormat;
+        }
+    }
+
+    return NwStat::success;
+}
+
+static NwStat parseAlgParamsFile(const std::string& algParamPath, NwAlgParamsData& algParamsData)
+{
+    if (NwStat::success != readFromJsonFile(algParamPath, algParamsData))
+    {
+        std::cerr << "error: could not open/parse json from algParamPath: \"" << algParamPath << "\"\n";
+        return NwStat::errorIoStream;
+    }
+
+    return NwStat::success;
+}
+
+static NwStat verifyAndSetAlgNames(NwCmdArgs& cmdArgs, const NwCmdData& cmdData)
 {
     Dict<std::string, NwAlgorithm> algMap {};
     getNwAlgorithmMap(algMap);
@@ -364,23 +396,24 @@ static NwStat verifyAndSetAlgNames(NwCmdArgs& cmdArgs, NwCmdData& cmdData)
     return NwStat::success;
 }
 
+static NwStat parseSeqFile(const std::string& seqPath, NwSeqData& seqData)
+{
+    if (NwStat::success != readFromJsonFile(seqPath, seqData))
+    {
+        std::cerr << "error: could not open/parse fasta from seqPath: \"" << seqPath << "\"\n";
+        return NwStat::errorIoStream;
+    }
+
+    return NwStat::success;
+}
+
 NwStat initCmdData(NwCmdArgs& cmdArgs, NwCmdData& cmdData)
 {
-    if (NwStat::success != readFromJsonFile(cmdArgs.substPath.value(), cmdData.substData))
-    {
-        std::cerr << "error: could not open/parse json from substPath: \"" << cmdArgs.substPath.value() << "\"\n";
-        return NwStat::errorIoStream;
-    }
-    if (NwStat::success != readFromJsonFile(cmdArgs.algParamPath.value(), cmdData.algParamsData))
-    {
-        std::cerr << "error: could not open/parse json from algParamPath: \"" << cmdArgs.algParamPath.value() << "\"\n";
-        return NwStat::errorIoStream;
-    }
-    if (NwStat::success != readFromJsonFile(cmdArgs.seqPath.value(), cmdData.seqData))
-    {
-        std::cerr << "error: could not open/parse json from seqPath: \"" << cmdArgs.seqPath.value() << "\"\n";
-        return NwStat::errorIoStream;
-    }
+    ZIG_TRY(NwStat::success, parseSubstFile(cmdArgs.substPath.value(), cmdData.substData));
+    ZIG_TRY(NwStat::success, parseAlgParamsFile(cmdArgs.algParamPath.value(), cmdData.algParamsData));
+    ZIG_TRY(NwStat::success, verifyAndSetAlgNames(cmdArgs, cmdData));
+    ZIG_TRY(NwStat::success, parseSeqFile(cmdArgs.seqPath.value(), cmdData.seqData));
+
     if (NwStat::success != openOutFile(cmdArgs.resPath.value(), cmdData.resOfs))
     {
         std::cerr << "error: could not open resPath: \"" << cmdArgs.resPath.value() << "\"\n";
@@ -392,8 +425,6 @@ NwStat initCmdData(NwCmdArgs& cmdArgs, NwCmdData& cmdData)
         std::cerr << "error: could not open debugPath: \"" << cmdArgs.debugPath.value() << "\"\n";
         return NwStat::errorIoStream;
     }
-
-    ZIG_TRY(NwStat::success, verifyAndSetAlgNames(cmdArgs, cmdData));
 
     return NwStat::success;
 }

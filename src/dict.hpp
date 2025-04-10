@@ -185,6 +185,11 @@ public:
         return result;
     }
 
+    size_t size()
+    {
+        return entries.size();
+    }
+
     auto begin() -> typename ListType::iterator
     {
         return entries.begin();

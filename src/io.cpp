@@ -20,6 +20,19 @@ std::string isoDatetimeAsString()
     return strs.str();
 }
 
+// open input file stream
+NwStat openInFile(const std::string& path, std::ifstream& ifs)
+{
+    ifs.exceptions(std::ios_base::goodbit);
+    ifs.open(path, std::ios_base::in);
+    if (!ifs)
+    {
+        return NwStat::errorIoStream;
+    }
+
+    return NwStat::success;
+}
+
 // open output file stream
 NwStat openOutFile(const std::string& path, std::ofstream& ofs)
 {
