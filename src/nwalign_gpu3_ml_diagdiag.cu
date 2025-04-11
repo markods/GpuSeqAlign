@@ -295,6 +295,12 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResu
     {
         threadsPerBlockA = pr.at("threadsPerBlockA").curr();
         tileBx = pr.at("tileBx").curr();
+
+        if ((threadsPerBlockA < nw.warpsz || threadsPerBlockA > nw.maxThreadsPerBlock) ||
+            (tileBx < 1))
+        {
+            return NwStat::errorInvalidValue;
+        }
     }
     catch (const std::out_of_range&)
     {

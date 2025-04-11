@@ -302,6 +302,12 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
         threadsPerBlockA = pr.at("threadsPerBlockA").curr();
         tileBx = pr.at("tileBx").curr();
         warpDivFactorB = pr.at("warpDivFactorB").curr();
+
+        if ((threadsPerBlockA < nw.warpsz || threadsPerBlockA > nw.maxThreadsPerBlock) ||
+            (tileBx < 1 || warpDivFactorB < 1))
+        {
+            return NwStat::errorInvalidValue;
+        }
     }
     catch (const std::out_of_range&)
     {

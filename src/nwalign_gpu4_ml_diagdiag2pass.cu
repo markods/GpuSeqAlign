@@ -291,13 +291,17 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAl
         tileAx = pr.at("tileAx").curr();
         tileAy = pr.at("tileAy").curr();
         tileBx = pr.at("tileBx").curr();
+
+        if (tileAx < 1 || tileAy < 1 || tileBx < 1)
+        {
+            return NwStat::errorInvalidValue;
+        }
+        if (tileAx % nw.warpsz != 0)
+        {
+            return NwStat::errorInvalidValue;
+        }
     }
     catch (const std::out_of_range&)
-    {
-        return NwStat::errorInvalidValue;
-    }
-
-    if (tileAx % nw.warpsz != 0)
     {
         return NwStat::errorInvalidValue;
     }

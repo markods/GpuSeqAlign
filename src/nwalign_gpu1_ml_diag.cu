@@ -79,6 +79,10 @@ NwStat NwAlign_Gpu1_Ml_Diag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
     try
     {
         threadsPerBlock = pr.at("threadsPerBlock").curr();
+        if (threadsPerBlock < nw.warpsz || threadsPerBlock > nw.maxThreadsPerBlock)
+        {
+            return NwStat::errorInvalidValue;
+        }
     }
     catch (const std::out_of_range&)
     {

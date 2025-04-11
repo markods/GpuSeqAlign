@@ -21,6 +21,10 @@ NwStat NwAlign_Cpu4_Mt_DiagRow(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResul
     try
     {
         blocksz = pr.at("blocksz").curr();
+        if (blocksz < 1)
+        {
+            return NwStat::errorInvalidValue;
+        }
     }
     catch (const std::out_of_range&)
     {

@@ -319,6 +319,10 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
     try
     {
         tileAx = pr.at("tileAx").curr();
+        if (tileAx < 1)
+        {
+            return NwStat::errorInvalidValue;
+        }
     }
     catch (const std::out_of_range&)
     {

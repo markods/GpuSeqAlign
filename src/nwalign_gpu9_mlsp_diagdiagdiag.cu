@@ -396,6 +396,12 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwA
         {
             return NwStat::errorInvalidValue;
         }
+
+        if ((threadsPerBlockA < nw.warpsz || threadsPerBlockA > nw.maxThreadsPerBlock) ||
+            (subtileRows < 1 || subtileCols < 1 || subtileBx < 1))
+        {
+            return NwStat::errorInvalidValue;
+        }
     }
     catch (const std::out_of_range&)
     {

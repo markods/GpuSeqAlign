@@ -125,6 +125,12 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
         tileBy = pr.at("tileBy").curr();
         threadsPerBlockA = pr.at("threadsPerBlock").curr();
         threadsPerBlockB = pr.at("threadsPerBlock").curr();
+        if ((tileBx < 1 || tileBy < 1) ||
+            (threadsPerBlockA < nw.warpsz || threadsPerBlockA > nw.maxThreadsPerBlock) ||
+            (threadsPerBlockB < nw.warpsz || threadsPerBlockB > nw.maxThreadsPerBlock))
+        {
+            return NwStat::errorInvalidValue;
+        }
     }
     catch (const std::out_of_range&)
     {
