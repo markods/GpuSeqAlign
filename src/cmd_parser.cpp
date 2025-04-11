@@ -396,12 +396,21 @@ static NwStat verifyAndSetAlgNames(NwCmdArgs& cmdArgs, const NwCmdData& cmdData)
     return NwStat::success;
 }
 
-static NwStat parseSeqFile(const std::string& seqPath, NwSeqData& seqData)
+static NwStat parseSeqFile(const std::string& seqPath, const Dict<std::string, int>& letterMap, NwSeqData& seqData)
 {
-    if (NwStat::success != readFromJsonFile(seqPath, seqData))
+    std::ifstream ifs;
+    if (NwStat stat = openInFile(seqPath, ifs); stat != NwStat::success)
     {
-        std::cerr << "error: could not open/parse fasta from seqPath: \"" << seqPath << "\"\n";
+        std::cerr << "error: could not open fasta file from seqPath: \"" << seqPath << "\"\n";
         return NwStat::errorIoStream;
+    }
+
+    std::string error_msg;
+    if (NwStat stat = readFromFastaFormat(seqPath, ifs, seqData, letterMap, error_msg); stat != NwStat::success)
+    {
+        std::cerr << "error: invalid fasta format on seqPath: \"" << seqPath << "\"\n";
+        std::cerr << error_msg << "\n";
+        return stat;
     }
 
     return NwStat::success;
@@ -412,7 +421,7 @@ NwStat initCmdData(NwCmdArgs& cmdArgs, NwCmdData& cmdData)
     ZIG_TRY(NwStat::success, parseSubstFile(cmdArgs.substPath.value(), cmdData.substData));
     ZIG_TRY(NwStat::success, parseAlgParamsFile(cmdArgs.algParamPath.value(), cmdData.algParamsData));
     ZIG_TRY(NwStat::success, verifyAndSetAlgNames(cmdArgs, cmdData));
-    ZIG_TRY(NwStat::success, parseSeqFile(cmdArgs.seqPath.value(), cmdData.seqData));
+    ZIG_TRY(NwStat::success, parseSeqFile(cmdArgs.seqPath.value(), cmdData.substData.letterMap, cmdData.seqData));
 
     if (NwStat::success != openOutFile(cmdArgs.resPath.value(), cmdData.resOfs))
     {

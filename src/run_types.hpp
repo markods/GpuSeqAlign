@@ -108,6 +108,8 @@ struct NwAlgResult
 {
     std::string algName;
     Dict<std::string, int> algParams;
+    int seqY_idx;
+    int seqX_idx;
     std::string seqY_id;
     std::string seqX_id;
 

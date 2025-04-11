@@ -8,7 +8,7 @@ struct NwCmdArgs
 {
     std::optional<std::string> substPath;
     std::optional<std::string> algParamPath;
-    std::optional<std::string> seqPath;  // TODO: fasta format
+    std::optional<std::string> seqPath;
     std::optional<std::string> pairPath; // TODO: parse and use
     std::optional<std::string> resPath;
 

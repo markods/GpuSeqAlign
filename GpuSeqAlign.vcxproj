@@ -62,13 +62,13 @@
   <ItemGroup>
     <None Include="resrc\param_best.json" />
     <None Include="resrc\param_optimize.json" />
-    <None Include="resrc\seq_debug.json" />
-    <None Include="resrc\seq_gen1.json" />
-    <None Include="resrc\seq_gen2.json" />
-    <None Include="resrc\seq_gen3.json" />
-    <None Include="resrc\seq_optimize.json" />
-    <None Include="resrc\seq_profile.json" />
-    <None Include="resrc\seq_release.json" />
+    <None Include="resrc\seq_debug.fa" />
+    <None Include="resrc\seq_gen1.fa" />
+    <None Include="resrc\seq_gen2.fa" />
+    <None Include="resrc\seq_gen3.fa" />
+    <None Include="resrc\seq_optimize.fa" />
+    <None Include="resrc\seq_profile.fa" />
+    <None Include="resrc\seq_release.fa" />
     <None Include="resrc\subst.json" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

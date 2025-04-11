@@ -18,6 +18,7 @@ NwStat openInFile(const std::string& path, std::ifstream& ifs);
 NwStat openOutFile(const std::string& path, std::ofstream& ofs);
 
 // read a json file into a variable
+// TODO: add error_msg string
 template <typename T>
 NwStat readFromJsonFile(const std::string& path, T& res)
 {

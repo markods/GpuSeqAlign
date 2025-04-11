@@ -10,32 +10,6 @@
 #include <iostream>
 #include <string>
 
-// convert the sequence string to a vector using a character map
-// + NOTE: add the header (zeroth) element if requested
-static std::vector<int> seqStrToVect(const std::string& str, const Dict<std::string, int>& map, const bool addHeader)
-{
-    // preallocate the requred amount of elements
-    std::vector<int> vect {};
-
-    // initialize the zeroth element if requested
-    if (addHeader)
-    {
-        vect.push_back(0);
-    }
-
-    // for all characters of the string
-    for (char c : str)
-    {
-        // add them to the vector
-        std::string cs {c};
-        // TODO: check if cs is valid
-        int val = map.at(cs);
-        vect.push_back(val);
-    }
-
-    return vect;
-}
-
 // Structs used to verify that the algorithms' results are correct.
 struct NwCompareKey
 {
@@ -246,19 +220,8 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
     });
     initNwInput(cmdArgs, cmdData, nw);
 
-    // initialize the letter map
-    Dict<std::string, int>& letterMap = cmdData.substData.letterMap;
+    auto seqList = cmdData.seqData.seqMap.values();
 
-    // initialize the sequence map
-    bool addHeader = true;
-    std::vector<std::vector<int>> seqList {};
-    for (auto& charSeq : cmdData.seqData.seqList)
-    {
-        auto seq = seqStrToVect(charSeq, letterMap, addHeader);
-        seqList.push_back(seq);
-    }
-
-    // write the tsv file's header
     writeResultHeaderToTsv(cmdData.resOfs, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
     if (cmdArgs.fWriteProgress.value())
     {
@@ -266,8 +229,7 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
         cmdData.resOfs.flush();
     }
 
-    // for all algorithms which have parameters in the param map
-    std::vector<std::string> algNames = cmdArgs.algNames.value();
+    auto algNames = cmdArgs.algNames.value(); // Copy on purpose.
     std::string refAlgName = cmdArgs.refAlgName.value();
     if (auto iter = std::find(algNames.begin(), algNames.end(), refAlgName); iter != algNames.end())
     {
@@ -275,6 +237,7 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
         algNames.insert(algNames.begin(), refAlgName);
     }
 
+    // for all algorithms which have parameters in the param map
     for (auto& algName : algNames)
     {
         if (cmdArgs.fWriteProgress.value())
@@ -283,7 +246,7 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
         }
 
         NwAlgorithm& alg = algMap[algName];
-        NwAlgParams algParams = cmdData.algParamsData.paramMap.at(algName);
+        NwAlgParams algParams = cmdData.algParamsData.paramMap.at(algName); // Copy on purpose.
 
         // for all Y sequences + for all X sequences (also compare every sequence with itself)
         for (int iY = 0; iY < seqList.size(); iY++)
@@ -297,20 +260,16 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
 
             for (int iX = iY; iX < seqList.size(); iX++)
             {
-                // get the Y sequence
-                // NOTE: the padding (zeroth element) was already added to the sequence
-                nw.seqY = seqList[iY];
+                nw.seqY = seqList[iY].seq;
                 nw.adjrows = (int)nw.seqY.size();
 
-                // get the X sequence
-                // NOTE: the padding (zeroth element) was already added to the sequence
-                nw.seqX = seqList[iX];
+                nw.seqX = seqList[iX].seq;
                 nw.adjcols = (int)nw.seqX.size();
 
                 // for all parameter combinations
                 for (; algParams.hasCurr(); algParams.next())
                 {
-                    // results from multiple repetitions
+                    // Results from multiple repetitions.
                     std::vector<NwAlgResult> resList {};
 
                     // for all requested repeats
@@ -326,11 +285,13 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
 
                         res.algName = algName;
                         res.algParams = algParams.copy();
-                        res.seqY_id = std::to_string(iY);
-                        res.seqX_id = std::to_string(iX);
+                        res.seqY_idx = iY;
+                        res.seqX_idx = iX;
+                        res.seqY_id = seqList[iY].id;
+                        res.seqX_id = seqList[iX].id;
                         //
-                        res.seqY_len = nw.seqY.size() - addHeader;
-                        res.seqX_len = nw.seqX.size() - addHeader;
+                        res.seqY_len = nw.seqY.size() - 1 /*header*/;
+                        res.seqX_len = nw.seqX.size() - 1 /*header*/;
                         res.substName = cmdArgs.substName.value();
                         res.gapoCost = cmdArgs.gapoCost.value();
                         res.warmup_runs = cmdArgs.warmupPerAlign.value();

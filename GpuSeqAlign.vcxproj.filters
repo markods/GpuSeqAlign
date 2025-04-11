@@ -138,28 +138,28 @@
     <None Include="resrc\param_optimize.json">
       <Filter>resrc</Filter>
     </None>
-    <None Include="resrc\seq_debug.json">
+    <None Include="resrc\seq_debug.fa">
       <Filter>resrc</Filter>
     </None>
-    <None Include="resrc\seq_gen1.json">
+    <None Include="resrc\seq_gen1.fa">
       <Filter>resrc</Filter>
     </None>
-    <None Include="resrc\seq_gen2.json">
+    <None Include="resrc\seq_gen2.fa">
       <Filter>resrc</Filter>
     </None>
-    <None Include="resrc\seq_gen3.json">
+    <None Include="resrc\seq_gen3.fa">
       <Filter>resrc</Filter>
     </None>
-    <None Include="resrc\seq_optimize.json">
+    <None Include="resrc\seq_optimize.fa">
       <Filter>resrc</Filter>
     </None>
-    <None Include="resrc\seq_profile.json">
+    <None Include="resrc\seq_profile.fa">
+      <Filter>resrc</Filter>
+    </None>
+    <None Include="resrc\seq_release.fa">
       <Filter>resrc</Filter>
     </None>
     <None Include="resrc\subst.json">
-      <Filter>resrc</Filter>
-    </None>
-    <None Include="resrc\seq_release.json">
       <Filter>resrc</Filter>
     </None>
   </ItemGroup>

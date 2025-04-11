@@ -19,10 +19,17 @@ struct NwAlgParamsData
     Dict<std::string, NwAlgParams> paramMap;
 };
 
+struct NwSeq
+{
+    std::string id;
+    std::string info;
+    // Sequence has a header (zeroth) element.
+    std::vector<int> seq;
+};
+
 struct NwSeqData
 {
-    // Sequence has a header (zeroth) element.
-    std::vector<std::string> seqList;
+    Dict<std::string, NwSeq> seqMap;
 };
 
 namespace nlohmann
@@ -113,24 +120,14 @@ struct adl_serializer<NwAlgParamsData>
     }
 };
 
-template <>
-struct adl_serializer<NwSeqData>
-{
-    static void from_json(const nlohmann::ordered_json& j, NwSeqData& seqData)
-    {
-        if (j.size() != 1)
-        {
-            throw std::exception("Expected a JSON object with exactly one key: \"seqList\"");
-        }
-        j.at("seqList").get_to(seqData.seqList);
-    }
-    static void to_json(nlohmann::ordered_json& j, const NwSeqData& seqData)
-    {
-        j["seqList"] = seqData.seqList;
-    }
-};
-
 } // namespace nlohmann
+
+NwStat readFromFastaFormat(
+    const std::string& path,
+    std::istream& is,
+    NwSeqData& seqData,
+    const Dict<std::string, int>& letterMap,
+    std::string& error_msg);
 
 void writeResultHeaderToTsv(std::ostream& os, bool fPrintScoreStats, bool fPrintTraceStats);
 void writeResultLineToTsv(std::ostream& os, const NwAlgResult& res, bool fPrintScoreStats, bool fPrintTraceStats);
