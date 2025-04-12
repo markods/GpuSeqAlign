@@ -60,15 +60,17 @@
     <CudaCompile Include="src\nwalign_gpu9_mlsp_diagdiagdiag.cu" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="resrc\pair_debug.txt" />
+    <Text Include="resrc\pair_generated_1.txt" />
+    <Text Include="resrc\pair_generated_2.txt" />
+    <Text Include="resrc\pair_optimize.txt" />
+    <Text Include="resrc\pair_profile.txt" />
+    <Text Include="resrc\pair_release.txt" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="resrc\param_best.json" />
     <None Include="resrc\param_optimize.json" />
-    <None Include="resrc\seq_debug.fa" />
-    <None Include="resrc\seq_gen1.fa" />
-    <None Include="resrc\seq_gen2.fa" />
-    <None Include="resrc\seq_gen3.fa" />
-    <None Include="resrc\seq_optimize.fa" />
-    <None Include="resrc\seq_profile.fa" />
-    <None Include="resrc\seq_release.fa" />
+    <None Include="resrc\seq_generated.fa" />
     <None Include="resrc\subst.json" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

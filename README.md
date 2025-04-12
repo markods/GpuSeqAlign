@@ -74,21 +74,19 @@ Run existing benchmarks from the project root:
 ```shell
 # View all parameters.
 ./build/windows-x64-vs-release/nw.exe --help
+# Run a quick test to verify all algorithms work on your system.
+./build/windows-x64-vs-release/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_generated.fa" -p "./resrc/pair_debug.txt" --fCalcScoreHash --fCalcTrace --fWriteProgress
 
 # Calibrate optimal algoritm parameters on your system. See the results in the '/logs' directory.
-./build/windows-x64-vs-release/nw.exe -r "./resrc/param_optimize.json" -s "./resrc/seq_optimize.fa" --fCalcScoreHash --fCalcTrace --fWriteProgress
+./build/windows-x64-vs-release/nw.exe -r "./resrc/param_optimize.json" -s "./resrc/seq_generated.fa" -p "./resrc/pair_optimize.txt" --fCalcScoreHash --fCalcTrace --fWriteProgress
 
-# Run a quick test to verify all algorithms work on your system.
-./build/windows-x64-vs-debug/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_debug.fa" --fCalcScoreHash --fCalcTrace --fWriteProgress
 # Run the sequences used in profiling reports.
-./build/windows-x64-vs-profile/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_profile.fa" --fCalcScoreHash --fCalcTrace --fWriteProgress
+./build/windows-x64-vs-profile/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_generated.fa" -p "./resrc/pair_profile.txt" --fCalcScoreHash --fCalcTrace --fWriteProgress
 
-# Small test - sequences up to 0.1k base pairs.
-./build/windows-x64-vs-release/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_gen1.fa" --fCalcScoreHash --fCalcTrace --fWriteProgress
 # Medium test - sequences up to 1k base pairs.
-./build/windows-x64-vs-release/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_gen2.fa" --fCalcScoreHash --fCalcTrace --fWriteProgress
+./build/windows-x64-vs-release/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_generated.fa" -p "./resrc/pair_generated_1.txt" --fCalcScoreHash --fCalcTrace --fWriteProgress
 # Large test - sequences up to 10k base pairs.
-./build/windows-x64-vs-release/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_gen3.fa" --fCalcScoreHash --fCalcTrace --fWriteProgress
+./build/windows-x64-vs-release/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_generated.fa" -p "./resrc/pair_generated_2.txt" --fCalcScoreHash --fCalcTrace --fWriteProgress
 ```
 
 ## Results

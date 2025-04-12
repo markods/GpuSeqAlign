@@ -1,0 +1,43 @@
+len500 len500
+len500 len1000
+len500 len1500
+len500 len2000
+len500 len2500
+len500 len4500
+len500 len5000
+len500 len9384
+
+len1000 len1000
+len1000 len1500
+len1000 len2000
+len1000 len2500
+len1000 len4500
+len1000 len5000
+len1000 len9384
+
+len1500 len1500
+len1500 len2000
+len1500 len2500
+len1500 len4500
+len1500 len5000
+len1500 len9384
+
+len2000 len2000
+len2000 len2500
+len2000 len4500
+len2000 len5000
+len2000 len9384
+
+len2500 len2500
+len2500 len4500
+len2500 len5000
+len2500 len9384
+
+len4500 len4500
+len4500 len5000
+len4500 len9384
+
+len5000 len5000
+len5000 len9384
+
+len9384 len9384

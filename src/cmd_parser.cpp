@@ -5,7 +5,6 @@
 #include "run_types.hpp"
 #include <algorithm>
 #include <iostream>
-#include <optional>
 
 static NwStat setStringArgOnce(
     const int argc,
@@ -129,13 +128,13 @@ static void print_cmd_usage(std::ostream& os)
           "-b, --substPath <path>     Path of JSON substitution matrices file, defaults to \"./resrc/subst.json\".\n"
           "-r, --algParamPath <path>  Path of JSON algorithm parameters file.\n"
           "-s, --seqPath <path>       Path of FASTA file with sequences to be aligned.\n"
-          "-p, --pairPath <path>      Path of TXT file with sequence pairs to be aligned. Each line is in the format\n"
-          "                           \"seqA[0:42] seqB\", where \"seqA\" and \"seqB\" are sequence ids, and \"[a:b]\" specifies the\n"
-          "                           substring starting from element \"a\" (inclusive) until element \"b\" (exclusive).\n"
-          "                           It's possible to omit the start/end of the interval, like so: \"[a:b]\", \"[a:]\", \"[:b]\".\n"
+          "-p, --seqPairPath <path>   Path of TXT file with sequence pairs to be aligned. Each line is in the format\n"
+          "                           \"seqY seqX\", where \"seqY\" and \"seqX\" are sequence ids. It's possible to specify a substring\n"
+          "                           e.g. \"seqX[l:r]\", starting from element \"l\" (inclusive) until element \"r\" (exclusive).\n"
+          "                           It's possible to omit the start/end of the interval, like so: \"[l:]\", \"[:r]\".\n"
           "                           If the TXT file is not specified, then all sequences in the FASTA file except the first\n"
-          "                           are aligned to the first sequence. There must be at least two sequences in the FASTA file.\n"
-          "-o, --resPath <path>       Path of TSV test bench results file, defaults to \"./logs/${datetime}.tsv\".\n"
+          "                           are aligned to the first sequence. In that case, there must be two or more sequences in the FASTA file.\n"
+          "-o, --resPath <path>       Path of TSV test bench results file, defaults to \"./logs/%{datetime}.tsv\".\n"
           "\n"
           "--substName <name>         Specify which substitution matrix from the \"subst\" file will be used. Defaults to\n"
           "                           \"blosum62\".\n"
@@ -154,7 +153,7 @@ static void print_cmd_usage(std::ostream& os)
           "                           algorithm implementation. Defaults to false.\n"
           "--fWriteProgress           Should progress be printed on stdout. Defaults to false.\n"
           "--debugPath <path>         For debug purposes, path of the TXT file where score matrices/traces will be\n"
-          "                           written to, once per alignment. Defaults to \"${datetime}_debug.txt\" if\n"
+          "                           written to, once per alignment. Defaults to \"%{datetime}_debug.txt\" if\n"
           "                           fPrintScore or fPrintTrace are passed, otherwise \"\".\n"
           "--fPrintScore              Should the score matrix be printed. Defaults to false.\n"
           "--fPrintTrace              Should the trace be printed. Defaults to false.\n"
@@ -189,9 +188,9 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
         {
             ZIG_TRY(NwStat::success, setStringArgOnce(argc, argv, i, cmdArgs.seqPath, arg));
         }
-        else if (arg == "-p" || arg == "--pairPath")
+        else if (arg == "-p" || arg == "--seqPairPath")
         {
-            ZIG_TRY(NwStat::success, setStringArgOnce(argc, argv, i, cmdArgs.pairPath, arg));
+            ZIG_TRY(NwStat::success, setStringArgOnce(argc, argv, i, cmdArgs.seqPairPath, arg));
         }
         else if (arg == "-o" || arg == "--resPath")
         {
@@ -286,7 +285,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
     // Required.
     cmdArgs.algParamPath;
     cmdArgs.seqPath;
-    setDefaultIfArgEmpty(cmdArgs.pairPath, std::string {});
+    setDefaultIfArgEmpty(cmdArgs.seqPairPath, std::string {});
     setDefaultIfArgEmpty(cmdArgs.resPath, std::string("./logs/") + cmdArgs.isoDateTime + std::string(".tsv"));
 
     setDefaultIfArgEmpty(cmdArgs.substName, std::string("blosum62"));
@@ -317,11 +316,11 @@ static NwStat parseSubstFile(const std::string& substPath, NwSubstData& substDat
     }
 
     int letter_cnt = (int)substData.letterMap.size();
-    for (const auto& substPair : substData.substMap)
+    for (const auto& subst_tuple : substData.substMap)
     {
-        if (substPair.second.size() != letter_cnt * letter_cnt)
+        if (subst_tuple.second.size() != letter_cnt * letter_cnt)
         {
-            std::cerr << "error: substitution matrix should have exactly letter_cnt^2 elements: \"" << substPair.first << "\"\n";
+            std::cerr << "error: substitution matrix should have exactly letter_cnt^2 elements: \"" << subst_tuple.first << "\"\n";
             return NwStat::errorInvalidFormat;
         }
     }
@@ -416,12 +415,76 @@ static NwStat parseSeqFile(const std::string& seqPath, const Dict<std::string, i
     return NwStat::success;
 }
 
+static NwStat parseSeqPairFile(const std::string& seqPairPath, NwSeqPairData& seqPairData, const Dict<std::string, NwSeq>& seqMap)
+{
+    std::ifstream ifs;
+    if (NwStat stat = openInFile(seqPairPath, ifs); stat != NwStat::success)
+    {
+        std::cerr << "error: could not open text file from seqPairPath: \"" << seqPairPath << "\"\n";
+        return NwStat::errorIoStream;
+    }
+
+    std::string error_msg;
+    if (NwStat stat = readFromSeqPairFormat(seqPairPath, ifs, seqPairData, seqMap, error_msg); stat != NwStat::success)
+    {
+        std::cerr << "error: invalid text format on seqPairPath: \"" << seqPairPath << "\"\n";
+        std::cerr << error_msg << "\n";
+        return stat;
+    }
+
+    return NwStat::success;
+}
+
+// By default, align second and following sequences (Y) to the first (X).
+static NwStat initSeqPairData(const NwSeqData& seqData, NwSeqPairData& seqPairData)
+{
+    const auto& seqX_tuple = *(seqData.seqMap.cbegin());
+    auto& seqX_id = seqX_tuple.first;
+    auto& seqX = seqX_tuple.second;
+
+    for (const auto& seqY_tuple : seqData.seqMap)
+    {
+        auto& seqY_id = seqY_tuple.first;
+        auto& seqY = seqY_tuple.second;
+        if (seqY_id == seqX_id)
+        {
+            continue;
+        }
+
+        NwSeqPair pair {};
+        pair.seqY_id = seqY.id;
+        pair.seqX_id = seqX.id;
+        pair.seqY_range.l = 0;
+        pair.seqY_range.r = seqY_tuple.second.seq.size() - 1 /*header*/;
+        pair.seqX_range.l = 0;
+        pair.seqX_range.r = seqX_tuple.second.seq.size() - 1 /*header*/;
+        seqPairData.pairList.push_back(pair);
+    }
+
+    if (seqPairData.pairList.size() == 0)
+    {
+        std::cerr << "error: since seqPairPath is empty, at least two sequences are necessary for default alignment\n";
+        return NwStat::errorInvalidFormat;
+    }
+
+    return NwStat::success;
+}
+
 NwStat initCmdData(NwCmdArgs& cmdArgs, NwCmdData& cmdData)
 {
     ZIG_TRY(NwStat::success, parseSubstFile(cmdArgs.substPath.value(), cmdData.substData));
     ZIG_TRY(NwStat::success, parseAlgParamsFile(cmdArgs.algParamPath.value(), cmdData.algParamsData));
     ZIG_TRY(NwStat::success, verifyAndSetAlgNames(cmdArgs, cmdData));
     ZIG_TRY(NwStat::success, parseSeqFile(cmdArgs.seqPath.value(), cmdData.substData.letterMap, cmdData.seqData));
+
+    if (!cmdArgs.seqPairPath.value().empty())
+    {
+        ZIG_TRY(NwStat::success, parseSeqPairFile(cmdArgs.seqPairPath.value(), cmdData.seqPairData, cmdData.seqData.seqMap));
+    }
+    else
+    {
+        initSeqPairData(cmdData.seqData, cmdData.seqPairData);
+    }
 
     if (NwStat::success != openOutFile(cmdArgs.resPath.value(), cmdData.resOfs))
     {

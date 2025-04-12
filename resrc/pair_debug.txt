@@ -1,0 +1,191 @@
+len1 len1
+len1 len2
+len1 len4
+len1 len8
+len1 len16
+len1 len31
+len1 len32
+len1 len33
+len1 len40
+len1 len60
+len1 len64
+len1 len66
+len1 len128
+len1 len196
+len1 len256
+len1 len384
+len1 len512
+len1 len728
+
+len2 len2
+len2 len4
+len2 len8
+len2 len16
+len2 len31
+len2 len32
+len2 len33
+len2 len40
+len2 len60
+len2 len64
+len2 len66
+len2 len128
+len2 len196
+len2 len256
+len2 len384
+len2 len512
+len2 len728
+
+len4 len4
+len4 len8
+len4 len16
+len4 len31
+len4 len32
+len4 len33
+len4 len40
+len4 len60
+len4 len64
+len4 len66
+len4 len128
+len4 len196
+len4 len256
+len4 len384
+len4 len512
+len4 len728
+
+len8 len8
+len8 len16
+len8 len31
+len8 len32
+len8 len33
+len8 len40
+len8 len60
+len8 len64
+len8 len66
+len8 len128
+len8 len196
+len8 len256
+len8 len384
+len8 len512
+len8 len728
+
+len16 len16
+len16 len31
+len16 len32
+len16 len33
+len16 len40
+len16 len60
+len16 len64
+len16 len66
+len16 len128
+len16 len196
+len16 len256
+len16 len384
+len16 len512
+len16 len728
+
+len31 len31
+len31 len32
+len31 len33
+len31 len40
+len31 len60
+len31 len64
+len31 len66
+len31 len128
+len31 len196
+len31 len256
+len31 len384
+len31 len512
+len31 len728
+
+len32 len32
+len32 len33
+len32 len40
+len32 len60
+len32 len64
+len32 len66
+len32 len128
+len32 len196
+len32 len256
+len32 len384
+len32 len512
+len32 len728
+
+len33 len33
+len33 len40
+len33 len60
+len33 len64
+len33 len66
+len33 len128
+len33 len196
+len33 len256
+len33 len384
+len33 len512
+len33 len728
+
+len40 len40
+len40 len60
+len40 len64
+len40 len66
+len40 len128
+len40 len196
+len40 len256
+len40 len384
+len40 len512
+len40 len728
+
+len60 len60
+len60 len64
+len60 len66
+len60 len128
+len60 len196
+len60 len256
+len60 len384
+len60 len512
+len60 len728
+
+len64 len64
+len64 len66
+len64 len128
+len64 len196
+len64 len256
+len64 len384
+len64 len512
+len64 len728
+
+len66 len66
+len66 len128
+len66 len196
+len66 len256
+len66 len384
+len66 len512
+len66 len728
+
+len128 len128
+len128 len196
+len128 len256
+len128 len384
+len128 len512
+len128 len728
+
+len196 len196
+len196 len256
+len196 len384
+len196 len512
+len196 len728
+
+len256 len256
+len256 len384
+len256 len512
+len256 len728
+
+len384 len384
+len384 len512
+len384 len728
+
+len512 len512
+len512 len728
+
+len728 len728
+
+len512[:] len728[0:728]
+len512[2:] len728[:726]

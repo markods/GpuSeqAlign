@@ -24,11 +24,11 @@ public:
         NwPrintScoreFn printScoreFn,
         NwPrintTraceFn printTraceFn);
 
-    NwStat align(const NwAlgParams& algParams, NwAlgInput& nw, NwAlgResult& res);
-    NwStat trace(NwAlgInput& nw, NwAlgResult& res);
-    NwStat hash(const NwAlgInput& nw, NwAlgResult& res);
-    NwStat printScore(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
-    NwStat printTrace(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
+    NwStat align(const NwAlgParams& algParams, NwAlgInput& nw, NwAlgResult& res) const;
+    NwStat trace(NwAlgInput& nw, NwAlgResult& res) const;
+    NwStat hash(const NwAlgInput& nw, NwAlgResult& res) const;
+    NwStat printScore(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res) const;
+    NwStat printTrace(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res) const;
 
 private:
     NwAlignFn _alignFn;

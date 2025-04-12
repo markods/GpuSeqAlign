@@ -3,13 +3,16 @@
 
 #include "file_formats.hpp"
 #include <fstream>
+#include <optional>
+#include <string>
+#include <vector>
 
 struct NwCmdArgs
 {
     std::optional<std::string> substPath;
     std::optional<std::string> algParamPath;
     std::optional<std::string> seqPath;
-    std::optional<std::string> pairPath; // TODO: parse and use
+    std::optional<std::string> seqPairPath;
     std::optional<std::string> resPath;
 
     std::optional<std::string> substName;
@@ -35,7 +38,7 @@ struct NwCmdData
     NwSubstData substData;
     NwAlgParamsData algParamsData;
     NwSeqData seqData;
-    // NwPairData pairData;
+    NwSeqPairData seqPairData;
     std::ofstream resOfs;
 
     std::ofstream debugOfs;

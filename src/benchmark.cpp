@@ -10,15 +10,40 @@
 #include <iostream>
 #include <string>
 
+template <typename T>
+static NwStat vectorSubstringWithHeader(const std::vector<T>& vect, const NwRange& range, std::vector<T>& res)
+{
+    int64_t vectSizeNoHeader = (int64_t)vect.size() - 1 /*without header*/;
+
+    if ((range.l < 0 || range.l >= vectSizeNoHeader) || (range.r <= range.l || range.r > vectSizeNoHeader))
+    {
+        return NwStat::errorInvalidValue;
+    }
+
+    if ((!range.lNotDefault || range.l == 0) && (!range.rNotDefault || range.r == vectSizeNoHeader))
+    {
+        res = vect;
+        return NwStat::success;
+    }
+
+    res = std::vector<T> {};
+    res.reserve(1 + (range.r - range.l));
+    res.push_back(0); // Header.
+    res.insert(res.end(), 1 /*header*/ + vect.begin() + range.l, 1 /*header*/ + vect.begin() + range.r);
+
+    return NwStat::success;
+}
+
 // Structs used to verify that the algorithms' results are correct.
 struct NwCompareKey
 {
     std::string seqY_id;
     std::string seqX_id;
+    NwRange seqY_range;
+    NwRange seqX_range;
 
     friend bool operator==(const NwCompareKey& l, const NwCompareKey& r);
     friend bool operator!=(const NwCompareKey& l, const NwCompareKey& r);
-    friend bool operator<(const NwCompareKey& l, const NwCompareKey& r);
 };
 struct NwCompareRes
 {
@@ -29,26 +54,22 @@ struct NwCompareRes
     friend bool operator==(const NwCompareRes& l, const NwCompareRes& r);
     friend bool operator!=(const NwCompareRes& l, const NwCompareRes& r);
 };
-
-bool operator<(const NwCompareKey& l, const NwCompareKey& r)
-{
-    bool res =
-        (l.seqY_id < r.seqY_id) ||
-        (l.seqY_id == r.seqY_id && l.seqX_id < r.seqX_id);
-    return res;
-}
 bool operator==(const NwCompareKey& l, const NwCompareKey& r)
 {
     bool res =
         l.seqY_id == r.seqY_id &&
-        l.seqX_id == r.seqX_id;
+        l.seqX_id == r.seqX_id &&
+        l.seqY_range == r.seqY_range &&
+        l.seqX_range == r.seqX_range;
     return res;
 }
 bool operator!=(const NwCompareKey& l, const NwCompareKey& r)
 {
     bool res =
         l.seqY_id != r.seqY_id ||
-        l.seqX_id != r.seqX_id;
+        l.seqX_id != r.seqX_id ||
+        l.seqY_range != r.seqY_range ||
+        l.seqX_range != r.seqX_range;
     return res;
 }
 
@@ -93,49 +114,43 @@ bool operator!=(const NwCompareRes& l, const NwCompareRes& r)
     return res;
 }
 
-// check that the result hashes match the hashes calculated by the first algorithm (the gold standard)
+// Check that the result hashes match the hashes calculated by the reference algorithm (calculated first).
 static NwStat setOrVerifyResult(const NwAlgResult& res, Dict<NwCompareKey, NwCompareRes>& compareMap)
 {
     NwCompareKey key;
     key.seqY_id = res.seqY_id;
     key.seqX_id = res.seqX_id;
+    key.seqY_range = res.seqY_range;
+    key.seqX_range = res.seqX_range;
 
     NwCompareRes calcVal {};
     calcVal.align_cost = res.align_cost;
     calcVal.score_hash = res.score_hash;
     calcVal.trace_hash = res.trace_hash;
 
-    // if this is the first time the two sequences have been aligned
     auto compareRes = compareMap.find(key);
     if (compareRes == compareMap.end())
     {
-        // add the calculated (gold) values to the map
         compareMap[key] = calcVal;
         return NwStat::success;
     }
 
-    // if the calculated value is not the same as the expected value
     NwCompareRes& expVal = compareMap[key];
     if (calcVal != expVal)
     {
-        // the current algorithm probably made a mistake during calculation
         return NwStat::errorInvalidResult;
     }
 
-    // the current and gold algoritm agree on the results
     return NwStat::success;
 }
 
-// combine results from many repetitions into one
-static NwAlgResult combineResults(std::vector<NwAlgResult>& resList)
+static NwAlgResult combineRepResults(std::vector<NwAlgResult>& resList)
 {
-    // if the result list is empty, return a default initialized result
     if (resList.empty())
     {
         return NwAlgResult {};
     }
 
-    // get the stopwatches from multiple repeats as lists
     std::vector<Stopwatch> swAlignList {};
     std::vector<Stopwatch> swHashList {};
     std::vector<Stopwatch> swTraceList {};
@@ -146,10 +161,8 @@ static NwAlgResult combineResults(std::vector<NwAlgResult>& resList)
         swTraceList.push_back(curr.sw_trace);
     }
 
-    // copy on purpose here -- don't modify the given result list
-    // +   take the last result since it might have an error (if it errored it is definitely the last result)
-    NwAlgResult res = resList[resList.size() - 1];
-    // combine the stopwatches from many repeats into one
+    // Take the last result - if it errored it is definitely the last result.
+    NwAlgResult res = resList[resList.size() - 1]; // Copy on purpose.
     res.sw_align = Stopwatch::combine(swAlignList);
     res.sw_hash = Stopwatch::combine(swHashList);
     res.sw_trace = Stopwatch::combine(swTraceList);
@@ -159,7 +172,7 @@ static NwAlgResult combineResults(std::vector<NwAlgResult>& resList)
 
 static NwStat initNwInput(const NwCmdArgs& cmdArgs, const NwCmdData& cmdData, NwAlgInput& nw)
 {
-    // initialize the device parameters
+    // Initialize the device parameters.
     cudaDeviceProp deviceProps {};
     if (auto cudaStatus = cudaGetDeviceProperties(&deviceProps, 0 /*deviceId*/); cudaSuccess != cudaStatus)
     {
@@ -171,7 +184,7 @@ static NwStat initNwInput(const NwCmdArgs& cmdArgs, const NwCmdData& cmdData, Nw
     nw.warpsz = deviceProps.warpSize;
     nw.maxThreadsPerBlock = deviceProps.maxThreadsPerBlock;
 
-    // initialize the substitution matrix on the cpu and gpu
+    // Initialize the substitution matrix on the cpu and gpu.
     try
     {
         nw.subst = cmdData.substData.substMap.at(cmdArgs.substName.value());
@@ -183,7 +196,7 @@ static NwStat initNwInput(const NwCmdArgs& cmdArgs, const NwCmdData& cmdData, Nw
         return NwStat::errorInvalidValue;
     }
 
-    // reserve space in the gpu global memory
+    // Reserve space in the gpu global memory.
     try
     {
         nw.subst_gpu.init(nw.substsz * nw.substsz);
@@ -194,17 +207,74 @@ static NwStat initNwInput(const NwCmdArgs& cmdArgs, const NwCmdData& cmdData, Nw
         return NwStat::errorMemoryAllocation;
     }
 
-    // transfer the substitution matrix to the gpu global memory
+    // Transfer the substitution matrix to the gpu global memory.
     if (auto cudaStatus = memTransfer(nw.subst_gpu, nw.subst, nw.substsz * nw.substsz); cudaSuccess != cudaStatus)
     {
         std::cerr << "error: could not transfer substitution matrix to the gpu\n";
         return NwStat::errorMemoryTransfer;
     }
 
-    // initialize the gapoCost cost
+    // Initialize the gapoCost cost.
     nw.gapoCost = cmdArgs.gapoCost.value();
 
     return NwStat::success;
+}
+
+static void printBenchReportLine(
+    const NwCmdArgs& cmdArgs,
+    NwCmdData& cmdData,
+    const NwAlgorithm& alg,
+    const NwAlgInput& nw,
+    const NwAlgResult& repResCombined)
+{
+    // Print progress to stdout.
+    if (cmdArgs.fWriteProgress.value())
+    {
+        if (repResCombined.stat == NwStat::success)
+        {
+            std::cout << '.' << std::flush;
+        }
+        else
+        {
+            std::cout << repResCombined.errstep << std::flush;
+        }
+    }
+
+    // Print the result to the tsv output file.
+    writeResultLineToTsv(cmdData.resOfs, repResCombined, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
+    if (cmdArgs.fWriteProgress.value())
+    {
+        // Since we write to progress immediately, write to file immediately as well.
+        cmdData.resOfs.flush();
+    }
+
+    // Print the result to the debug output file.
+    if (cmdArgs.fPrintScore.value() || cmdArgs.fPrintTrace.value())
+    {
+        cmdData.debugOfs << ">results\n";
+        writeResultHeaderToTsv(cmdData.debugOfs, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
+        writeResultLineToTsv(cmdData.debugOfs, repResCombined, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
+
+        if (cmdArgs.fPrintTrace.value())
+        {
+            cmdData.debugOfs << "+\n>edit trace\n";
+            alg.printTrace(cmdData.debugOfs, nw, repResCombined);
+        }
+
+        if (cmdArgs.fPrintScore.value())
+        {
+            cmdData.debugOfs << "+\n>score matrix\n";
+            alg.printScore(cmdData.debugOfs, nw, repResCombined);
+        }
+
+        cmdData.debugOfs << "\n\n";
+
+        if (cmdArgs.fWriteProgress.value())
+        {
+            // Since we write to progress immediately, write to file immediately as well.
+            cmdData.debugOfs.flush();
+        }
+    }
 }
 
 NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkData& benchData)
@@ -221,6 +291,17 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
     initNwInput(cmdArgs, cmdData, nw);
 
     auto seqList = cmdData.seqData.seqMap.values();
+    auto& seqPairList = cmdData.seqPairData.pairList;
+
+    Dict<std::string, int> seqIdxMap {};
+    {
+        int iSeq = 0;
+        for (const auto& seq : cmdData.seqData.seqMap)
+        {
+            seqIdxMap.insert(seq.second.id, iSeq);
+            iSeq++;
+        }
+    }
 
     writeResultHeaderToTsv(cmdData.resOfs, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
     if (cmdArgs.fWriteProgress.value())
@@ -237,186 +318,134 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
         algNames.insert(algNames.begin(), refAlgName);
     }
 
-    // for all algorithms which have parameters in the param map
+    // For all selected algorithms.
     for (auto& algName : algNames)
     {
         if (cmdArgs.fWriteProgress.value())
         {
-            std::cout << algName << ":";
+            std::cout << algName << ":\n";
         }
 
         NwAlgorithm& alg = algMap[algName];
         NwAlgParams algParams = cmdData.algParamsData.paramMap.at(algName); // Copy on purpose.
 
-        // for all Y sequences + for all X sequences (also compare every sequence with itself)
-        for (int iY = 0; iY < seqList.size(); iY++)
+        // For all sequence pairs.
+        for (const NwSeqPair& seqPair : seqPairList)
         {
-            if (cmdArgs.fWriteProgress.value())
+            int iY = seqIdxMap.at(seqPair.seqY_id);
+            int iX = seqIdxMap.at(seqPair.seqX_id);
+
+            if (NwStat stat = vectorSubstringWithHeader(seqList[iY].seq, seqPair.seqY_range, nw.seqY); stat != NwStat::success)
             {
-                std::cout << "\n"
-                          << std::flush
-                          << "|";
+                std::cerr << "error: cannot take substring from seqY\n";
+                return stat;
+            }
+            if (NwStat stat = vectorSubstringWithHeader(seqList[iX].seq, seqPair.seqX_range, nw.seqX); stat != NwStat::success)
+            {
+                std::cerr << "error: cannot take substring from seqX\n";
+                return stat;
             }
 
-            for (int iX = iY; iX < seqList.size(); iX++)
+            // Already includes header (zeroth) element.
+            nw.adjrows = (int)nw.seqY.size();
+            nw.adjcols = (int)nw.seqX.size();
+
+            // For all parameter combinations.
+            for (; algParams.hasCurr(); algParams.next())
             {
-                nw.seqY = seqList[iY].seq;
-                nw.adjrows = (int)nw.seqY.size();
+                std::vector<NwAlgResult> repResList {};
 
-                nw.seqX = seqList[iX].seq;
-                nw.adjcols = (int)nw.seqX.size();
-
-                // for all parameter combinations
-                for (; algParams.hasCurr(); algParams.next())
+                // For all requested repeats.
+                for (int iR = -cmdArgs.warmupPerAlign.value(); iR < cmdArgs.samplesPerAlign.value(); iR++)
                 {
-                    // Results from multiple repetitions.
-                    std::vector<NwAlgResult> resList {};
-
-                    // for all requested repeats
-                    for (int iR = -cmdArgs.warmupPerAlign.value(); iR < cmdArgs.samplesPerAlign.value(); iR++)
+                    auto defer2 = make_defer([&]() noexcept
                     {
-                        auto defer2 = make_defer([&]() noexcept
+                        nw.resetAllocsBenchmarkCycle();
+                    });
+
+                    repResList.push_back(NwAlgResult {});
+                    NwAlgResult& res = repResList.back();
+
+                    res.algName = algName;
+                    res.algParams = algParams.copy();
+                    res.seqY_idx = iY;
+                    res.seqX_idx = iX;
+                    res.seqY_id = seqList[iY].id;
+                    res.seqX_id = seqList[iX].id;
+                    res.seqY_range = seqPair.seqY_range;
+                    res.seqX_range = seqPair.seqX_range;
+                    //
+                    res.seqY_len = nw.seqY.size() - 1 /*header*/;
+                    res.seqX_len = nw.seqX.size() - 1 /*header*/;
+                    res.substName = cmdArgs.substName.value();
+                    res.gapoCost = cmdArgs.gapoCost.value();
+                    res.warmup_runs = cmdArgs.warmupPerAlign.value();
+                    res.sample_runs = cmdArgs.samplesPerAlign.value();
+                    res.last_run_idx = iR;
+
+                    // Clear cuda non-sticky errors and get possible cuda sticky errors.
+                    // Since sticky errors cannot be cleared, repeat twice.
+                    if (auto cudaStatus = (cudaGetLastError(), cudaGetLastError()); cudaStatus != cudaSuccess)
+                    {
+                        std::cerr << "error: corrupted cuda context\n";
+                        return NwStat::errorCudaGeneral;
+                    }
+
+                    // Compare the sequences, hash and trace the score matrices, and verify the soundness of the results.
+                    if (!res.errstep && NwStat::success != (res.stat = alg.align(algParams, nw, res)))
+                    {
+                        if (res.stat == NwStat::errorInvalidValue)
                         {
-                            nw.resetAllocsBenchmarkCycle();
-                        });
-
-                        resList.push_back(NwAlgResult {});
-                        NwAlgResult& res = resList.back();
-
-                        res.algName = algName;
-                        res.algParams = algParams.copy();
-                        res.seqY_idx = iY;
-                        res.seqX_idx = iX;
-                        res.seqY_id = seqList[iY].id;
-                        res.seqX_id = seqList[iX].id;
-                        //
-                        res.seqY_len = nw.seqY.size() - 1 /*header*/;
-                        res.seqX_len = nw.seqX.size() - 1 /*header*/;
-                        res.substName = cmdArgs.substName.value();
-                        res.gapoCost = cmdArgs.gapoCost.value();
-                        res.warmup_runs = cmdArgs.warmupPerAlign.value();
-                        res.sample_runs = cmdArgs.samplesPerAlign.value();
-
-                        // Clear cuda non-sticky errors and get possible cuda sticky errors.
-                        // Since sticky errors cannot be cleared, so repeat twice.
-                        if (auto cudaStatus = (cudaGetLastError(), cudaGetLastError()); cudaStatus != cudaSuccess)
-                        {
-                            std::cerr << "error: corrupted cuda context\n";
-                            return NwStat::errorCudaGeneral;
+                            res.errstep = 1;
                         }
-
-                        // compare the sequences, hash and trace the score matrices, and verify the soundness of the results
-                        if (!res.errstep && NwStat::success != (res.stat = alg.align(algParams, nw, res)))
+                        else
                         {
-                            if (res.stat == NwStat::errorInvalidValue)
-                            {
-                                res.errstep = 1;
-                            }
-                            else
-                            {
-                                res.errstep = 2;
-                            }
-                        }
-                        if (cmdArgs.fCalcScoreHash.value() && !res.errstep && NwStat::success != (res.stat = alg.hash(nw, res)))
-                        {
-                            res.errstep = 3;
-                        }
-                        if (cmdArgs.fCalcTrace.value() && !res.errstep && NwStat::success != (res.stat = alg.trace(nw, res)))
-                        {
-                            res.errstep = 4;
-                        }
-                        if (!res.errstep && NwStat::success != (res.stat = setOrVerifyResult(res, compareMap)))
-                        {
-                            res.errstep = 5;
-                            benchData.calcErrors++;
-                        }
-
-                        if (iR < 0)
-                        {
-                            // Discard warmup runs.
-                            resList.pop_back();
-                        }
-
-                        if (cmdArgs.fWriteProgress.value())
-                        {
-                            // if the result is successful, print a dot, otherwise an x
-                            if (res.stat == NwStat::success)
-                            {
-                                std::cout << '.' << std::flush;
-                            }
-                            else
-                            {
-                                std::cout << res.errstep << std::flush;
-                            }
-                        }
-
-                        // Last iteration.
-                        if (iR == cmdArgs.samplesPerAlign.value() - 1)
-                        {
-                            // add the result to the results list
-                            NwAlgResult resCombined {combineResults(resList)};
-                            resList.clear();
-                            benchData.resultList.push_back(resCombined);
-
-                            // print the result as a tsv line to the tsv output file
-                            writeResultLineToTsv(cmdData.resOfs, resCombined, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
-                            if (cmdArgs.fWriteProgress.value())
-                            {
-                                // Since we write to progress immediately, write to file immediately as well.
-                                cmdData.resOfs.flush();
-                            }
-
-                            // print the result as a tsv line to the debug output file
-                            if (cmdArgs.fPrintScore.value() || cmdArgs.fPrintTrace.value())
-                            {
-                                cmdData.debugOfs << ">results\n";
-                                writeResultHeaderToTsv(cmdData.debugOfs, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
-                                writeResultLineToTsv(cmdData.debugOfs, resCombined, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
-
-                                if (cmdArgs.fPrintTrace.value())
-                                {
-                                    cmdData.debugOfs << "+\n>edit trace\n";
-                                    alg.printTrace(cmdData.debugOfs, nw, resCombined);
-                                }
-
-                                if (cmdArgs.fPrintScore.value())
-                                {
-                                    cmdData.debugOfs << "+\n>score matrix\n";
-                                    alg.printScore(cmdData.debugOfs, nw, resCombined);
-                                }
-
-                                cmdData.debugOfs << "\n\n";
-
-                                if (cmdArgs.fWriteProgress.value())
-                                {
-                                    // Since we write to progress immediately, write to file immediately as well.
-                                    cmdData.debugOfs.flush();
-                                }
-                            }
+                            res.errstep = 2;
                         }
                     }
-                }
+                    if (cmdArgs.fCalcScoreHash.value() && !res.errstep && NwStat::success != (res.stat = alg.hash(nw, res)))
+                    {
+                        res.errstep = 3;
+                    }
+                    if (cmdArgs.fCalcTrace.value() && !res.errstep && NwStat::success != (res.stat = alg.trace(nw, res)))
+                    {
+                        res.errstep = 4;
+                    }
+                    if (!res.errstep && NwStat::success != (res.stat = setOrVerifyResult(res, compareMap)))
+                    {
+                        res.errstep = 5;
+                        benchData.calcErrors++;
+                    }
 
-                // reset the algorithm parameters
-                algParams.reset();
+                    if (iR < 0 && res.stat == NwStat::success)
+                    {
+                        // Discard successful warmup runs.
+                        repResList.pop_back();
+                    }
 
-                if (cmdArgs.fWriteProgress.value())
-                {
-                    // seqX-seqY comparison separator
-                    std::cout << '|' << std::flush;
+                    // Last iteration.
+                    if (iR == cmdArgs.samplesPerAlign.value() - 1 || res.stat != NwStat::success)
+                    {
+                        NwAlgResult repResCombined {combineRepResults(repResList)};
+                        repResList.clear();
+                        benchData.resultList.push_back(repResCombined);
+
+                        printBenchReportLine(cmdArgs, cmdData, alg, nw, repResCombined);
+                    }
                 }
             }
+
+            algParams.reset();
         }
 
         if (cmdArgs.fWriteProgress.value())
         {
-            // algorithm separator
+            // Algorithm separator.
             std::cout << "\n\n"
                       << std::flush;
         }
     }
 
-    // print the number of calculation errors
     if (benchData.calcErrors > 0)
     {
         std::cerr << "error: " << benchData.calcErrors << " calculation error(s)\n";

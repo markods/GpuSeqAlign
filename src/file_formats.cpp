@@ -1,7 +1,16 @@
 #include "file_formats.hpp"
 #include "defer.hpp"
 #include "fmt_guard.hpp"
+#include <cctype>
 #include <sstream>
+
+static void updateColIdx(std::istringstream& issLine, int64_t& iCol)
+{
+    if (issLine.peek() != EOF)
+    {
+        iCol = (int64_t)issLine.tellg();
+    }
+}
 
 static NwStat error_if(
     const bool error_if_true,
@@ -14,7 +23,8 @@ static NwStat error_if(
 {
     if (error_if_true)
     {
-        error_msg = path + ":" + std::to_string(iLine) + ":" + std::to_string(iCol) + ": " + message;
+        // Lines and columns start from 1.
+        error_msg = path + ":" + std::to_string(1 + iLine) + ":" + std::to_string(1 + iCol) + ": " + message;
         return returnStat;
     }
     return NwStat::success;
@@ -70,23 +80,46 @@ static NwStat readFastaHeaderLine(
     const std::string& path,
     const int64_t iLine,
     int64_t iCol,
-    NwSeq& nw_seq,
+    const Dict<std::string, NwSeq>& seqMap,
+    NwSeq& nwSeq,
     std::string& error_msg)
 {
+    // Consume '>' symbol.
     ZIG_TRY(NwStat::success, error_if(issLine.peek() != '>', "expected sequence header (>)", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
-    issLine.get(); // Consume '>' symbol.
+    issLine.get();
+    ZIG_TRY(NwStat::success, error_if(issLine.fail(), "expected sequence id after '>' symbol", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+    updateColIdx(issLine, iCol);
 
-    issLine >> nw_seq.id;
-    ZIG_TRY(NwStat::success, error_if(issLine.fail() || nw_seq.id.empty(), "expected sequence id after '>' symbol", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
-
+    // Consume possible whitespace.
     issLine >> std::ws;
-    if (!issLine.eof())
-    {
-        iCol = (int64_t)issLine.tellg();
+    updateColIdx(issLine, iCol);
 
-        std::getline(issLine, nw_seq.info, '\n');
-        ZIG_TRY(NwStat::success, error_if(issLine.fail() || nw_seq.info.empty(), "expected sequence info after sequence id", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+    // Consume sequence id.
+    issLine >> nwSeq.id;
+    ZIG_TRY(NwStat::success, error_if(issLine.fail() || nwSeq.id.empty(), "expected sequence id after '>' symbol", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+    ZIG_TRY(NwStat::success, error_if(seqMap.contains(nwSeq.id), "duplicate sequence id", path, iLine, iCol, NwStat::errorInvalidValue, error_msg));
+    updateColIdx(issLine, iCol);
+
+    // Consume possible whitespace.
+    issLine >> std::ws;
+    updateColIdx(issLine, iCol);
+
+    if (issLine.peek() == EOF)
+    {
+        return NwStat::success;
     }
+
+    // Consume possible line info.
+    std::getline(issLine, nwSeq.info, '\n');
+    ZIG_TRY(NwStat::success, error_if(issLine.fail() || nwSeq.info.empty(), "expected sequence info after sequence id", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+    updateColIdx(issLine, iCol);
+
+    // Trim whitespace from line info end.
+    auto firstWsIter = std::find_if(nwSeq.info.rbegin(), nwSeq.info.rend(), [](char c)
+    {
+        return !std::isspace(c);
+    }).base();
+    nwSeq.info.erase(firstWsIter, nwSeq.info.end());
 
     return NwStat::success;
 }
@@ -116,20 +149,20 @@ NwStat readFromFastaFormat(
     FastaState state = FastaState::expect_header;
     NwSeq nw_seq {};
     std::string strLine {};
-    int64_t iLine {-1 + 1 /*lines start from 1, not 0*/};
-    int64_t iCol {1 /*columns start from 1, not 0*/};
+    int64_t iLine {-1};
+    int64_t iCol {};
     bool read_next_line {true};
 
     while (state != FastaState::eof)
     {
         if (read_next_line)
         {
-            if (!is.eof())
+            if (is.peek() != EOF)
             {
-                std::getline(is, strLine, '\n');
-                iLine++;
                 iCol = 0;
+                iLine++;
 
+                std::getline(is, strLine, '\n');
                 ZIG_TRY(NwStat::success, error_if(is.bad(), "could not read line", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
             }
             else
@@ -140,7 +173,9 @@ NwStat readFromFastaFormat(
 
         std::istringstream issLine {strLine};
         issLine >> std::ws;
-        if (state != FastaState::eof && issLine.eof())
+        updateColIdx(issLine, iCol);
+
+        if (state != FastaState::eof && issLine.peek() == EOF)
         {
             // Skip empty lines.
             continue;
@@ -150,7 +185,7 @@ NwStat readFromFastaFormat(
         {
         case FastaState::expect_header:
         {
-            ZIG_TRY(NwStat::success, readFastaHeaderLine(issLine, path, iLine, iCol, nw_seq, error_msg));
+            ZIG_TRY(NwStat::success, readFastaHeaderLine(issLine, path, iLine, iCol, seqData.seqMap, nw_seq, error_msg));
             state = FastaState::expect_sequence_line;
             read_next_line = true;
             break;
@@ -194,8 +229,168 @@ NwStat readFromFastaFormat(
         }
     }
 
+    ZIG_TRY(NwStat::success, error_if(is.fail(), "could not read line", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
     ZIG_TRY(NwStat::success, error_if(state == FastaState::expect_header, "expected sequence header (>)", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
     ZIG_TRY(NwStat::success, error_if(state == FastaState::expect_sequence_line, "expected sequence after header", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+
+    return NwStat::success;
+}
+
+static NwStat readSeqIdAndRange(
+    std::istringstream& issLine,
+    const std::string& path,
+    const int64_t iLine,
+    int64_t iCol,
+    std::string& seqId,
+    NwRange& seqRange,
+    const Dict<std::string, NwSeq>& seqMap,
+    std::string& error_msg)
+{
+    // Consume possible whitespace.
+    issLine >> std::ws;
+    updateColIdx(issLine, iCol);
+
+    // Consume sequence id.
+    seqId = "";
+    for (int c; (c = issLine.peek()) != EOF; issLine.get())
+    {
+        if (std::isspace(c) || c == '[')
+        {
+            break;
+        }
+        seqId.push_back((char)c);
+    }
+    ZIG_TRY(NwStat::success, error_if(issLine.fail() || seqId.empty(), "expected sequence id", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+    ZIG_TRY(NwStat::success, error_if(!seqMap.contains(seqId), "unknown sequence id", path, iLine, iCol, NwStat::errorInvalidValue, error_msg));
+    updateColIdx(issLine, iCol);
+
+    int64_t seqSizeNoHeader = (int64_t)seqMap.at(seqId).seq.size() - 1 /*without header*/;
+    seqRange.l = 0;
+    seqRange.r = seqSizeNoHeader;
+    seqRange.lNotDefault = false;
+    seqRange.rNotDefault = false;
+
+    if (issLine.peek() != '[')
+    {
+        // Default range (whole sequence).
+        return NwStat::success;
+    }
+
+    // Consume left angle bracket '['.
+    issLine.get();
+    ZIG_TRY(NwStat::success, error_if(issLine.fail(), "could not parse '['", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+    updateColIdx(issLine, iCol);
+
+    // Consume possible whitespace.
+    issLine >> std::ws;
+    updateColIdx(issLine, iCol);
+
+    // Consume possible left range index.
+    if (auto c = issLine.peek(); c != ':')
+    {
+        ZIG_TRY(NwStat::success, error_if(!std::isdigit(c) && c != '+' && c != '-', "expected a number", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+        issLine >> seqRange.l;
+        seqRange.lNotDefault = true;
+
+        ZIG_TRY(NwStat::success, error_if(issLine.fail(), "expected a number", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+        ZIG_TRY(NwStat::success, error_if(seqRange.l < 0, "left bound must be non-negative", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+        ZIG_TRY(NwStat::success, error_if(seqRange.l >= seqSizeNoHeader, "left bound greater than or equal to sequence length", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+        updateColIdx(issLine, iCol);
+    }
+
+    // Consume possible whitespace.
+    issLine >> std::ws;
+    updateColIdx(issLine, iCol);
+
+    // Consume colon.
+    ZIG_TRY(NwStat::success, error_if(issLine.peek() != ':', "expected ':'", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+    issLine.get();
+    ZIG_TRY(NwStat::success, error_if(issLine.fail(), "could not parse ':'", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+    updateColIdx(issLine, iCol);
+
+    // Consume possible whitespace.
+    issLine >> std::ws;
+    updateColIdx(issLine, iCol);
+
+    // Consume possible right range index.
+    if (auto c = issLine.peek(); c != ']')
+    {
+        ZIG_TRY(NwStat::success, error_if(!std::isdigit(c) && c != '+' && c != '-', "expected a number", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+        issLine >> seqRange.r;
+        seqRange.rNotDefault = true;
+
+        ZIG_TRY(NwStat::success, error_if(issLine.fail(), "expected a number", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+        ZIG_TRY(NwStat::success, error_if(seqRange.r <= seqRange.l, "right bound must be greater than left", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+        ZIG_TRY(NwStat::success, error_if(seqRange.r > seqSizeNoHeader, "right bound greater than sequence length", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+        updateColIdx(issLine, iCol);
+    }
+
+    // Consume possible whitespace.
+    issLine >> std::ws;
+    updateColIdx(issLine, iCol);
+
+    // Consume right angle bracket (']').
+    ZIG_TRY(NwStat::success, error_if(issLine.peek() != ']', "expected ']'", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+    issLine.get();
+    ZIG_TRY(NwStat::success, error_if(issLine.fail(), "could not parse ']'", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+    updateColIdx(issLine, iCol);
+
+    return NwStat::success;
+}
+
+NwStat readFromSeqPairFormat(
+    const std::string& path,
+    std::istream& is,
+    NwSeqPairData& seqPairData,
+    const Dict<std::string, NwSeq>& seqMap,
+    std::string& error_msg)
+{
+    NwSeqPair seqPair {};
+    std::string strLine {};
+    int64_t iLine {-1};
+    int64_t iCol {0};
+
+    while (true)
+    {
+        if (is.peek() != EOF)
+        {
+            iLine++;
+            iCol = 0;
+
+            std::getline(is, strLine, '\n');
+            ZIG_TRY(NwStat::success, error_if(is.bad(), "could not read line", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+        }
+        else
+        {
+            break;
+        }
+
+        std::istringstream issLine {strLine};
+        issLine >> std::ws;
+        updateColIdx(issLine, iCol);
+
+        if (issLine.peek() == EOF)
+        {
+            // Skip empty lines.
+            continue;
+        }
+
+        ZIG_TRY(NwStat::success, readSeqIdAndRange(issLine, path, iLine, iCol, seqPair.seqY_id, seqPair.seqY_range, seqMap, error_msg));
+        ZIG_TRY(NwStat::success, readSeqIdAndRange(issLine, path, iLine, iCol, seqPair.seqX_id, seqPair.seqX_range, seqMap, error_msg));
+        issLine >> std::ws;
+        updateColIdx(issLine, iCol);
+
+        if (issLine.peek() != EOF)
+        {
+            ZIG_TRY(NwStat::success, error_if(true, "expected next line", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+        }
+
+        seqPairData.pairList.push_back(seqPair);
+        seqPair = {};
+    }
+
+    ZIG_TRY(NwStat::success, error_if(is.fail(), "could not read line", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+    ZIG_TRY(NwStat::success, error_if(seqPairData.pairList.size() == 0, "expected at least one sequence pair", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
 
     return NwStat::success;
 }
@@ -220,6 +415,7 @@ void writeResultHeaderToTsv(std::ostream& os,
     os << "\t" << "gapo_cost";
     os << "\t" << "warmup_runs";
     os << "\t" << "sample_runs";
+    os << "\t" << "last_run_idx";
 
     os << "\t" << "alg_params";
 
@@ -256,6 +452,25 @@ void writeResultHeaderToTsv(std::ostream& os,
     os << '\n';
 }
 
+static void seqIdAndRangeToTsv(std::ostream& os, const std::string seq_id, const NwRange& seq_range)
+{
+    os << seq_id;
+    if (seq_range.lNotDefault || seq_range.rNotDefault)
+    {
+        os << "[";
+        if (seq_range.lNotDefault)
+        {
+            os << seq_range.l;
+        }
+        os << ":";
+        if (seq_range.rNotDefault)
+        {
+            os << seq_range.r;
+        }
+        os << "]";
+    }
+}
+
 static void lapTimeToTsv(std::ostream& os, float lapTime)
 {
     os << std::fixed << std::setprecision(4) << lapTime;
@@ -272,8 +487,10 @@ void writeResultLineToTsv(
     os << res.algName;
     os << "\t" << res.seqY_idx;
     os << "\t" << res.seqX_idx;
-    os << "\t" << res.seqY_id;
-    os << "\t" << res.seqX_id;
+    os << "\t";
+    seqIdAndRangeToTsv(os, res.seqY_id, res.seqY_range);
+    os << "\t";
+    seqIdAndRangeToTsv(os, res.seqX_id, res.seqX_range);
 
     os << "\t" << res.seqY_len;
     os << "\t" << res.seqX_len;
@@ -281,6 +498,7 @@ void writeResultLineToTsv(
     os << "\t" << res.gapoCost;
     os << "\t" << res.warmup_runs;
     os << "\t" << res.sample_runs;
+    os << "\t" << res.last_run_idx;
 
     nlohmann::ordered_json algParamsJson = res.algParams;
     os << "\t" << algParamsJson.dump();

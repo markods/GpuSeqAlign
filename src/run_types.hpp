@@ -5,6 +5,7 @@
 #include "math.hpp"
 #include "memory.hpp"
 #include "stopwatch.hpp"
+#include <string>
 #include <vector>
 
 // Needleman-Wunsch status
@@ -20,6 +21,17 @@ enum class NwStat : int
     errorInvalidFormat,
     errorInvalidValue,
     errorInvalidResult,
+};
+
+struct NwRange
+{
+    bool lNotDefault;
+    bool rNotDefault;
+    int64_t l; // Inclusive.
+    int64_t r; // Exclusive.
+
+    friend bool operator==(const NwRange& l, const NwRange& r);
+    friend bool operator!=(const NwRange& l, const NwRange& r);
 };
 
 // parameter that takes values from a vector
@@ -112,6 +124,8 @@ struct NwAlgResult
     int seqX_idx;
     std::string seqY_id;
     std::string seqX_id;
+    NwRange seqY_range;
+    NwRange seqX_range;
 
     int errstep;          // 0 for success
     NwStat stat;          // 0 for success
@@ -123,6 +137,7 @@ struct NwAlgResult
     int gapoCost;
     int warmup_runs;
     int sample_runs;
+    int last_run_idx;
 
     int align_cost;
     unsigned score_hash;

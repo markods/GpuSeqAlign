@@ -132,31 +132,33 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <Text Include="resrc\pair_debug.txt">
+      <Filter>resrc</Filter>
+    </Text>
+    <Text Include="resrc\pair_generated_1.txt">
+      <Filter>resrc</Filter>
+    </Text>
+    <Text Include="resrc\pair_generated_2.txt">
+      <Filter>resrc</Filter>
+    </Text>
+    <Text Include="resrc\pair_optimize.txt">
+      <Filter>resrc</Filter>
+    </Text>
+    <Text Include="resrc\pair_profile.txt">
+      <Filter>resrc</Filter>
+    </Text>
+    <Text Include="resrc\pair_release.txt">
+      <Filter>resrc</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
     <None Include="resrc\param_best.json">
       <Filter>resrc</Filter>
     </None>
     <None Include="resrc\param_optimize.json">
       <Filter>resrc</Filter>
     </None>
-    <None Include="resrc\seq_debug.fa">
-      <Filter>resrc</Filter>
-    </None>
-    <None Include="resrc\seq_gen1.fa">
-      <Filter>resrc</Filter>
-    </None>
-    <None Include="resrc\seq_gen2.fa">
-      <Filter>resrc</Filter>
-    </None>
-    <None Include="resrc\seq_gen3.fa">
-      <Filter>resrc</Filter>
-    </None>
-    <None Include="resrc\seq_optimize.fa">
-      <Filter>resrc</Filter>
-    </None>
-    <None Include="resrc\seq_profile.fa">
-      <Filter>resrc</Filter>
-    </None>
-    <None Include="resrc\seq_release.fa">
+    <None Include="resrc\seq_generated.fa">
       <Filter>resrc</Filter>
     </None>
     <None Include="resrc\subst.json">

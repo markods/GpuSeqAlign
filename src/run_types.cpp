@@ -1,5 +1,18 @@
 #include "run_types.hpp"
 
+////// NwRange //////
+
+bool operator==(const NwRange& l, const NwRange& r)
+{
+    bool res = l.l == r.l && l.r == r.r;
+    return res;
+}
+bool operator!=(const NwRange& l, const NwRange& r)
+{
+    bool res = l.l != r.l || l.r != r.r;
+    return res;
+}
+
 ////// NwAlgParam //////
 
 NwAlgParam::NwAlgParam() = default;

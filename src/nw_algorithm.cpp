@@ -23,23 +23,23 @@ NwAlgorithm::NwAlgorithm(
       _printTraceFn(printTraceFn)
 { }
 
-NwStat NwAlgorithm::align(const NwAlgParams& algParams, NwAlgInput& nw, NwAlgResult& res)
+NwStat NwAlgorithm::align(const NwAlgParams& algParams, NwAlgInput& nw, NwAlgResult& res) const
 {
     return _alignFn(algParams, nw, res);
 }
-NwStat NwAlgorithm::trace(NwAlgInput& nw, NwAlgResult& res)
+NwStat NwAlgorithm::trace(NwAlgInput& nw, NwAlgResult& res) const
 {
     return _traceFn(nw, res);
 }
-NwStat NwAlgorithm::hash(const NwAlgInput& nw, NwAlgResult& res)
+NwStat NwAlgorithm::hash(const NwAlgInput& nw, NwAlgResult& res) const
 {
     return _hashFn(nw, res);
 }
-NwStat NwAlgorithm::printScore(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res)
+NwStat NwAlgorithm::printScore(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res) const
 {
     return _printScoreFn(os, nw, res);
 }
-NwStat NwAlgorithm::printTrace(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res)
+NwStat NwAlgorithm::printTrace(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res) const
 {
     return _printTraceFn(os, nw, res);
 }

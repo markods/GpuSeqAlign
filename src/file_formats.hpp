@@ -32,6 +32,19 @@ struct NwSeqData
     Dict<std::string, NwSeq> seqMap;
 };
 
+struct NwSeqPair
+{
+    std::string seqY_id;
+    std::string seqX_id;
+    NwRange seqY_range;
+    NwRange seqX_range;
+};
+
+struct NwSeqPairData
+{
+    std::vector<NwSeqPair> pairList;
+};
+
 namespace nlohmann
 {
 template <typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
@@ -127,6 +140,13 @@ NwStat readFromFastaFormat(
     std::istream& is,
     NwSeqData& seqData,
     const Dict<std::string, int>& letterMap,
+    std::string& error_msg);
+
+NwStat readFromSeqPairFormat(
+    const std::string& path,
+    std::istream& is,
+    NwSeqPairData& seqPairData,
+    const Dict<std::string, NwSeq>& seqMap,
     std::string& error_msg);
 
 void writeResultHeaderToTsv(std::ostream& os, bool fPrintScoreStats, bool fPrintTraceStats);
