@@ -2,6 +2,7 @@
 #include "nw_fns.hpp"
 #include "run_types.hpp"
 #include <limits>
+#include <vector>
 
 void NwTrace2_GetTileAndElemIJ(const NwAlgInput& nw, int i, int j, TileAndElemIJ& co)
 {
@@ -35,6 +36,7 @@ void NwTrace2_GetTileAndElemIJ(const NwAlgInput& nw, int i, int j, TileAndElemIJ
     }
 }
 
+// TODO: only load up to (and including) iInTile, jInTile
 void NwTrace2_AlignTile(std::vector<int>& tile, const NwAlgInput& nw, int iTile, int jTile)
 {
     //  x x x x x x

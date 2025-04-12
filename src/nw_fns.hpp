@@ -2,6 +2,7 @@
 #define INCLUDE_NW_FNS_HPP
 
 #include "run_types.hpp"
+#include <iostream>
 #include <vector>
 
 NwStat NwAlign_Cpu1_St_Row(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res);

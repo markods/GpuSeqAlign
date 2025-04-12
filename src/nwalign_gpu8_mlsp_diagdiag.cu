@@ -3,6 +3,7 @@
 #include "run_types.hpp"
 #include <cuda_runtime.h>
 #include <stdexcept>
+#include <vector>
 
 // Initialize the score matrix's header row and column.
 // The score matrix is represented as two matrices (row-major order):

@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 template <
     typename K,
