@@ -149,7 +149,16 @@ NwStat readFromSeqPairFormat(
     const Dict<std::string, NwSeq>& seqMap,
     std::string& error_msg);
 
-void writeResultHeaderToTsv(std::ostream& os, bool fPrintScoreStats, bool fPrintTraceStats);
-void writeResultLineToTsv(std::ostream& os, const NwAlgResult& res, bool fPrintScoreStats, bool fPrintTraceStats);
+struct TsvPrintCtl
+{
+    // Enum class turned out to be too much hassle.
+
+    unsigned writeColName : 1;
+    unsigned writeValue : 1;
+    unsigned fPrintScoreStats : 1;
+    unsigned fPrintTraceStats : 1;
+};
+
+NwStat writeNwResultToTsv(std::ostream& os, const NwAlgResult& res, const TsvPrintCtl printCtl);
 
 #endif // INCLUDE_FILE_FORMATS_HPP

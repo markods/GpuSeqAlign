@@ -220,7 +220,7 @@ static NwStat initNwInput(const NwCmdArgs& cmdArgs, const NwCmdData& cmdData, Nw
     return NwStat::success;
 }
 
-static void printBenchReportLine(
+static NwStat printBenchReportLine(
     const NwCmdArgs& cmdArgs,
     NwCmdData& cmdData,
     const NwAlgorithm& alg,
@@ -241,7 +241,13 @@ static void printBenchReportLine(
     }
 
     // Print the result to the tsv output file.
-    writeResultLineToTsv(cmdData.resOfs, repResCombined, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
+    {
+        TsvPrintCtl printCtl;
+        printCtl.writeValue = 1;
+        printCtl.fPrintScoreStats = cmdArgs.fCalcScoreHash.value();
+        printCtl.fPrintTraceStats = cmdArgs.fCalcTrace.value();
+        ZIG_TRY(NwStat::success, writeNwResultToTsv(cmdData.resOfs, repResCombined, printCtl));
+    }
     if (cmdArgs.fWriteProgress.value())
     {
         // Since we write to progress immediately, write to file immediately as well.
@@ -251,9 +257,19 @@ static void printBenchReportLine(
     // Print the result to the debug output file.
     if (cmdArgs.fPrintScore.value() || cmdArgs.fPrintTrace.value())
     {
+        TsvPrintCtl printCtl;
+        printCtl.fPrintScoreStats = cmdArgs.fCalcScoreHash.value();
+        printCtl.fPrintTraceStats = cmdArgs.fCalcTrace.value();
+
         cmdData.debugOfs << ">results\n";
-        writeResultHeaderToTsv(cmdData.debugOfs, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
-        writeResultLineToTsv(cmdData.debugOfs, repResCombined, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
+
+        printCtl.writeColName = 1;
+        printCtl.writeValue = 0;
+        ZIG_TRY(NwStat::success, writeNwResultToTsv(cmdData.debugOfs, repResCombined /*unused*/, printCtl));
+
+        printCtl.writeColName = 0;
+        printCtl.writeValue = 1;
+        ZIG_TRY(NwStat::success, writeNwResultToTsv(cmdData.debugOfs, repResCombined, printCtl));
 
         if (cmdArgs.fPrintTrace.value())
         {
@@ -275,6 +291,8 @@ static void printBenchReportLine(
             cmdData.debugOfs.flush();
         }
     }
+
+    return NwStat::success;
 }
 
 NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkData& benchData)
@@ -303,7 +321,15 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
         }
     }
 
-    writeResultHeaderToTsv(cmdData.resOfs, cmdArgs.fCalcScoreHash.value(), cmdArgs.fCalcTrace.value());
+    // Write tsv header.
+    {
+        TsvPrintCtl printCtl;
+        printCtl.writeColName = 1;
+        printCtl.fPrintScoreStats = cmdArgs.fCalcScoreHash.value();
+        printCtl.fPrintTraceStats = cmdArgs.fCalcTrace.value();
+        NwAlgResult res;
+        ZIG_TRY(NwStat::success, writeNwResultToTsv(cmdData.resOfs, res /*unused*/, printCtl));
+    }
     if (cmdArgs.fWriteProgress.value())
     {
         // Since we write to progress immediately, write to file immediately as well.
@@ -430,7 +456,7 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                         repResList.clear();
                         benchData.resultList.push_back(repResCombined);
 
-                        printBenchReportLine(cmdArgs, cmdData, alg, nw, repResCombined);
+                        ZIG_TRY(NwStat::success, printBenchReportLine(cmdArgs, cmdData, alg, nw, repResCombined));
                     }
                 }
             }

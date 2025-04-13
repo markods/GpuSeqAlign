@@ -2,6 +2,7 @@
 #include "defer.hpp"
 #include "fmt_guard.hpp"
 #include <cctype>
+#include <functional>
 #include <sstream>
 
 static void updateColIdx(std::istringstream& issLine, int64_t& iCol)
@@ -395,158 +396,119 @@ NwStat readFromSeqPairFormat(
     return NwStat::success;
 }
 
-// TODO: combine with writeResultLineToTsv
-void writeResultHeaderToTsv(std::ostream& os,
-    bool fPrintScoreStats,
-    bool fPrintTraceStats)
+template <typename T>
+static void fieldToTsv(
+    std::ostream& os,
+    const char* const fieldName,
+    const T fieldVal,
+    const TsvPrintCtl& printCtl,
+    std::optional<std::function<void(std::ostream&)>> format_fn = std::nullopt,
+    const bool writeSep = true)
 {
-    FormatFlagsGuard fg {os};
-    os.fill(' ');
-
-    os << "alg_name";
-    os << "\t" << "seqY_idx";
-    os << "\t" << "seqX_idx";
-    os << "\t" << "seqY_id";
-    os << "\t" << "seqX_id";
-
-    os << "\t" << "seqY_len";
-    os << "\t" << "seqX_len";
-    os << "\t" << "subst_name";
-    os << "\t" << "gapo_cost";
-    os << "\t" << "warmup_runs";
-    os << "\t" << "sample_runs";
-    os << "\t" << "last_run_idx";
-
-    os << "\t" << "alg_params";
-
-    os << "\t" << "err_step";
-    os << "\t" << "nw_stat";
-    os << "\t" << "cuda_stat";
-
-    os << "\t" << "align_cost";
-    if (fPrintScoreStats)
+    if (writeSep)
     {
-        os << "\t" << "score_hash";
+        os << '\t';
     }
-    if (fPrintTraceStats)
+    if (printCtl.writeColName)
     {
-        os << "\t" << "trace_hash";
+        os << fieldName;
     }
-
-    os << "\t" << "align.alloc";
-    os << "\t" << "align.cpy_dev";
-    os << "\t" << "align.init_hdr";
-    os << "\t" << "align.calc_init";
-    os << "\t" << "align.calc";
-    os << "\t" << "align.cpy_host";
-    if (fPrintScoreStats)
+    if (printCtl.writeValue)
     {
-        os << "\t" << "hash.calc";
+        if (format_fn.has_value())
+        {
+            FormatFlagsGuard fg {os};
+            format_fn.value()(os);
+            os << fieldVal;
+        }
+        else
+        {
+            os << fieldVal;
+        }
     }
-    if (fPrintTraceStats)
-    {
-        os << "\t" << "trace.alloc";
-        os << "\t" << "trace.calc";
-    }
-
-    os << '\n';
 }
 
-static void seqIdAndRangeToTsv(std::ostream& os, const std::string seq_id, const NwRange& seq_range)
+static std::string seqIdAndRangeToString(const std::string seq_id, const NwRange& seq_range)
 {
-    os << seq_id;
+    std::string res {seq_id};
+
     if (seq_range.lNotDefault || seq_range.rNotDefault)
     {
-        os << "[";
+        res.append("[");
         if (seq_range.lNotDefault)
         {
-            os << seq_range.l;
+            res.append(std::to_string(seq_range.l));
         }
-        os << ":";
+        res.append(":");
         if (seq_range.rNotDefault)
         {
-            os << seq_range.r;
+            res.append(std::to_string(seq_range.r));
         }
-        os << "]";
+        res.append("]");
     }
+
+    return res;
 }
 
-static void lapTimeToTsv(std::ostream& os, float lapTime)
+NwStat writeNwResultToTsv(std::ostream& os, const NwAlgResult& res, const TsvPrintCtl printCtl)
 {
-    os << std::fixed << std::setprecision(4) << lapTime;
-}
+    if (printCtl.writeColName == printCtl.writeValue)
+    {
+        return NwStat::errorInvalidValue;
+    }
 
-void writeResultLineToTsv(
-    std::ostream& os,
-    const NwAlgResult& res,
-    bool fPrintScoreStats,
-    bool fPrintTraceStats)
-{
-    FormatFlagsGuard fg {os};
+    auto fmt1 = [](std::ostream& os)
+    { os << std::hex << std::setw(8) << std::setfill('0'); };
+    auto fmt2 = [](std::ostream& os)
+    { os << std::fixed << std::setprecision(4); };
 
-    os << res.algName;
-    os << "\t" << res.seqY_idx;
-    os << "\t" << res.seqX_idx;
-    os << "\t";
-    seqIdAndRangeToTsv(os, res.seqY_id, res.seqY_range);
-    os << "\t";
-    seqIdAndRangeToTsv(os, res.seqX_id, res.seqX_range);
+    fieldToTsv(os, "alg_name", res.algName, printCtl, std::nullopt, false /*writeSep*/);
+    fieldToTsv(os, "seqY_idx", res.seqY_idx, printCtl);
+    fieldToTsv(os, "seqX_idx", res.seqX_idx, printCtl);
+    fieldToTsv(os, "seqY_id", seqIdAndRangeToString(res.seqY_id, res.seqY_range), printCtl);
+    fieldToTsv(os, "seqX_id", seqIdAndRangeToString(res.seqX_id, res.seqX_range), printCtl);
 
-    os << "\t" << res.seqY_len;
-    os << "\t" << res.seqX_len;
-    os << "\t" << res.substName;
-    os << "\t" << res.gapoCost;
-    os << "\t" << res.warmup_runs;
-    os << "\t" << res.sample_runs;
-    os << "\t" << res.last_run_idx;
+    fieldToTsv(os, "seqY_len", res.seqY_len, printCtl);
+    fieldToTsv(os, "seqX_len", res.seqX_len, printCtl);
+    fieldToTsv(os, "subst_name", res.substName, printCtl);
+    fieldToTsv(os, "gapo_cost", res.gapoCost, printCtl);
+    fieldToTsv(os, "warmup_runs", res.warmup_runs, printCtl);
+    fieldToTsv(os, "sample_runs", res.sample_runs, printCtl);
+    fieldToTsv(os, "last_run_idx", res.last_run_idx, printCtl);
 
     nlohmann::ordered_json algParamsJson = res.algParams;
-    os << "\t" << algParamsJson.dump();
+    fieldToTsv(os, "alg_params", algParamsJson.dump(), printCtl);
 
-    os << "\t" << res.errstep;
-    os << "\t" << int(res.stat);
-    os << "\t" << int(res.cudaStat);
+    fieldToTsv(os, "err_step", res.errstep, printCtl);
+    fieldToTsv(os, "nw_stat", int(res.stat), printCtl);
+    fieldToTsv(os, "cuda_stat", int(res.cudaStat), printCtl);
 
-    os << "\t" << res.align_cost;
-    if (fPrintScoreStats)
+    fieldToTsv(os, "align_cost", res.align_cost, printCtl);
+    if (printCtl.fPrintScoreStats)
     {
-        os.fill('0');
-        os << "\t" << std::setw(10) << res.score_hash;
-        fg.restore();
+        fieldToTsv(os, "score_hash", res.score_hash, printCtl, fmt1);
     }
-    if (fPrintTraceStats)
+    if (printCtl.fPrintTraceStats)
     {
-        os.fill('0');
-        os << "\t" << std::setw(10) << res.trace_hash;
-        fg.restore();
+        fieldToTsv(os, "trace_hash", res.trace_hash, printCtl, fmt1);
     }
 
-    os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("align.alloc"));
-    os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("align.cpy_dev"));
-    os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("align.init_hdr"));
-    os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("align.calc_init"));
-    os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("align.calc"));
-    os << "\t";
-    lapTimeToTsv(os, res.sw_align.get_or_default("align.cpy_host"));
-
-    if (fPrintScoreStats)
+    fieldToTsv(os, "align.alloc", res.sw_align.get_or_default("align.alloc"), printCtl, fmt2);
+    fieldToTsv(os, "align.cpy_dev", res.sw_align.get_or_default("align.cpy_dev"), printCtl, fmt2);
+    fieldToTsv(os, "align.init_hdr", res.sw_align.get_or_default("align.init_hdr"), printCtl, fmt2);
+    fieldToTsv(os, "align.calc_init", res.sw_align.get_or_default("align.calc_init"), printCtl, fmt2);
+    fieldToTsv(os, "align.calc", res.sw_align.get_or_default("align.calc"), printCtl, fmt2);
+    fieldToTsv(os, "align.cpy_host", res.sw_align.get_or_default("align.cpy_host"), printCtl, fmt2);
+    if (printCtl.fPrintScoreStats)
     {
-        os << "\t";
-        lapTimeToTsv(os, res.sw_hash.get_or_default("hash.calc"));
+        fieldToTsv(os, "hash.calc", res.sw_hash.get_or_default("hash.calc"), printCtl, fmt2);
     }
-
-    if (fPrintTraceStats)
+    if (printCtl.fPrintTraceStats)
     {
-        os << "\t";
-        lapTimeToTsv(os, res.sw_trace.get_or_default("trace.alloc"));
-        os << "\t";
-        lapTimeToTsv(os, res.sw_trace.get_or_default("trace.calc"));
+        fieldToTsv(os, "trace.alloc", res.sw_trace.get_or_default("trace.alloc"), printCtl, fmt2);
+        fieldToTsv(os, "trace.calc", res.sw_trace.get_or_default("trace.calc"), printCtl, fmt2);
     }
 
     os << "\n";
+    return NwStat::success;
 }
