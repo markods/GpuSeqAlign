@@ -231,7 +231,6 @@
       <MaxRegCount>32</MaxRegCount>
       <Optimization>O2</Optimization>
       <CompileOut>$(SolutionDir)build\windows-$(Platform.toLower())-vs-$(Configuration.toLower())\%(Filename)%(Extension).obj</CompileOut>
-      <ExtensibleWholeProgramCompilation>true</ExtensibleWholeProgramCompilation>
     </CudaCompile>
     <CudaLink>
       <GPUDebugInfo>true</GPUDebugInfo>
