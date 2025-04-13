@@ -152,6 +152,7 @@ NwStat readFromFastaFormat(
     NwSeq nw_seq {};
     std::string strLine {};
     int64_t iLine {-1};
+    std::istringstream issLine {};
     int64_t iCol {};
     bool read_next_line {true};
 
@@ -165,22 +166,22 @@ NwStat readFromFastaFormat(
                 iLine++;
 
                 std::getline(is, strLine, '\n');
-                ZIG_TRY(NwStat::success, error_if(is.bad(), "could not read line", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+                ZIG_TRY(NwStat::success, error_if(is.fail(), "could not read line", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+
+                issLine = std::istringstream {strLine};
+                issLine >> std::ws;
+                updateColIdx(issLine, iCol);
+
+                if (issLine.peek() == EOF)
+                {
+                    // Skip empty lines.
+                    continue;
+                }
             }
             else
             {
                 state = FastaState::eof;
             }
-        }
-
-        std::istringstream issLine {strLine};
-        issLine >> std::ws;
-        updateColIdx(issLine, iCol);
-
-        if (state != FastaState::eof && issLine.peek() == EOF)
-        {
-            // Skip empty lines.
-            continue;
         }
 
         switch (state)
@@ -231,7 +232,7 @@ NwStat readFromFastaFormat(
         }
     }
 
-    ZIG_TRY(NwStat::success, error_if(is.fail(), "could not read line", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+    ZIG_TRY(NwStat::success, error_if(is.bad() || (is.fail() && !is.eof()), "file truncated", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
     ZIG_TRY(NwStat::success, error_if(state == FastaState::expect_header, "expected sequence header (>)", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
     ZIG_TRY(NwStat::success, error_if(state == FastaState::expect_sequence_line, "expected sequence after header", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
 
@@ -349,6 +350,7 @@ NwStat readFromSeqPairFormat(
 {
     NwSeqPair seqPair {};
     std::string strLine {};
+    std::istringstream issLine {};
     int64_t iLine {-1};
     int64_t iCol {0};
 
@@ -360,21 +362,21 @@ NwStat readFromSeqPairFormat(
             iCol = 0;
 
             std::getline(is, strLine, '\n');
-            ZIG_TRY(NwStat::success, error_if(is.bad(), "could not read line", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+            ZIG_TRY(NwStat::success, error_if(is.fail(), "could not read line", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+
+            issLine = std::istringstream {strLine};
+            issLine >> std::ws;
+            updateColIdx(issLine, iCol);
+
+            if (issLine.peek() == EOF)
+            {
+                // Skip empty lines.
+                continue;
+            }
         }
         else
         {
             break;
-        }
-
-        std::istringstream issLine {strLine};
-        issLine >> std::ws;
-        updateColIdx(issLine, iCol);
-
-        if (issLine.peek() == EOF)
-        {
-            // Skip empty lines.
-            continue;
         }
 
         ZIG_TRY(NwStat::success, readSeqIdAndRange(issLine, path, iLine, iCol, seqPair.seqY_id, seqPair.seqY_range, seqMap, error_msg));
@@ -391,7 +393,7 @@ NwStat readFromSeqPairFormat(
         seqPair = {};
     }
 
-    ZIG_TRY(NwStat::success, error_if(is.fail(), "could not read line", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
+    ZIG_TRY(NwStat::success, error_if(is.bad() || (is.fail() && !is.eof()), "file truncated", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
     ZIG_TRY(NwStat::success, error_if(seqPairData.pairList.size() == 0, "expected at least one sequence pair", path, iLine, iCol, NwStat::errorInvalidFormat, error_msg));
 
     return NwStat::success;
