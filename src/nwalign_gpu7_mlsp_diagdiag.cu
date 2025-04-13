@@ -577,7 +577,7 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
 
     TileAndElemIJ co;
     NwTrace2_GetTileAndElemIJ(nw, nw.adjrows - 1 /*last valid i pos*/, nw.adjcols - 1 /*last valid j pos*/, co);
-    NwTrace2_AlignTile(tile, nw, co.iTile, co.jTile);
+    NwTrace2_AlignTile(tile, nw, co);
     res.align_cost = el(tile, 1 + tileBx, co.iTileElem, co.jTileElem);
 
     // Increment calculation time.

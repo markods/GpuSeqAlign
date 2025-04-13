@@ -35,7 +35,7 @@ struct TileAndElemIJ
 NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res);
 NwStat NwHash2_Sparse(const NwAlgInput& nw, NwAlgResult& res);
 NwStat NwPrintScore2_Sparse(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
-void NwTrace2_AlignTile(std::vector<int>& tile, const NwAlgInput& nw, int iTile, int jTile);
+void NwTrace2_AlignTile(std::vector<int>& tile, const NwAlgInput& nw, const TileAndElemIJ& co);
 void NwTrace2_GetTileAndElemIJ(const NwAlgInput& nw, int i, int j, TileAndElemIJ& co);
 
 #endif // INCLUDE_NW_FNS_HPP

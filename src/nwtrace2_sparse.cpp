@@ -36,8 +36,7 @@ void NwTrace2_GetTileAndElemIJ(const NwAlgInput& nw, int i, int j, TileAndElemIJ
     }
 }
 
-// TODO: only load up to (and including) iInTile, jInTile
-void NwTrace2_AlignTile(std::vector<int>& tile, const NwAlgInput& nw, int iTile, int jTile)
+void NwTrace2_AlignTile(std::vector<int>& tile, const NwAlgInput& nw, const TileAndElemIJ& co)
 {
     //  x x x x x x
     //  x / / / / /
@@ -46,7 +45,7 @@ void NwTrace2_AlignTile(std::vector<int>& tile, const NwAlgInput& nw, int iTile,
 
     // Load the tile's header row.
     {
-        int kHrow = nw.tileHdrMatCols * iTile + jTile;
+        int kHrow = nw.tileHdrMatCols * co.iTile + co.jTile;
         int kHrowElem = kHrow * nw.tileHrowLen;
 
         for (int j = 0; j < nw.tileHrowLen; j++)
@@ -57,7 +56,7 @@ void NwTrace2_AlignTile(std::vector<int>& tile, const NwAlgInput& nw, int iTile,
 
     // Load the tile's header column.
     {
-        int kHcol = nw.tileHdrMatCols * iTile + jTile; // row-major
+        int kHcol = nw.tileHdrMatCols * co.iTile + co.jTile; // row-major
         int kHcolElem = kHcol * nw.tileHcolLen;
 
         for (int i = 0; i < nw.tileHcolLen; i++)
@@ -69,15 +68,19 @@ void NwTrace2_AlignTile(std::vector<int>& tile, const NwAlgInput& nw, int iTile,
     // Calculate remaining elements in tile.
     {
         // Don't add header column because it's added in the inner loop - loops start from 1.
-        int ibeg = 0 + iTile * (nw.tileHcolLen - 1);
-        int jbeg = 0 + jTile * (nw.tileHrowLen - 1);
+        int ibeg = 0 + co.iTile * (nw.tileHcolLen - 1);
+        int jbeg = 0 + co.jTile * (nw.tileHrowLen - 1);
 
-        for (int i = 1; i < nw.tileHcolLen; i++)
+        int iend = min2(nw.tileHcolLen, co.iTileElem + 1 /*exclusive*/);
+        int jend = min2(nw.tileHrowLen, co.jTileElem + 1 /*exclusive*/);
+
+        for (int i = 1; i < iend; i++)
         {
-            for (int j = 1; j < nw.tileHrowLen; j++)
+            for (int j = 1; j < jend; j++)
             {
                 if (ibeg + i >= nw.adjrows || jbeg + j >= nw.adjcols)
                 {
+                    // Write 0 for artificial elements.
                     el(tile, nw.tileHrowLen, i, j) = 0;
                     continue;
                 }
@@ -120,7 +123,7 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
     // Load last tile.
     TileAndElemIJ co;
     NwTrace2_GetTileAndElemIJ(nw, nw.adjrows - 1 /*last valid i pos*/, nw.adjcols - 1 /*last valid j pos*/, co);
-    NwTrace2_AlignTile(tile, nw, co.iTile, co.jTile);
+    NwTrace2_AlignTile(tile, nw, co);
 
     // While there are elements on one of the optimal paths.
     while (true)
@@ -174,7 +177,7 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
                 co.jTileElem = nw.tileHrowLen - 1;
             }
 
-            NwTrace2_AlignTile(tile, nw, co.iTile, co.jTile);
+            NwTrace2_AlignTile(tile, nw, co);
         }
 
         if (di == 0 && dj == 0)
