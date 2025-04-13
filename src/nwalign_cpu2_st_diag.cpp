@@ -49,49 +49,30 @@ NwStat NwAlign_Cpu2_St_Diag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
     // measure header initialization time
     sw.lap("align.init_hdr");
 
-    //  x x x x x x
-    //  x / / / . .
-    //  x / / . . .
-    //  x / . . . .
-    for (int s = 0; s < rows; s++)
+    //  / / / . .       . . . / /       . . . . .|/ /
+    //  / / . . .   +   . . / / .   +   . . . . /|/
+    //  / . . . .       . / / . .       . . . / /|
+    for (int s = 0; s < cols - 1 + rows; s++)
     {
-        for (int t = 0; t <= s; t++)
-        {
-            int i = 1 + t;
-            int j = 1 + s - t;
-            UpdateScore(nw, i, j);
-        }
-    }
+        int tbeg = max2(0, s - (cols - 1));
+        int tend = min2(s + 1, rows);
 
-    //  x x x x x x
-    //  x . . . / /
-    //  x . . / / .
-    //  x . / / . .
-    // if the matrix is not square shaped
-    if (rows != cols)
-    {
-        for (int s = rows; s < cols; s++)
+        for (int t = tbeg; t < tend; t++)
         {
-            for (int t = 0; t <= rows - 1; t++)
+            // calculate the element boundaries
+            int ibeg = 1 + t;
+            int jbeg = 1 + s - t;
+
+            int iend = min2(ibeg + 1, 1 + rows);
+            int jend = min2(jbeg + 1, 1 + cols);
+
+            for (int i = ibeg; i < iend; i++)
             {
-                int i = 1 + t;
-                int j = 1 + s - t;
-                UpdateScore(nw, i, j);
+                for (int j = jbeg; j < jend; j++)
+                {
+                    UpdateScore(nw, i, j);
+                }
             }
-        }
-    }
-
-    //  x x x x x x
-    //  x . . . . .|/ /
-    //  x . . . . /|/
-    //  x . . . / /|
-    for (int s = cols; s < cols - 1 + rows; s++)
-    {
-        for (int t = s - cols + 1; t <= rows - 1; t++)
-        {
-            int i = 1 + t;
-            int j = 1 + s - t;
-            UpdateScore(nw, i, j);
         }
     }
 
