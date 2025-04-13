@@ -46,9 +46,10 @@ static NwStat appendSequenceLine(
         seq.push_back(0);
     }
 
-    for (char letter; (issLine >> letter); iCol++)
+    for (int letter; (letter = issLine.peek()) != EOF; iCol++)
     {
-        std::string letter_str {letter};
+        letter = issLine.get();
+        std::string letter_str {(char)letter};
         if (!letterMap.contains(letter_str))
         {
             if (std::isspace(letter))
@@ -64,7 +65,7 @@ static NwStat appendSequenceLine(
         seq.push_back(val);
     }
 
-    ZIG_TRY(NwStat::success, error_if(issLine.bad(), "could not read letter", path, iLine, iCol, NwStat::errorInvalidValue, error_msg));
+    ZIG_TRY(NwStat::success, error_if(issLine.fail(), "could not read letter", path, iLine, iCol, NwStat::errorInvalidValue, error_msg));
     return NwStat::success;
 }
 
