@@ -15,9 +15,8 @@ void NwPrintVect(
 
     for (size_t i = 0; i < len; i++)
     {
-        os << std::setw(4) << vect[i] << ",";
+        os << std::setw(4) << vect[i] << ' ';
     }
-    os << "\n";
 }
 
 template <typename T>
@@ -33,7 +32,7 @@ void NwPrintMat(
     {
         for (size_t j = 0; j < cols; j++)
         {
-            os << std::setw(4) << el(mat, cols, i, j) << ',';
+            os << std::setw(4) << el(mat, cols, i, j) << ' ';
         }
         os << "\n";
     }
@@ -54,7 +53,7 @@ void NwPrintTiledMat(
     {
         for (size_t j = 0; j < cols; j++)
         {
-            os << std::setw(4) << el(mat, cols, i, j) << ',';
+            os << std::setw(4) << el(mat, cols, i, j) << ' ';
             if ((j - 1) % tileWid == 0)
             {
                 os << "   ";
@@ -64,7 +63,7 @@ void NwPrintTiledMat(
         os << "\n";
         if ((i - 1) % tileHei == 0)
         {
-            os << "   ";
+            os << "\n";
         }
     }
 }
@@ -86,9 +85,9 @@ void NwPrintHdrMat(
             for (size_t k = 0; k < hdrLen; k++)
             {
                 int kHdrElem = (i * cols + j) * hdrLen + k;
-                os << std::setw(4) << tileHdrMat[kHdrElem] << ',';
+                os << std::setw(4) << tileHdrMat[kHdrElem] << ' ';
             }
-            os << " // " << i << " " << j << "\n";
+            os << " // " << i << ' ' << j << "\n";
         }
     }
 }
