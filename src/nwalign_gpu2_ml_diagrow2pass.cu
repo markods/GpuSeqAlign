@@ -252,7 +252,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
         {
             return NwStat::errorKernelFailure;
         }
-        auto defer1 = make_defer([&]() noexcept
+        auto defer1 = make_defer([&stream]() noexcept
         {
             cudaStreamDestroy(stream);
         });
@@ -262,7 +262,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
         {
             return NwStat::errorKernelFailure;
         }
-        auto defer2 = make_defer([&]() noexcept
+        auto defer2 = make_defer([&graph]() noexcept
         {
             cudaGraphDestroy(graph);
         });
@@ -342,7 +342,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
         {
             return NwStat::errorKernelFailure;
         }
-        auto defer3 = make_defer([&]() noexcept
+        auto defer3 = make_defer([&graphExec]() noexcept
         {
             cudaGraphExecDestroy(graphExec);
         });

@@ -444,7 +444,7 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
         {
             return NwStat::errorKernelFailure;
         }
-        auto defer1 = make_defer([&]() noexcept
+        auto defer1 = make_defer([&stream]() noexcept
         {
             cudaStreamDestroy(stream);
         });
@@ -454,7 +454,7 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
         {
             return NwStat::errorKernelFailure;
         }
-        auto defer2 = make_defer([&]() noexcept
+        auto defer2 = make_defer([&graph]() noexcept
         {
             cudaGraphDestroy(graph);
         });
@@ -536,7 +536,7 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
         {
             return NwStat::errorKernelFailure;
         }
-        auto defer3 = make_defer([&]() noexcept
+        auto defer3 = make_defer([&graphExec]() noexcept
         {
             cudaGraphExecDestroy(graphExec);
         });
