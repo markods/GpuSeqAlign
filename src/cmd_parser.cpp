@@ -164,7 +164,11 @@ static void print_cmd_usage(std::ostream& os)
 
 NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
 {
-    cmdArgs.isoDateTime = isoDatetimeAsString();
+    if (NwStat stat = isoDatetimeAsString(cmdArgs.isoDateTime); stat != NwStat::success)
+    {
+        std::cerr << "error: failed to get local time\n";
+        return stat;
+    }
 
     if (argc == 1)
     {

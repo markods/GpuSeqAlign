@@ -4,7 +4,7 @@
 #include <sstream>
 
 // get the current time as an ISO string
-std::string isoDatetimeAsString()
+NwStat isoDatetimeAsString(std::string& res)
 {
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
@@ -12,12 +12,14 @@ std::string isoDatetimeAsString()
     std::tm tm_struct {};
     if (localtime_s(&tm_struct, &time) != 0)
     {
-        throw std::runtime_error("Failed to get local time.");
+        return NwStat::errorInvalidValue;
     }
 
     std::stringstream strs;
     strs << std::put_time(&tm_struct, "%Y%m%d_%H%M%S");
-    return strs.str();
+    res = strs.str();
+
+    return NwStat::success;
 }
 
 // open input file stream

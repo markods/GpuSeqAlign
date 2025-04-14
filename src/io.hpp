@@ -9,7 +9,7 @@
 #include <string>
 
 // get the current time as an ISO string
-std::string isoDatetimeAsString();
+NwStat isoDatetimeAsString(std::string& res);
 
 // open input file stream
 NwStat openInFile(const std::string& path, std::ifstream& ifs);
