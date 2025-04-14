@@ -74,10 +74,11 @@ struct NwAlgInput
 {
     ////// host specific memory
     std::vector<int> subst;
+    // Align seqX to seqY (seqX becomes seqY).
     std::vector<int> seqX;
     std::vector<int> seqY;
     HostArray<int> score;
-    std::vector<int> trace; // TODO: char vector of Match/Mismatch, Insertion, Deletion
+    std::vector<int> trace;
     // sparse representation of the score matrix
     HostArray<int> tileHrowMat;
     HostArray<int> tileHcolMat;
@@ -146,6 +147,8 @@ struct NwAlgResult
     Stopwatch sw_align;
     Stopwatch sw_hash;
     Stopwatch sw_trace;
+
+    std::string edit_trace;
 };
 
 #endif // INCLUDE_RUN_TYPES_HPP

@@ -509,6 +509,7 @@ NwStat writeNwResultToTsv(std::ostream& os, const NwAlgResult& res, const TsvPri
     {
         fieldToTsv(os, "trace.alloc", res.sw_trace.get_or_default("trace.alloc"), printCtl, fmt2);
         fieldToTsv(os, "trace.calc", res.sw_trace.get_or_default("trace.calc"), printCtl, fmt2);
+        fieldToTsv(os, "edit_trace", res.edit_trace, printCtl);
     }
 
     os << "\n";

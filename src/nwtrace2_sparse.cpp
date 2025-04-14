@@ -111,6 +111,8 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
     {
         std::vector<int> tmpTile(nw.tileHcolLen * nw.tileHrowLen, 0);
         std::swap(tile, tmpTile);
+        nw.trace.reserve(nw.adjrows - 1 + nw.adjcols); // Longest possible path.
+        res.edit_trace.reserve(nw.adjrows - 1 + nw.adjcols);
     }
     catch (const std::exception&)
     {
@@ -121,8 +123,10 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
     sw.lap("trace.alloc");
 
     // Load last tile.
+    int i = nw.adjrows - 1 /*last valid i pos*/;
+    int j = nw.adjcols - 1 /*last valid j pos*/;
     TileAndElemIJ co;
-    NwTrace2_GetTileAndElemIJ(nw, nw.adjrows - 1 /*last valid i pos*/, nw.adjcols - 1 /*last valid j pos*/, co);
+    NwTrace2_GetTileAndElemIJ(nw, i, j, co);
     NwTrace2_AlignTile(tile, nw, co);
 
     // While there are elements on one of the optimal paths.
@@ -134,28 +138,42 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
         int max = std::numeric_limits<int>::min();
         int di = 0;
         int dj = 0;
+        char edit = '\0';
 
-        // Up-left movement if possible and better.
-        if (co.iTileElem > 0 && co.jTileElem > 0 && max < el(tile, nw.tileHrowLen, co.iTileElem - 1, co.jTileElem - 1))
+        if (co.iTileElem > 0 && co.jTileElem > 0)
         {
             max = el(tile, nw.tileHrowLen, co.iTileElem - 1, co.jTileElem - 1);
             di = -1;
             dj = -1;
+            if (nw.seqX[j] == nw.seqY[i])
+            {
+                // DIAGONAL^-1 -- match.
+                edit = 'M';
+            }
+            else
+            {
+                // DIAGONAL^-1 -- substitution.
+                edit = 'S';
+            }
         }
-        // Up movement if possible and better.
         if (co.iTileElem > 0 && max < el(tile, nw.tileHrowLen, co.iTileElem - 1, co.jTileElem))
         {
             max = el(tile, nw.tileHrowLen, co.iTileElem - 1, co.jTileElem);
             di = -1;
             dj = 0;
+            // DOWN^-1 -- align a gap in seqX to a letter in seqY. INSERTION in seqX.
+            edit = 'I';
         }
-        // Left movement if possible and better.
         if (co.jTileElem > 0 && max < el(tile, nw.tileHrowLen, co.iTileElem, co.jTileElem - 1))
         {
             max = el(tile, nw.tileHrowLen, co.iTileElem, co.jTileElem - 1);
             di = 0;
             dj = -1;
+            // RIGHT^-1 -- align a letter in seqX to a gap in seqY. DELETION in seqX.
+            edit = 'D';
         }
+        i += di;
+        j += dj;
         co.iTileElem += di;
         co.jTileElem += dj;
 
@@ -184,23 +202,28 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
         {
             break;
         }
+        res.edit_trace.push_back(edit);
     }
 
     // Reverse the trace, so it starts from the top-left corner of the matrix instead of the bottom-right.
     std::reverse(nw.trace.begin(), nw.trace.end());
+    std::reverse(res.edit_trace.begin(), res.edit_trace.end());
 
     // Measure trace time.
     sw.lap("trace.calc");
 
-    // Calculate the trace hash.
     // http://www.cse.yorku.ca/~oz/hash.html
     unsigned hash = 5381;
+
     for (auto& curr : nw.trace)
     {
         hash = ((hash << 5) + hash) ^ curr;
     }
+    for (auto& curr : res.edit_trace)
+    {
+        hash = ((hash << 5) + hash) ^ curr;
+    }
 
-    // Save the trace hash.
     res.trace_hash = hash;
 
     return NwStat::success;

@@ -24,6 +24,7 @@ public:
         NwPrintScoreFn printScoreFn,
         NwPrintTraceFn printTraceFn);
 
+    // Align seqX to seqY (seqX becomes seqY).
     NwStat align(const NwAlgParams& algParams, NwAlgInput& nw, NwAlgResult& res) const;
     NwStat trace(NwAlgInput& nw, NwAlgResult& res) const;
     NwStat hash(const NwAlgInput& nw, NwAlgResult& res) const;

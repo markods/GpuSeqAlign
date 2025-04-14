@@ -23,6 +23,7 @@ NwAlgorithm::NwAlgorithm(
       _printTraceFn(printTraceFn)
 { }
 
+// Align seqX to seqY (seqX becomes seqY).
 NwStat NwAlgorithm::align(const NwAlgParams& algParams, NwAlgInput& nw, NwAlgResult& res) const
 {
     return _alignFn(algParams, nw, res);

@@ -301,14 +301,14 @@ static NwStat printBenchReportLine(
 
         if (cmdArgs.fPrintTrace.value())
         {
-            cmdData.debugOfs << "+\n>edit trace\n";
+            cmdData.debugOfs << "+\n>edit_trace\n";
             alg.printTrace(cmdData.debugOfs, nw, repResCombined);
             cmdData.debugOfs << "\n";
         }
 
         if (cmdArgs.fPrintScore.value())
         {
-            cmdData.debugOfs << "+\n>score matrix\n";
+            cmdData.debugOfs << "+\n>score_matrix\n";
             alg.printScore(cmdData.debugOfs, nw, repResCombined);
         }
 

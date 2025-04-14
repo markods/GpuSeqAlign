@@ -23,7 +23,7 @@ struct NwCmdArgs
     std::optional<int> warmupPerAlign;
     std::optional<int> samplesPerAlign;
 
-    std::optional<bool> fCalcTrace; // TODO: have letter trace as well as debug trace; output letter trace in tsv, and both in debug file
+    std::optional<bool> fCalcTrace;
     std::optional<bool> fCalcScoreHash;
     std::optional<bool> fWriteProgress;
     std::optional<std::string> debugPath;
