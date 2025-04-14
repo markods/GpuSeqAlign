@@ -60,7 +60,6 @@ static NwStat appendSequenceLine(
             ZIG_TRY(NwStat::success, error_if(true /*always*/, "letter not found in substitution letters", path, iLine, iCol, NwStat::errorInvalidValue, error_msg));
         }
 
-        // TODO: use char for letterMap
         auto val = letterMap.at(letter_str);
         seq.push_back(val);
     }

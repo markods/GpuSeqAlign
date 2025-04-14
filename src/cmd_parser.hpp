@@ -30,7 +30,7 @@ struct NwCmdArgs
     std::optional<bool> fPrintScore;
     std::optional<bool> fPrintTrace;
 
-    std::string isoDateTime; // TODO: regex replace ${datetime} in output filenames
+    std::string isoDateTime;
 };
 
 struct NwCmdData

@@ -317,11 +317,29 @@ static NwStat parseSubstFile(const std::string& substPath, NwSubstData& substDat
     }
 
     int letter_cnt = (int)substData.letterMap.size();
+    int letter_idx = 0;
+    for (const auto& letter_tuple : substData.letterMap)
+    {
+        if (letter_tuple.first.size() != 1)
+        {
+            std::cerr << "error: substitution matrix letters must be a character: \"" << letter_tuple.first << "\"\n";
+            return NwStat::errorInvalidFormat;
+        }
+
+        if (letter_tuple.second != letter_idx)
+        {
+            std::cerr << "error: substitution matrix letter's index must start from zero and increase by 1: \"" << letter_tuple.first << "\": " << letter_tuple.second << "\n";
+            return NwStat::errorInvalidFormat;
+        }
+
+        letter_idx++;
+    }
+
     for (const auto& subst_tuple : substData.substMap)
     {
         if (subst_tuple.second.size() != letter_cnt * letter_cnt)
         {
-            std::cerr << "error: substitution matrix should have exactly letter_cnt^2 elements: \"" << subst_tuple.first << "\"\n";
+            std::cerr << "error: substitution matrix must have exactly letter_cnt^2 elements: \"" << subst_tuple.first << "\"\n";
             return NwStat::errorInvalidFormat;
         }
     }
