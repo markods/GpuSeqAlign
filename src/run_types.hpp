@@ -8,7 +8,6 @@
 #include <string>
 #include <vector>
 
-// Needleman-Wunsch status
 enum class NwStat : int
 {
     success,
@@ -34,7 +33,6 @@ struct NwRange
     friend bool operator!=(const NwRange& l, const NwRange& r);
 };
 
-// parameter that takes values from a vector
 struct NwAlgParam
 {
     NwAlgParam();
@@ -49,7 +47,6 @@ struct NwAlgParam
     int _currIdx = 0;
 };
 
-// parameters for the Needleman-Wunsch algorithm variant
 struct NwAlgParams
 {
     NwAlgParams();
@@ -59,7 +56,7 @@ struct NwAlgParams
     const NwAlgParam& at(const std::string name) const;
 
     bool hasCurr() const;
-    // updates starting from the last parameter and so on
+    // Updates last parameter, then second-to-last, etc.
     void next();
     void reset();
 
@@ -69,54 +66,45 @@ struct NwAlgParams
     bool _isEnd;
 };
 
-// input for the Needleman-Wunsch algorithm variant
 struct NwAlgInput
 {
-    ////// host specific memory
     std::vector<int> subst;
     // Align seqX to seqY (seqX becomes seqY).
     std::vector<int> seqX;
     std::vector<int> seqY;
     HostArray<int> score;
     std::vector<int> trace;
-    // sparse representation of the score matrix
     HostArray<int> tileHrowMat;
     HostArray<int> tileHcolMat;
 
-    ////// device specific memory
     DeviceArray<int> subst_gpu;
     DeviceArray<int> seqX_gpu;
     DeviceArray<int> seqY_gpu;
     DeviceArray<int> score_gpu;
-    // sparse representation of the score matrix
     DeviceArray<int> tileHrowMat_gpu;
     DeviceArray<int> tileHcolMat_gpu;
 
-    // alignment parameters
-    // prefer using them instead of vector.size()
+    // Prefer using these instead of vector.size().
     int substsz;
     int adjrows;
     int adjcols;
     int gapoCost;
-    // sparse representation of the score matrix
     int tileHdrMatRows;
     int tileHdrMatCols;
     int tileHrowLen;
     int tileHcolLen;
 
-    // device parameters
     int sm_count;
     int warpsz;
     int maxThreadsPerBlock;
 
-    // free all memory allocated by the Needleman-Wunsch algorithms
+    // Free all memory allocated by the Needleman-Wunsch algorithms.
     void resetAllocsBenchmarkCycle();
 
-    // free all remaining memory not cleared by resetAllocs
+    // Free all remaining memory not cleared by resetAllocs.
     void resetAllocsBenchmarkEnd();
 };
 
-// results which the Needleman-Wunsch algorithm variant returns
 struct NwAlgResult
 {
     std::string algName;
@@ -128,9 +116,9 @@ struct NwAlgResult
     NwRange seqY_range;
     NwRange seqX_range;
 
-    int errstep;          // 0 for success
-    NwStat stat;          // 0 for success
-    cudaError_t cudaStat; // 0 for success
+    int errstep;          // 0 for success.
+    NwStat stat;          // 0 for success.
+    cudaError_t cudaStat; // 0 for success.
 
     size_t seqY_len;
     size_t seqX_len;
