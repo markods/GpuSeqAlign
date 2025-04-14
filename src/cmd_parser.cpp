@@ -314,9 +314,11 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
 
 static NwStat parseSubstFile(const std::string& substPath, NwSubstData& substData)
 {
-    if (NwStat::success != readFromJsonFile(substPath, substData))
+    std::string error_msg {};
+    if (NwStat::success != readFromJsonFile(substPath, substData, error_msg))
     {
         std::cerr << "error: could not open/parse json from substPath: \"" << substPath << "\"\n";
+        std::cerr << error_msg << "\n";
         return NwStat::errorIoStream;
     }
 
@@ -353,9 +355,11 @@ static NwStat parseSubstFile(const std::string& substPath, NwSubstData& substDat
 
 static NwStat parseAlgParamsFile(const std::string& algParamPath, NwAlgParamsData& algParamsData)
 {
-    if (NwStat::success != readFromJsonFile(algParamPath, algParamsData))
+    std::string error_msg {};
+    if (NwStat::success != readFromJsonFile(algParamPath, algParamsData, error_msg))
     {
         std::cerr << "error: could not open/parse json from algParamPath: \"" << algParamPath << "\"\n";
+        std::cerr << error_msg << "\n";
         return NwStat::errorIoStream;
     }
 
@@ -427,7 +431,7 @@ static NwStat parseSeqFile(const std::string& seqPath, const Dict<std::string, i
         return NwStat::errorIoStream;
     }
 
-    std::string error_msg;
+    std::string error_msg {};
     if (NwStat stat = readFromFastaFormat(seqPath, ifs, seqData, letterMap, error_msg); stat != NwStat::success)
     {
         std::cerr << "error: invalid fasta format on seqPath: \"" << seqPath << "\"\n";
@@ -447,7 +451,7 @@ static NwStat parseSeqPairFile(const std::string& seqPairPath, NwSeqPairData& se
         return NwStat::errorIoStream;
     }
 
-    std::string error_msg;
+    std::string error_msg {};
     if (NwStat stat = readFromSeqPairFormat(seqPairPath, ifs, seqPairData, seqMap, error_msg); stat != NwStat::success)
     {
         std::cerr << "error: invalid text format on seqPairPath: \"" << seqPairPath << "\"\n";
