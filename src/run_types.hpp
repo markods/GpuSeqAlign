@@ -66,6 +66,10 @@ struct NwAlgParams
     bool _isEnd;
 };
 
+// TODO: "\n" -> '\n', " " -> ' '
+// TODO: remove useless comments
+// TODO: fix: Exception thrown at 0x00007FF83227016C in nw.exe: Microsoft C++ exception: std::out_of_range at memory location 0x000000A7E93FB4C8.
+
 struct NwAlgInput
 {
     std::vector<int> subst;
