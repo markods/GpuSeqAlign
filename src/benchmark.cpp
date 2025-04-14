@@ -2,6 +2,7 @@
 #include "defer.hpp"
 #include "dict.hpp"
 #include "file_formats.hpp"
+#include "fmt_guard.hpp"
 #include "nw_algorithm.hpp"
 #include "nw_fns.hpp"
 #include "run_types.hpp"
@@ -220,12 +221,23 @@ static NwStat initNwInput(const NwCmdArgs& cmdArgs, const NwCmdData& cmdData, Nw
     return NwStat::success;
 }
 
+void breakProgressLine(const NwCmdArgs& cmdArgs, bool& write_progress_newline)
+{
+    if (cmdArgs.fWriteProgress.value() && write_progress_newline)
+    {
+        std::cout << "\n"
+                  << std::flush;
+        write_progress_newline = false;
+    }
+}
+
 static NwStat printBenchReportLine(
     const NwCmdArgs& cmdArgs,
     NwCmdData& cmdData,
     const NwAlgorithm& alg,
     const NwAlgInput& nw,
-    const NwAlgResult& repResCombined)
+    const NwAlgResult& repResCombined,
+    bool& write_progress_newline)
 {
     // Print progress to stdout.
     if (cmdArgs.fWriteProgress.value())
@@ -238,6 +250,7 @@ static NwStat printBenchReportLine(
         {
             std::cout << repResCombined.errstep << std::flush;
         }
+        write_progress_newline = true;
     }
 
     // Print the result to the tsv output file.
@@ -246,7 +259,12 @@ static NwStat printBenchReportLine(
         printCtl.writeValue = 1;
         printCtl.fPrintScoreStats = cmdArgs.fCalcScoreHash.value();
         printCtl.fPrintTraceStats = cmdArgs.fCalcTrace.value();
-        ZIG_TRY(NwStat::success, writeNwResultToTsv(cmdData.resOfs, repResCombined, printCtl));
+        if (NwStat stat = writeNwResultToTsv(cmdData.resOfs, repResCombined, printCtl); stat != NwStat::success)
+        {
+            breakProgressLine(cmdArgs, write_progress_newline);
+            std::cerr << "error: could not write output tsv result line\n";
+            return stat;
+        }
     }
     if (cmdArgs.fWriteProgress.value())
     {
@@ -265,16 +283,27 @@ static NwStat printBenchReportLine(
 
         printCtl.writeColName = 1;
         printCtl.writeValue = 0;
-        ZIG_TRY(NwStat::success, writeNwResultToTsv(cmdData.debugOfs, repResCombined /*unused*/, printCtl));
+        if (NwStat stat = writeNwResultToTsv(cmdData.debugOfs, repResCombined /*unused*/, printCtl); stat != NwStat::success)
+        {
+            breakProgressLine(cmdArgs, write_progress_newline);
+            std::cerr << "error: could not write debug output tsv header\n";
+            return stat;
+        }
 
         printCtl.writeColName = 0;
         printCtl.writeValue = 1;
-        ZIG_TRY(NwStat::success, writeNwResultToTsv(cmdData.debugOfs, repResCombined, printCtl));
+        if (NwStat stat = writeNwResultToTsv(cmdData.debugOfs, repResCombined, printCtl); stat != NwStat::success)
+        {
+            breakProgressLine(cmdArgs, write_progress_newline);
+            std::cerr << "error: could not write debug output tsv result line\n";
+            return stat;
+        }
 
         if (cmdArgs.fPrintTrace.value())
         {
             cmdData.debugOfs << "+\n>edit trace\n";
             alg.printTrace(cmdData.debugOfs, nw, repResCombined);
+            cmdData.debugOfs << "\n";
         }
 
         if (cmdArgs.fPrintScore.value())
@@ -302,9 +331,19 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
     getNwAlgorithmMap(algMap);
 
     NwAlgInput nw {};
-    auto defer1 = make_defer([&]() noexcept
+    bool write_progress_newline {};
+    auto defer1 = make_defer([&nw, &benchData, &cmdArgs, &write_progress_newline]() noexcept
     {
         nw.resetAllocsBenchmarkEnd();
+
+        if (benchData.calcErrors > 0)
+        {
+            // Must not throw in defer.
+            FormatFlagsGuard fg {std::cerr};
+            std::cerr.exceptions(std::ios_base::goodbit);
+            breakProgressLine(cmdArgs, write_progress_newline);
+            std::cerr << "error: " << benchData.calcErrors << " calculation error(s)\n";
+        }
     });
     initNwInput(cmdArgs, cmdData, nw);
 
@@ -328,7 +367,12 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
         printCtl.fPrintScoreStats = cmdArgs.fCalcScoreHash.value();
         printCtl.fPrintTraceStats = cmdArgs.fCalcTrace.value();
         NwAlgResult res;
-        ZIG_TRY(NwStat::success, writeNwResultToTsv(cmdData.resOfs, res /*unused*/, printCtl));
+        if (NwStat stat = writeNwResultToTsv(cmdData.resOfs, res /*unused*/, printCtl); stat != NwStat::success)
+        {
+            breakProgressLine(cmdArgs, write_progress_newline);
+            std::cerr << "error: could not write output tsv header\n";
+            return stat;
+        }
     }
     if (cmdArgs.fWriteProgress.value())
     {
@@ -349,7 +393,9 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
     {
         if (cmdArgs.fWriteProgress.value())
         {
-            std::cout << algName << ":\n";
+            std::cout << algName << ":\n"
+                      << std::flush;
+            write_progress_newline = false;
         }
 
         NwAlgorithm& alg = algMap[algName];
@@ -363,11 +409,13 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
 
             if (NwStat stat = vectorSubstringWithHeader(seqList[iY].seq, seqPair.seqY_range, nw.seqY); stat != NwStat::success)
             {
+                breakProgressLine(cmdArgs, write_progress_newline);
                 std::cerr << "error: cannot take substring from seqY\n";
                 return stat;
             }
             if (NwStat stat = vectorSubstringWithHeader(seqList[iX].seq, seqPair.seqX_range, nw.seqX); stat != NwStat::success)
             {
+                breakProgressLine(cmdArgs, write_progress_newline);
                 std::cerr << "error: cannot take substring from seqX\n";
                 return stat;
             }
@@ -384,7 +432,7 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                 // For all requested repeats.
                 for (int iR = -cmdArgs.warmupPerAlign.value(); iR < cmdArgs.samplesPerAlign.value(); iR++)
                 {
-                    auto defer2 = make_defer([&]() noexcept
+                    auto defer2 = make_defer([&nw]() noexcept
                     {
                         nw.resetAllocsBenchmarkCycle();
                     });
@@ -413,6 +461,7 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                     // Since sticky errors cannot be cleared, repeat twice.
                     if (auto cudaStatus = (cudaGetLastError(), cudaGetLastError()); cudaStatus != cudaSuccess)
                     {
+                        breakProgressLine(cmdArgs, write_progress_newline);
                         std::cerr << "error: corrupted cuda context\n";
                         return NwStat::errorCudaGeneral;
                     }
@@ -456,7 +505,7 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                         repResList.clear();
                         benchData.resultList.push_back(repResCombined);
 
-                        ZIG_TRY(NwStat::success, printBenchReportLine(cmdArgs, cmdData, alg, nw, repResCombined));
+                        ZIG_TRY(NwStat::success, printBenchReportLine(cmdArgs, cmdData, alg, nw, repResCombined, write_progress_newline));
                     }
                 }
             }
@@ -469,12 +518,13 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
             // Algorithm separator.
             std::cout << "\n\n"
                       << std::flush;
+            write_progress_newline = false;
         }
     }
 
     if (benchData.calcErrors > 0)
     {
-        std::cerr << "error: " << benchData.calcErrors << " calculation error(s)\n";
+        // Error message written in defer.
         return NwStat::errorInvalidResult;
     }
 
