@@ -5,14 +5,11 @@
 // TODO: don't calculate default trace (numbers) unless asked
 // TODO: same_letter_cnt
 
-// get one of the optimal matching paths to a file
 NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res)
 {
-    // start the timer
     Stopwatch& sw = res.sw_trace;
     sw.start();
 
-    // reserve space in the ram
     try
     {
         nw.trace.reserve(nw.adjrows - 1 + nw.adjcols); // Longest possible path.
@@ -23,16 +20,14 @@ NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res)
         return NwStat::errorMemoryAllocation;
     }
 
-    // measure allocation time
     sw.lap("trace.alloc");
 
     int i = nw.adjrows - 1;
     int j = nw.adjcols - 1;
-    // for all elements on one of the optimal paths
     while (true)
     {
-        int currElem = el(nw.score, nw.adjcols, i, j);
-        nw.trace.push_back(currElem);
+        int curr = el(nw.score, nw.adjcols, i, j);
+        nw.trace.push_back(curr);
 
         int max = std::numeric_limits<int>::min();
         int di = 0;
@@ -81,12 +76,13 @@ NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res)
         res.edit_trace.push_back(edit);
     }
 
-    // reverse the trace, so it starts from the top-left corner of the matrix
-    std::reverse(nw.trace.begin(), nw.trace.end());
+    // Reverse the trace, so it starts from the top-left corner of the matrix.
     std::reverse(res.edit_trace.begin(), res.edit_trace.end());
 
-    // measure trace time
     sw.lap("trace.calc");
+
+    // Reverse the trace, so it starts from the top-left corner of the matrix.
+    std::reverse(nw.trace.begin(), nw.trace.end());
 
     // http://www.cse.yorku.ca/~oz/hash.html
     unsigned hash = 5381;
@@ -105,15 +101,11 @@ NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res)
     return NwStat::success;
 }
 
-// hash the score matrix
 NwStat NwHash1_Plain(const NwAlgInput& nw, NwAlgResult& res)
 {
-    // variable used to calculate the hash function
     // http://www.cse.yorku.ca/~oz/hash.html
-    // the starting value is a magic constant
     unsigned hash = 5381;
 
-    // Start the timer.
     Stopwatch& sw = res.sw_hash;
     sw.start();
 
@@ -121,22 +113,17 @@ NwStat NwHash1_Plain(const NwAlgInput& nw, NwAlgResult& res)
     {
         for (int j = 0; j < nw.adjcols; j++)
         {
-            // add the current element to the hash
             int curr = el(nw.score, nw.adjcols, i, j);
             hash = ((hash << 5) + hash) ^ curr;
         }
     }
-
-    // save the resulting hash
     res.score_hash = hash;
 
-    // Measure hash time.
     sw.lap("hash.calc");
 
     return NwStat::success;
 }
 
-// print the score matrix
 NwStat NwPrintScore1_Plain(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res)
 {
     (void)res;
@@ -144,7 +131,6 @@ NwStat NwPrintScore1_Plain(std::ostream& os, const NwAlgInput& nw, const NwAlgRe
     return NwStat::success;
 }
 
-// print the edit trace
 NwStat NwPrintTrace1_Plain(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res)
 {
     (void)res;

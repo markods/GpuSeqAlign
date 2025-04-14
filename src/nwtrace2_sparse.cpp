@@ -102,11 +102,9 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
 {
     std::vector<int> tile;
 
-    // Start the timer.
     Stopwatch& sw = res.sw_trace;
     sw.start();
 
-    // Allocate memory.
     try
     {
         std::vector<int> tmpTile(nw.tileHcolLen * nw.tileHrowLen, 0);
@@ -119,7 +117,6 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
         return NwStat::errorMemoryAllocation;
     }
 
-    // Measure allocation time.
     sw.lap("trace.alloc");
 
     // Load last tile.
@@ -129,7 +126,6 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
     NwTrace2_GetTileAndElemIJ(nw, i, j, co);
     NwTrace2_AlignTile(tile, nw, co);
 
-    // While there are elements on one of the optimal paths.
     while (true)
     {
         int currElem = el(tile, nw.tileHrowLen, co.iTileElem, co.jTileElem);
@@ -185,7 +181,7 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
             co.iTile += diTile;
             co.jTile += djTile;
 
-            // If we are in the tile header row/column, set coordinates as if we're in the next tile's last row/column.
+            // If we are in the tile header row/column, set coordinates as if we're in the UP/LEFT/UP-LEFT tile's last row/column.
             if (co.iTileElem == 0 && di != 0)
             {
                 co.iTileElem = nw.tileHcolLen - 1;
@@ -206,11 +202,12 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
     }
 
     // Reverse the trace, so it starts from the top-left corner of the matrix instead of the bottom-right.
-    std::reverse(nw.trace.begin(), nw.trace.end());
     std::reverse(res.edit_trace.begin(), res.edit_trace.end());
 
-    // Measure trace time.
     sw.lap("trace.calc");
+
+    // Reverse the trace, so it starts from the top-left corner of the matrix.
+    std::reverse(nw.trace.begin(), nw.trace.end());
 
     // http://www.cse.yorku.ca/~oz/hash.html
     unsigned hash = 5381;
@@ -240,11 +237,9 @@ NwStat NwHash2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
     std::vector<int> currRow;
     std::vector<int> prevRow;
 
-    // Start the timer.
     Stopwatch& sw = res.sw_hash;
     sw.start();
 
-    // Allocate memory.
     try
     {
         std::vector<int> tmpCurrRow(nw.adjcols, 0);
@@ -257,10 +252,8 @@ NwStat NwHash2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
         return NwStat::errorMemoryAllocation;
     }
 
-    // Measure allocation time.
     sw.lap("align.alloc");
 
-    // Calculate the score matrix hash.
     for (int i = 0; i < nw.adjrows; i++)
     {
         for (int j = 0; j < nw.adjcols; j++)
@@ -308,10 +301,8 @@ NwStat NwHash2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
         std::swap(currRow, prevRow);
     }
 
-    // Save the resulting hash.
     res.score_hash = hash;
 
-    // Measure hash time.
     sw.lap("hash.calc");
 
     return NwStat::success;
@@ -330,7 +321,6 @@ NwStat NwPrintScore2_Sparse(std::ostream& os, const NwAlgInput& nw, const NwAlgR
     std::vector<int> currRow;
     std::vector<int> prevRow;
 
-    // Allocate memory.
     try
     {
         std::vector<int> tmpCurrRow(nw.adjcols, 0);
@@ -343,7 +333,6 @@ NwStat NwPrintScore2_Sparse(std::ostream& os, const NwAlgInput& nw, const NwAlgR
         return NwStat::errorMemoryAllocation;
     }
 
-    // Write the score matrix.
     for (int i = 0; i < nw.adjrows; i++)
     {
         for (int j = 0; j < nw.adjcols; j++)
