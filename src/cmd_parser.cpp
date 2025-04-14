@@ -131,7 +131,7 @@ static void print_cmd_usage(std::ostream& os)
           "-p, --seqPairPath <path>   Path of TXT file with sequence pairs to be aligned. Each line has the format \"seqY seqX\",\n"
           "                           where \"seqY\" and \"seqX\" are sequence ids. It's possible to specify a substring\n"
           "                           e.g. \"seqX[l:r]\", starting from element \"l\" inclusive until element \"r\" exclusive.\n"
-          "                           It's possible to omit the start/end of the interval, like so: \"[l:]\", \"[:r]\", \"[:]\".\n"
+          "                           The start/end of the interval can be omitted: \"[l:]\", \"[:r]\", \"[:]\".\n"
           "                           If the TXT file is not specified, then all sequences in the FASTA file except the first\n"
           "                           are aligned to the first sequence. In that case, there must be two or more sequences\n"
           "                           in the FASTA file.\n"
