@@ -3,7 +3,6 @@
 #include <filesystem>
 #include <sstream>
 
-// get the current time as an ISO string
 NwStat isoDatetimeAsString(std::string& res)
 {
     auto now = std::chrono::system_clock::now();
@@ -22,7 +21,6 @@ NwStat isoDatetimeAsString(std::string& res)
     return NwStat::success;
 }
 
-// open input file stream
 NwStat openInFile(const std::string& path, std::ifstream& ifs)
 {
     ifs.exceptions(std::ios_base::goodbit);
@@ -35,12 +33,11 @@ NwStat openInFile(const std::string& path, std::ifstream& ifs)
     return NwStat::success;
 }
 
-// open output file stream
+// Create directories if they don't exist
 NwStat openOutFile(const std::string& path, std::ofstream& ofs)
 {
     try
     {
-        // Create directories if they don't exist
         std::filesystem::create_directories(std::filesystem::path(path).parent_path());
 
         ofs.exceptions(std::ios_base::goodbit);

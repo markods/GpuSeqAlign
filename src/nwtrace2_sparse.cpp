@@ -201,7 +201,7 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
         res.edit_trace.push_back(edit);
     }
 
-    // Reverse the trace, so it starts from the top-left corner of the matrix instead of the bottom-right.
+    // Reverse the edit trace, so it starts from the top-left corner of the matrix instead of the bottom-right.
     std::reverse(res.edit_trace.begin(), res.edit_trace.end());
 
     sw.lap("trace.calc");

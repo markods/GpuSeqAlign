@@ -35,7 +35,7 @@ static NwStat vectorSubstringWithHeader(const std::vector<T>& vect, const NwRang
     return NwStat::success;
 }
 
-// Structs used to verify that the algorithms' results are correct.
+// Struct used to verify that the algorithms' results are correct.
 struct NwCompareKey
 {
     std::string seqY_id;
@@ -46,6 +46,7 @@ struct NwCompareKey
     friend bool operator==(const NwCompareKey& l, const NwCompareKey& r);
     friend bool operator!=(const NwCompareKey& l, const NwCompareKey& r);
 };
+// Struct used to verify that the algorithms' results are correct.
 struct NwCompareRes
 {
     int align_cost;

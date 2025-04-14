@@ -76,7 +76,7 @@ NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res)
         res.edit_trace.push_back(edit);
     }
 
-    // Reverse the trace, so it starts from the top-left corner of the matrix.
+    // Reverse the edit trace, so it starts from the top-left corner of the matrix.
     std::reverse(res.edit_trace.begin(), res.edit_trace.end());
 
     sw.lap("trace.calc");

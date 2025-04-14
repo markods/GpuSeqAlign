@@ -67,7 +67,8 @@ bool NwAlgParams::hasCurr() const
 {
     return !_isEnd;
 }
-void NwAlgParams::next() // updates starting from the last parameter and so on
+// Updates last parameter, then on iteration loop second-to-last, etc.
+void NwAlgParams::next()
 {
     for (auto iter = _params.rbegin(); iter != _params.rend(); iter++)
     {
@@ -108,7 +109,6 @@ Dict<std::string, int> NwAlgParams::copy() const
 
 ////// NwAlgInput //////
 
-// Free all memory allocated by the Needleman-Wunsch algorithms.
 void NwAlgInput::resetAllocsBenchmarkCycle()
 {
     // First free device memory, since there is usually less of it than ram.
@@ -129,7 +129,6 @@ void NwAlgInput::resetAllocsBenchmarkCycle()
     tileHcolMat.clear();
 }
 
-// Free all remaining memory not cleared by resetAllocs.
 void NwAlgInput::resetAllocsBenchmarkEnd()
 {
     // First free device memory, since there is usually less of it than ram.

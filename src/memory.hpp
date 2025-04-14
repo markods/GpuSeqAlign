@@ -5,7 +5,7 @@
 #include <memory>
 #include <vector>
 
-// create an uninitialized array on the host
+// Create an uninitialized array on the host.
 template <typename T>
 class HostArray
 {
@@ -77,7 +77,7 @@ private:
     size_t _size;
 };
 
-// create an uninitialized array on the device
+// Create an uninitialized array on the device.
 template <typename T>
 class DeviceArray
 {
@@ -139,7 +139,7 @@ private:
     size_t _size;
 };
 
-// initialize memory on the device starting from the given element
+// Initialize memory on the device starting from the given element.
 template <typename T>
 cudaError_t memSet(
     T* const arr,
@@ -164,12 +164,12 @@ cudaError_t memSet(
     return memSet(arr.data(), idx, arr.size() - idx, value);
 }
 
-// transfer data between the host and the device
+// Transfer data between the host and the device.
 template <typename T>
 cudaError_t memTransfer(
     T* const dst,
     const T* const src,
-    int elemcnt,
+    int elemcnt, // TODO: size_t
     cudaMemcpyKind kind)
 {
     cudaError_t status = cudaMemcpy(
@@ -181,6 +181,8 @@ cudaError_t memTransfer(
 
     return status;
 }
+
+// Transfer data between the host and the device.
 template <typename T>
 cudaError_t memTransfer(
     DeviceArray<T>& dst,
@@ -189,6 +191,8 @@ cudaError_t memTransfer(
 {
     return memTransfer(dst.data(), src.data(), elemcnt, cudaMemcpyHostToDevice);
 }
+
+// Transfer data between the host and the device.
 template <typename T>
 cudaError_t memTransfer(
     HostArray<T>& dst,
@@ -198,8 +202,8 @@ cudaError_t memTransfer(
     return memTransfer(dst.data(), src.data(), elemcnt, cudaMemcpyDeviceToHost);
 }
 
-// transfer a pitched matrix to a contiguous matrix, between the host and the device
-// Dst and src cannot overlap
+// Transfer a pitched matrix to a contiguous matrix, between the host and the device.
+// Destination and source must not overlap.
 template <typename T>
 cudaError_t memTransfer(
     T* const dst,
@@ -222,6 +226,9 @@ cudaError_t memTransfer(
 
     return status;
 }
+
+// Transfer a pitched matrix to a contiguous matrix, between the host and the device.
+// Destination and source must not overlap.
 template <typename T>
 cudaError_t memTransfer(
     HostArray<T>& dst,

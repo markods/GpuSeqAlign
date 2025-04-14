@@ -4,7 +4,7 @@
 #include <iomanip>
 #include <iostream>
 
-// iostream format flags guard
+// Iostream format flags guard.
 template <typename T>
 class FormatFlagsGuard
 {

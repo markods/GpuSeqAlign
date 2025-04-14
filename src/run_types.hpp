@@ -56,7 +56,7 @@ struct NwAlgParams
     const NwAlgParam& at(const std::string name) const;
 
     bool hasCurr() const;
-    // Updates last parameter, then second-to-last, etc.
+    // Updates last parameter, then on iteration loop second-to-last, etc.
     void next();
     void reset();
 
@@ -66,7 +66,6 @@ struct NwAlgParams
     bool _isEnd;
 };
 
-// TODO: remove useless comments
 // TODO: fix: Exception thrown at 0x00007FF83227016C in nw.exe: Microsoft C++ exception: std::out_of_range at memory location 0x000000A7E93FB4C8.
 
 struct NwAlgInput
@@ -101,10 +100,7 @@ struct NwAlgInput
     int warpsz;
     int maxThreadsPerBlock;
 
-    // Free all memory allocated by the Needleman-Wunsch algorithms.
     void resetAllocsBenchmarkCycle();
-
-    // Free all remaining memory not cleared by resetAllocs.
     void resetAllocsBenchmarkEnd();
 };
 

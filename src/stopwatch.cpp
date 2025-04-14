@@ -3,19 +3,15 @@
 // Combine many stopwatches into one.
 Stopwatch Stopwatch::combine(std::vector<Stopwatch>& swList)
 {
-    // if the stopwatch list is empty, return a default initialized stopwatch
     if (swList.empty())
     {
         return Stopwatch {};
     }
 
-    // copy on purpose here -- don't modify the given stopwatch list
+    // Copy on purpose here.
     Stopwatch res {};
-    // the number of times the lap was found in the stopwatches
     Dict<std::string, int> lapCount {};
 
-    // for all stopwatches + for all laps in a stopwatch, get the average lap time
-    // +   for the average, don't count non-existent values in the denominator
     for (auto& sw : swList)
     {
         for (auto& lapTuple : sw._laps)
@@ -23,16 +19,15 @@ Stopwatch Stopwatch::combine(std::vector<Stopwatch>& swList)
             const std::string& lapName = lapTuple.first;
             float lapTime = lapTuple.second;
 
-            // insert or set default value! -- no initialization necessary before addition
+            // Insert or set default value (no initialization necessary before addition).
             res._laps[lapName] += lapTime;
             lapCount[lapName]++;
         }
     }
 
-    // for all laps in the result; divide them by the number of their occurences
+    // Don't count non-existent values in the denominator.
     for (auto& lapTuple : res._laps)
     {
-        // divide the total lap time by the number of lap occurences
         const std::string& lapName = lapTuple.first;
         res._laps[lapName] /= lapCount[lapName];
     }

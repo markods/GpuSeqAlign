@@ -1,7 +1,7 @@
 #ifndef INCLUDE_MATH_HPP
 #define INCLUDE_MATH_HPP
 
-// get the specified element from the given linearized matrix
+// Get the specified element from the given linearized matrix.
 #define el(mat, cols, i, j) (mat[(cols) * (i) + (j)])
 
 template <typename T>

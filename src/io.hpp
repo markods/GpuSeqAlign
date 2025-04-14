@@ -8,16 +8,11 @@
 #include <iostream>
 #include <string>
 
-// get the current time as an ISO string
 NwStat isoDatetimeAsString(std::string& res);
 
-// open input file stream
 NwStat openInFile(const std::string& path, std::ifstream& ifs);
-
-// open output file stream
 NwStat openOutFile(const std::string& path, std::ofstream& ofs);
 
-// read a json file into a variable
 template <typename T>
 NwStat readFromJsonFile(const std::string& path, T& res, std::string& error_msg)
 {

@@ -13,7 +13,7 @@
         }                      \
     } while (false)
 
-// defer execution to scope exit
+// Defer execution to scope exit.
 template <typename F>
 class Defer
 {
