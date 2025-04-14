@@ -271,7 +271,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
         else
         {
             print_cmd_usage(std::cout);
-            std::cout << "\n";
+            std::cout << '\n';
             std::cerr << "error: unknown parameter: \"" << arg << "\"\n";
             return NwStat::errorInvalidValue;
         }
@@ -318,7 +318,7 @@ static NwStat parseSubstFile(const std::string& substPath, NwSubstData& substDat
     if (NwStat::success != readFromJsonFile(substPath, substData, error_msg))
     {
         std::cerr << "error: could not open/parse json from substPath: \"" << substPath << "\"\n";
-        std::cerr << error_msg << "\n";
+        std::cerr << error_msg << '\n';
         return NwStat::errorIoStream;
     }
 
@@ -334,7 +334,7 @@ static NwStat parseSubstFile(const std::string& substPath, NwSubstData& substDat
 
         if (letter_tuple.second != letter_idx)
         {
-            std::cerr << "error: substitution matrix letter's index must start from zero and increase by 1: \"" << letter_tuple.first << "\": " << letter_tuple.second << "\n";
+            std::cerr << "error: substitution matrix letter's index must start from zero and increase by 1: \"" << letter_tuple.first << "\": " << letter_tuple.second << '\n';
             return NwStat::errorInvalidFormat;
         }
 
@@ -359,7 +359,7 @@ static NwStat parseAlgParamsFile(const std::string& algParamPath, NwAlgParamsDat
     if (NwStat::success != readFromJsonFile(algParamPath, algParamsData, error_msg))
     {
         std::cerr << "error: could not open/parse json from algParamPath: \"" << algParamPath << "\"\n";
-        std::cerr << error_msg << "\n";
+        std::cerr << error_msg << '\n';
         return NwStat::errorIoStream;
     }
 
@@ -435,7 +435,7 @@ static NwStat parseSeqFile(const std::string& seqPath, const Dict<std::string, i
     if (NwStat stat = readFromFastaFormat(seqPath, ifs, seqData, letterMap, error_msg); stat != NwStat::success)
     {
         std::cerr << "error: invalid fasta format on seqPath: \"" << seqPath << "\"\n";
-        std::cerr << error_msg << "\n";
+        std::cerr << error_msg << '\n';
         return stat;
     }
 
@@ -455,7 +455,7 @@ static NwStat parseSeqPairFile(const std::string& seqPairPath, NwSeqPairData& se
     if (NwStat stat = readFromSeqPairFormat(seqPairPath, ifs, seqPairData, seqMap, error_msg); stat != NwStat::success)
     {
         std::cerr << "error: invalid text format on seqPairPath: \"" << seqPairPath << "\"\n";
-        std::cerr << error_msg << "\n";
+        std::cerr << error_msg << '\n';
         return stat;
     }
 

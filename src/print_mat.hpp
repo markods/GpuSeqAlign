@@ -34,7 +34,7 @@ void NwPrintMat(
         {
             os << std::setw(4) << el(mat, cols, i, j) << ' ';
         }
-        os << "\n";
+        os << '\n';
     }
 }
 
@@ -60,10 +60,10 @@ void NwPrintTiledMat(
             }
         }
 
-        os << "\n";
+        os << '\n';
         if ((i - 1) % tileHei == 0)
         {
-            os << "\n";
+            os << '\n';
         }
     }
 }
@@ -87,7 +87,7 @@ void NwPrintHdrMat(
                 int kHdrElem = (i * cols + j) * hdrLen + k;
                 os << std::setw(4) << tileHdrMat[kHdrElem] << ' ';
             }
-            os << " // " << i << ' ' << j << "\n";
+            os << " // " << i << ' ' << j << '\n';
         }
     }
 }

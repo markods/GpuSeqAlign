@@ -225,7 +225,7 @@ void breakProgressLine(const NwCmdArgs& cmdArgs, bool& write_progress_newline)
 {
     if (cmdArgs.fWriteProgress.value() && write_progress_newline)
     {
-        std::cout << "\n"
+        std::cout << '\n'
                   << std::flush;
         write_progress_newline = false;
     }
@@ -303,7 +303,7 @@ static NwStat printBenchReportLine(
         {
             cmdData.debugOfs << "+\n>edit_trace\n";
             alg.printTrace(cmdData.debugOfs, nw, repResCombined);
-            cmdData.debugOfs << "\n";
+            cmdData.debugOfs << '\n';
         }
 
         if (cmdArgs.fPrintScore.value())

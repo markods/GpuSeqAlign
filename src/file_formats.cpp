@@ -512,6 +512,6 @@ NwStat writeNwResultToTsv(std::ostream& os, const NwAlgResult& res, const TsvPri
         fieldToTsv(os, "edit_trace", res.edit_trace, printCtl);
     }
 
-    os << "\n";
+    os << '\n';
     return NwStat::success;
 }

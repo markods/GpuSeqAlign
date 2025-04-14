@@ -378,7 +378,7 @@ NwStat NwPrintScore2_Sparse(std::ostream& os, const NwAlgInput& nw, const NwAlgR
         }
 
         std::swap(currRow, prevRow);
-        os << "\n";
+        os << '\n';
     }
 
     return NwStat::success;
