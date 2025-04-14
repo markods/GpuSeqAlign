@@ -33,9 +33,9 @@ NwStat readFromJsonFile(const std::string& path, T& res, std::string& error_msg)
         // The parser doesn't allow trailing commas.
         auto json = nlohmann::ordered_json::parse(
             ifs,
-            /*callback*/ nullptr,
-            /*allow_exceptions*/ true,
-            /*ignore_comments*/ true);
+            nullptr /*callback*/,
+            true /*allow_exceptions*/,
+            true /*ignore_comments*/);
 
         if (json.is_discarded())
         {

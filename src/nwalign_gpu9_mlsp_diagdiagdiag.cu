@@ -271,7 +271,7 @@ __global__ static void Nw_Gpu9_KernelB(
         // Syncs thread memory accesses in the warp.
         // Initialize 'up' elements for all warp threads except the zeroth.
         // + Copies from a lane with lower thread id relative to the caller thread id.
-        up = __shfl_up_sync(/*mask*/ 0xffffffff, /*var*/ curr, /*delta*/ 1, /*width*/ warpSize);
+        up = __shfl_up_sync(0xffffffff /*mask*/, curr /*var*/, 1 /*delta*/, warpSize /*width*/);
 
         // Initialize 'up' element for the zeroth thread.
         // For "artificial" elements, initialize to 0 so that behavior is deterministic.

@@ -11,7 +11,7 @@ static NwStat setStringArgOnce(
     const char* argv[],
     int& i,
     std::optional<std::string>& arg,
-    const std::string& arg_name /*must not be a rvalue*/)
+    const std::string& arg_name)
 {
     if (arg.has_value())
     {
@@ -33,7 +33,7 @@ static NwStat setStringVectArg(
     const char* argv[],
     int& i,
     std::optional<std::vector<std::string>>& arg,
-    const std::string& arg_name /*must not be a rvalue*/)
+    const std::string& arg_name)
 {
     if (i + 1 >= argc)
     {
@@ -55,7 +55,7 @@ static NwStat setIntArgOnce(
     const char* argv[],
     int& i,
     std::optional<int>& arg,
-    const std::string& arg_name /*must not be a rvalue*/)
+    const std::string& arg_name)
 {
     if (arg.has_value())
     {
@@ -88,7 +88,7 @@ static NwStat setIntArgOnce(
 
 static NwStat setSwitchArgOnce(
     std::optional<bool>& arg,
-    const std::string& arg_name /*must not be a rvalue*/)
+    const std::string& arg_name)
 {
     if (arg.has_value())
     {

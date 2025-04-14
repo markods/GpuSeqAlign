@@ -148,9 +148,9 @@ cudaError_t memSet(
     int value)
 {
     cudaError_t status = cudaMemset(
-        /*devPtr*/ &arr[idx],       // Pointer to device memory
-        /*value*/ value,            // Value to set for each byte of specified memory
-        /*count*/ count * sizeof(T) // Size in bytes to set
+        /*devPtr*/ &arr[idx],       // Pointer to device memory.
+        /*value*/ value,            // Value to set for each byte of specified memory.
+        /*count*/ count * sizeof(T) // Size in bytes to set.
     );
 
     return status;
@@ -173,10 +173,10 @@ cudaError_t memTransfer(
     cudaMemcpyKind kind)
 {
     cudaError_t status = cudaMemcpy(
-        /*dst*/ dst,                   // Destination memory address
-        /*src*/ src,                   // Source memory address
-        /*count*/ elemcnt * sizeof(T), // Size in bytes to copy
-        /*kind*/ kind                  // Type of transfer
+        /*dst*/ dst,                   // Destination memory address.
+        /*src*/ src,                   // Source memory address.
+        /*count*/ elemcnt * sizeof(T), // Size in bytes to copy.
+        /*kind*/ kind                  // Type of transfer.
     );
 
     return status;
@@ -199,7 +199,7 @@ cudaError_t memTransfer(
 }
 
 // transfer a pitched matrix to a contiguous matrix, between the host and the device
-// + NOTE: dst and src cannot overlap
+// Dst and src cannot overlap
 template <typename T>
 cudaError_t memTransfer(
     T* const dst,
@@ -210,14 +210,14 @@ cudaError_t memTransfer(
     cudaMemcpyKind kind)
 {
     cudaError_t status = cudaMemcpy2D(
-        /*dst*/ dst,                     // Destination memory address
-        /*dpitch*/ dst_cols * sizeof(T), // Pitch of destination memory (padded row size in bytes; in other words distance between the starting points of two rows)
-        /*src*/ src,                     // Source memory address
-        /*spitch*/ src_cols * sizeof(T), // Pitch of source memory (padded row size in bytes)
+        /*dst*/ dst,                     // Destination memory address.
+        /*dpitch*/ dst_cols * sizeof(T), // Pitch of destination memory (padded row size in bytes; distance between the starting points of two rows).
+        /*src*/ src,                     // Source memory address.
+        /*spitch*/ src_cols * sizeof(T), // Pitch of source memory (padded row size in bytes).
 
-        /*width*/ dst_cols * sizeof(T), // Width of matrix transfer (non-padding row size in bytes)
-        /*height*/ dst_rows,            // Height of matrix transfer (#rows)
-        /*kind*/ kind                   // Type of transfer
+        /*width*/ dst_cols * sizeof(T), // Width of matrix transfer (non-padding row size in bytes).
+        /*height*/ dst_rows,            // Height of matrix transfer (#rows).
+        /*kind*/ kind                   // Type of transfer.
     );
 
     return status;
