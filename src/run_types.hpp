@@ -73,9 +73,13 @@ struct NwAlgInput
     std::vector<int> seqX;
     std::vector<int> seqY;
     HostArray<int> score;
-    std::vector<int> trace;
     HostArray<int> tileHrowMat;
     HostArray<int> tileHcolMat;
+
+    std::vector<int> trace;
+    std::vector<int> tile;
+    std::vector<int> currRow;
+    std::vector<int> prevRow;
 
     DeviceArray<int> subst_gpu;
     DeviceArray<int> seqX_gpu;

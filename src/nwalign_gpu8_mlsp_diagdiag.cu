@@ -351,8 +351,6 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
     // The number of tiles per row and column of the score matrix.
     int trows = (int)ceil(float(adjrows - 1) / tileBy);
     int tcols = (int)ceil(float(adjcols - 1) / tileBx);
-    // Space for aligning single tile.
-    std::vector<int> tile;
 
     // Start the timer.
     Stopwatch& sw = res.sw_align;
@@ -370,7 +368,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
         nw.tileHcolMat.init(trows * tcols * (1 + tileBy));
 
         std::vector<int> tmpTile((1 + tileBy) * (1 + tileBx), 0);
-        std::swap(tile, tmpTile);
+        std::swap(nw.tile, tmpTile);
     }
     catch (const std::exception&)
     {
@@ -599,8 +597,8 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
 
     TileAndElemIJ co;
     NwTrace2_GetTileAndElemIJ(nw, nw.adjrows - 1 /*last valid i pos*/, nw.adjcols - 1 /*last valid j pos*/, co);
-    NwTrace2_AlignTile(tile, nw, co);
-    res.align_cost = el(tile, 1 + tileBx, co.iTileElem, co.jTileElem);
+    NwTrace2_AlignTile(nw.tile, nw, co);
+    res.align_cost = el(nw.tile, 1 + tileBx, co.iTileElem, co.jTileElem);
 
     // Increment calculation time.
     sw.lap("align.calc");

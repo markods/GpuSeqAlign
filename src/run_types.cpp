@@ -123,10 +123,17 @@ void NwAlgInput::resetAllocsBenchmarkCycle()
     // seqX.clear();
     // seqY.clear();
     score.clear();
-    trace.clear();
-    trace.shrink_to_fit();
     tileHrowMat.clear();
     tileHcolMat.clear();
+
+    trace.clear();
+    trace.shrink_to_fit();
+    tile.clear();
+    tile.shrink_to_fit();
+    currRow.clear();
+    currRow.shrink_to_fit();
+    prevRow.clear();
+    prevRow.shrink_to_fit();
 }
 
 void NwAlgInput::resetAllocsBenchmarkEnd()

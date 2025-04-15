@@ -20,7 +20,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
 NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res);
 
 NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace);
-NwStat NwHash1_Plain(const NwAlgInput& nw, NwAlgResult& res);
+NwStat NwHash1_Plain(NwAlgInput& nw, NwAlgResult& res);
 NwStat NwPrintScore1_Plain(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
 NwStat NwPrintTrace1_Plain(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
 
@@ -33,7 +33,7 @@ struct TileAndElemIJ
 };
 
 NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace);
-NwStat NwHash2_Sparse(const NwAlgInput& nw, NwAlgResult& res);
+NwStat NwHash2_Sparse(NwAlgInput& nw, NwAlgResult& res);
 NwStat NwPrintScore2_Sparse(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
 void NwTrace2_AlignTile(std::vector<int>& tile, const NwAlgInput& nw, const TileAndElemIJ& co);
 void NwTrace2_GetTileAndElemIJ(const NwAlgInput& nw, int i, int j, TileAndElemIJ& co);

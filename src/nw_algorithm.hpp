@@ -10,7 +10,7 @@ class NwAlgorithm
 public:
     using NwAlignFn = NwStat (*)(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res);
     using NwTraceFn = NwStat (*)(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace);
-    using NwHashFn = NwStat (*)(const NwAlgInput& nw, NwAlgResult& res);
+    using NwHashFn = NwStat (*)(NwAlgInput& nw, NwAlgResult& res);
     using NwPrintScoreFn = NwStat (*)(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
     using NwPrintTraceFn = NwStat (*)(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
 
@@ -27,7 +27,7 @@ public:
     // Align seqX to seqY (seqX becomes seqY).
     NwStat align(const NwAlgParams& algParams, NwAlgInput& nw, NwAlgResult& res) const;
     NwStat trace(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace) const;
-    NwStat hash(const NwAlgInput& nw, NwAlgResult& res) const;
+    NwStat hash(NwAlgInput& nw, NwAlgResult& res) const;
     NwStat printScore(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res) const;
     NwStat printTrace(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res) const;
 

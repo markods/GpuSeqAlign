@@ -100,16 +100,13 @@ void NwTrace2_AlignTile(std::vector<int>& tile, const NwAlgInput& nw, const Tile
 // + tile header column matrix.
 NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
 {
-    std::vector<int> tile;
-
     Stopwatch& sw = res.sw_trace;
     sw.start();
 
     try
     {
-        // TODO: tmpTile
         std::vector<int> tmpTile(nw.tileHcolLen * nw.tileHrowLen, 0);
-        std::swap(tile, tmpTile);
+        std::swap(nw.tile, tmpTile);
         res.edit_trace.reserve(nw.adjrows - 1 + nw.adjcols); // Longest possible path.
         if (calcDebugTrace)
         {
@@ -128,7 +125,7 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
     int j = nw.adjcols - 1 /*last valid j pos*/;
     TileAndElemIJ co;
     NwTrace2_GetTileAndElemIJ(nw, i, j, co);
-    NwTrace2_AlignTile(tile, nw, co);
+    NwTrace2_AlignTile(nw.tile, nw, co);
 
     int same_letter_cnt = 1;
     char edit = '\0';
@@ -137,7 +134,7 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
     {
         if (calcDebugTrace)
         {
-            int currElem = el(tile, nw.tileHrowLen, co.iTileElem, co.jTileElem);
+            int currElem = el(nw.tile, nw.tileHrowLen, co.iTileElem, co.jTileElem);
             nw.trace.push_back(currElem);
         }
 
@@ -147,7 +144,7 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
 
         if (co.iTileElem > 0 && co.jTileElem > 0)
         {
-            max = el(tile, nw.tileHrowLen, co.iTileElem - 1, co.jTileElem - 1);
+            max = el(nw.tile, nw.tileHrowLen, co.iTileElem - 1, co.jTileElem - 1);
             di = -1;
             dj = -1;
             if (nw.seqX[j] == nw.seqY[i])
@@ -161,17 +158,17 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
                 edit = 'X';
             }
         }
-        if (co.iTileElem > 0 && max < el(tile, nw.tileHrowLen, co.iTileElem - 1, co.jTileElem))
+        if (co.iTileElem > 0 && max < el(nw.tile, nw.tileHrowLen, co.iTileElem - 1, co.jTileElem))
         {
-            max = el(tile, nw.tileHrowLen, co.iTileElem - 1, co.jTileElem);
+            max = el(nw.tile, nw.tileHrowLen, co.iTileElem - 1, co.jTileElem);
             di = -1;
             dj = 0;
             // DOWN^-1 -- align a gap in seqX to a letter in seqY. INSERTION in seqX.
             edit = 'I';
         }
-        if (co.jTileElem > 0 && max < el(tile, nw.tileHrowLen, co.iTileElem, co.jTileElem - 1))
+        if (co.jTileElem > 0 && max < el(nw.tile, nw.tileHrowLen, co.iTileElem, co.jTileElem - 1))
         {
-            max = el(tile, nw.tileHrowLen, co.iTileElem, co.jTileElem - 1);
+            max = el(nw.tile, nw.tileHrowLen, co.iTileElem, co.jTileElem - 1);
             di = 0;
             dj = -1;
             // RIGHT^-1 -- align a letter in seqX to a gap in seqY. DELETION in seqX.
@@ -200,7 +197,7 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
                 co.jTileElem = nw.tileHrowLen - 1;
             }
 
-            NwTrace2_AlignTile(tile, nw, co);
+            NwTrace2_AlignTile(nw.tile, nw, co);
         }
 
         if (edit != prev_edit && prev_edit != '\0')
@@ -259,12 +256,10 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
 // The score matrix is represented as two matrices (row-major order):
 // + tile header row matrix,
 // + tile header column matrix.
-NwStat NwHash2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
+NwStat NwHash2_Sparse(NwAlgInput& nw, NwAlgResult& res)
 {
     // http://www.cse.yorku.ca/~oz/hash.html
     unsigned hash = 5381;
-    std::vector<int> currRow;
-    std::vector<int> prevRow;
 
     Stopwatch& sw = res.sw_hash;
     sw.start();
@@ -273,8 +268,8 @@ NwStat NwHash2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
     {
         std::vector<int> tmpCurrRow(nw.adjcols, 0);
         std::vector<int> tmpPrevRow(nw.adjcols, 0);
-        std::swap(currRow, tmpCurrRow);
-        std::swap(prevRow, tmpPrevRow);
+        std::swap(nw.currRow, tmpCurrRow);
+        std::swap(nw.prevRow, tmpPrevRow);
     }
     catch (const std::exception&)
     {
@@ -307,27 +302,27 @@ NwStat NwHash2_Sparse(const NwAlgInput& nw, NwAlgResult& res)
             }
             else if (i > 0 && j > 0)
             {
-                int p1 = prevRow[/*i - 1,*/ j - 1] + el(nw.subst, nw.substsz, nw.seqY[i], nw.seqX[j]); // MOVE DOWN-RIGHT
-                int p2 = prevRow[/*i - 1,*/ j] + nw.gapoCost;                                          // MOVE DOWN
-                int p3 = currRow[/*i,*/ j - 1] + nw.gapoCost;                                          // MOVE RIGHT
+                int p1 = nw.prevRow[/*i - 1,*/ j - 1] + el(nw.subst, nw.substsz, nw.seqY[i], nw.seqX[j]); // MOVE DOWN-RIGHT
+                int p2 = nw.prevRow[/*i - 1,*/ j] + nw.gapoCost;                                          // MOVE DOWN
+                int p3 = nw.currRow[/*i,*/ j - 1] + nw.gapoCost;                                          // MOVE RIGHT
                 currElem = max3(p1, p2, p3);
             }
             else if (i > 0)
             {
-                currElem = prevRow[/*i - 1,*/ j] + nw.gapoCost; // MOVE DOWN
+                currElem = nw.prevRow[/*i - 1,*/ j] + nw.gapoCost; // MOVE DOWN
             }
             else if (j > 0)
             {
-                currElem = currRow[/*i,*/ j - 1] + nw.gapoCost; // MOVE RIGHT
+                currElem = nw.currRow[/*i,*/ j - 1] + nw.gapoCost; // MOVE RIGHT
             }
 
-            currRow[j] = currElem;
+            nw.currRow[j] = currElem;
 
             // Add the current element to the hash.
             hash = ((hash << 5) + hash) ^ currElem;
         }
 
-        std::swap(currRow, prevRow);
+        std::swap(nw.currRow, nw.prevRow);
     }
 
     res.score_hash = hash;

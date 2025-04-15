@@ -32,7 +32,7 @@ NwStat NwAlgorithm::trace(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
 {
     return _traceFn(nw, res, calcDebugTrace);
 }
-NwStat NwAlgorithm::hash(const NwAlgInput& nw, NwAlgResult& res) const
+NwStat NwAlgorithm::hash(NwAlgInput& nw, NwAlgResult& res) const
 {
     return _hashFn(nw, res);
 }

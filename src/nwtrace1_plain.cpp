@@ -133,7 +133,7 @@ NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
     return NwStat::success;
 }
 
-NwStat NwHash1_Plain(const NwAlgInput& nw, NwAlgResult& res)
+NwStat NwHash1_Plain(NwAlgInput& nw, NwAlgResult& res)
 {
     // http://www.cse.yorku.ca/~oz/hash.html
     unsigned hash = 5381;
