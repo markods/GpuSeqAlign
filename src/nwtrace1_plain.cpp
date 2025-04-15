@@ -2,11 +2,11 @@
 #include "run_types.hpp"
 #include <limits>
 
-// TODO: measure memory
-
 // TODO: smith waterman
 // TODO: affine gap
 
+// TODO: allocate score matrix on the gpu every cycle
+// TODO: measure shared memory usage
 // TODO: remove comments in nwalign algorithms (part 3)
 
 NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)

@@ -493,6 +493,9 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                         benchData.calcErrors++;
                     }
 
+                    res.hostAllocations = nw.measureHostAllocations();
+                    res.deviceAllocations = nw.measureDeviceAllocations();
+
                     if (iR < 0 && res.stat == NwStat::success)
                     {
                         // Discard successful warmup runs.

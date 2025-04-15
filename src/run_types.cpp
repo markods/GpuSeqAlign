@@ -109,6 +109,39 @@ Dict<std::string, int> NwAlgParams::copy() const
 
 ////// NwAlgInput //////
 
+size_t NwAlgInput::measureHostAllocations()
+{
+    size_t size = 0;
+
+    size += subst.capacity() * sizeof(int);
+    size += seqX.capacity() * sizeof(int);
+    size += seqY.capacity() * sizeof(int);
+    size += score.size() * sizeof(int);
+    size += tileHrowMat.size() * sizeof(int);
+    size += tileHcolMat.size() * sizeof(int);
+
+    size += trace.capacity() * sizeof(int);
+    size += tile.capacity() * sizeof(int);
+    size += currRow.capacity() * sizeof(int);
+    size += prevRow.capacity() * sizeof(int);
+
+    return size;
+}
+
+size_t NwAlgInput::measureDeviceAllocations()
+{
+    size_t size = 0;
+
+    size += subst_gpu.size() * sizeof(int);
+    size += seqX_gpu.size() * sizeof(int);
+    size += seqY_gpu.size() * sizeof(int);
+    size += score_gpu.size() * sizeof(int);
+    size += tileHrowMat_gpu.size() * sizeof(int);
+    size += tileHcolMat_gpu.size() * sizeof(int);
+
+    return size;
+}
+
 void NwAlgInput::resetAllocsBenchmarkCycle()
 {
     // First free device memory, since there is usually less of it than ram.

@@ -5,6 +5,7 @@
 #include "math.hpp"
 #include "memory.hpp"
 #include "stopwatch.hpp"
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -102,6 +103,8 @@ struct NwAlgInput
     int warpsz;
     int maxThreadsPerBlock;
 
+    size_t measureHostAllocations();
+    size_t measureDeviceAllocations();
     void resetAllocsBenchmarkCycle();
     void resetAllocsBenchmarkEnd();
 };
@@ -132,6 +135,9 @@ struct NwAlgResult
     int align_cost;
     unsigned score_hash;
     unsigned trace_hash;
+
+    size_t hostAllocations;   // In bytes.
+    size_t deviceAllocations; // In bytes.
 
     Stopwatch sw_align;
     Stopwatch sw_hash;
