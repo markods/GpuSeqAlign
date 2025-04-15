@@ -3,12 +3,12 @@
 #include <limits>
 
 // TODO: don't calculate default trace (numbers) unless asked
+// TODO: measure memory
 
 // TODO: smith waterman
 // TODO: affine gap
 
 // TODO: remove comments in nwalign algorithms (part 3)
-// TODO: fix: Exception thrown at 0x00007FF83227016C in nw.exe: Microsoft C++ exception: std::out_of_range at memory location 0x000000A7E93FB4C8.
 
 NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res)
 {

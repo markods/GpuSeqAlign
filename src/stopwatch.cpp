@@ -66,14 +66,11 @@ float Stopwatch::total() const
 
 float Stopwatch::get_or_default(const std::string& lap_name) const
 {
-    try
+    if (_laps.contains(lap_name))
     {
         return _laps.at(lap_name);
     }
-    catch (const std::exception&)
-    {
-        return 0;
-    }
+    return 0;
 }
 const Dict<std::string, float>& Stopwatch::laps() const
 {
