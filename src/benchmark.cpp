@@ -483,7 +483,7 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                     {
                         res.errstep = 3;
                     }
-                    if (cmdArgs.fCalcTrace.value() && !res.errstep && NwStat::success != (res.stat = alg.trace(nw, res)))
+                    if (cmdArgs.fCalcTrace.value() && !res.errstep && NwStat::success != (res.stat = alg.trace(nw, res, cmdArgs.fPrintTrace.value())))
                     {
                         res.errstep = 4;
                     }

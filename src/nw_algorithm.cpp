@@ -28,9 +28,9 @@ NwStat NwAlgorithm::align(const NwAlgParams& algParams, NwAlgInput& nw, NwAlgRes
 {
     return _alignFn(algParams, nw, res);
 }
-NwStat NwAlgorithm::trace(NwAlgInput& nw, NwAlgResult& res) const
+NwStat NwAlgorithm::trace(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace) const
 {
-    return _traceFn(nw, res);
+    return _traceFn(nw, res, calcDebugTrace);
 }
 NwStat NwAlgorithm::hash(const NwAlgInput& nw, NwAlgResult& res) const
 {

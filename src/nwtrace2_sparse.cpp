@@ -98,7 +98,7 @@ void NwTrace2_AlignTile(std::vector<int>& tile, const NwAlgInput& nw, const Tile
 // The score matrix is represented as two matrices (row-major order):
 // + tile header row matrix,
 // + tile header column matrix.
-NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
+NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
 {
     std::vector<int> tile;
 
@@ -107,10 +107,14 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
 
     try
     {
+        // TODO: tmpTile
         std::vector<int> tmpTile(nw.tileHcolLen * nw.tileHrowLen, 0);
         std::swap(tile, tmpTile);
-        nw.trace.reserve(nw.adjrows - 1 + nw.adjcols); // Longest possible path.
-        res.edit_trace.reserve(nw.adjrows - 1 + nw.adjcols);
+        res.edit_trace.reserve(nw.adjrows - 1 + nw.adjcols); // Longest possible path.
+        if (calcDebugTrace)
+        {
+            nw.trace.reserve(nw.adjrows - 1 + nw.adjcols);
+        }
     }
     catch (const std::exception&)
     {
@@ -131,8 +135,11 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
     char prev_edit = '\0';
     while (true)
     {
-        int currElem = el(tile, nw.tileHrowLen, co.iTileElem, co.jTileElem);
-        nw.trace.push_back(currElem);
+        if (calcDebugTrace)
+        {
+            int currElem = el(tile, nw.tileHrowLen, co.iTileElem, co.jTileElem);
+            nw.trace.push_back(currElem);
+        }
 
         int max = std::numeric_limits<int>::min();
         int di = 0;
@@ -222,19 +229,25 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
 
     sw.lap("trace.calc");
 
-    // Reverse the trace, so it starts from the top-left corner of the matrix.
-    std::reverse(nw.trace.begin(), nw.trace.end());
+    if (calcDebugTrace)
+    {
+        // Reverse the trace, so it starts from the top-left corner of the matrix.
+        std::reverse(nw.trace.begin(), nw.trace.end());
+    }
 
     // http://www.cse.yorku.ca/~oz/hash.html
     unsigned hash = 5381;
 
-    for (auto& curr : nw.trace)
-    {
-        hash = ((hash << 5) + hash) ^ curr;
-    }
     for (auto& curr : res.edit_trace)
     {
         hash = ((hash << 5) + hash) ^ curr;
+    }
+    if (calcDebugTrace)
+    {
+        for (auto& curr : nw.trace)
+        {
+            hash = ((hash << 5) + hash) ^ curr;
+        }
     }
 
     res.trace_hash = hash;

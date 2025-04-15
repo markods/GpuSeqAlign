@@ -2,7 +2,6 @@
 #include "run_types.hpp"
 #include <limits>
 
-// TODO: don't calculate default trace (numbers) unless asked
 // TODO: measure memory
 
 // TODO: smith waterman
@@ -10,15 +9,18 @@
 
 // TODO: remove comments in nwalign algorithms (part 3)
 
-NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res)
+NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
 {
     Stopwatch& sw = res.sw_trace;
     sw.start();
 
     try
     {
-        nw.trace.reserve(nw.adjrows - 1 + nw.adjcols); // Longest possible path.
-        res.edit_trace.reserve(nw.adjrows - 1 + nw.adjcols);
+        res.edit_trace.reserve(nw.adjrows - 1 + nw.adjcols); // Longest possible path.
+        if (calcDebugTrace)
+        {
+            nw.trace.reserve(nw.adjrows - 1 + nw.adjcols);
+        }
     }
     catch (const std::exception&)
     {
@@ -34,8 +36,11 @@ NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res)
     char prev_edit = '\0';
     while (true)
     {
-        int curr = el(nw.score, nw.adjcols, i, j);
-        nw.trace.push_back(curr);
+        if (calcDebugTrace)
+        {
+            int curr = el(nw.score, nw.adjcols, i, j);
+            nw.trace.push_back(curr);
+        }
 
         int max = std::numeric_limits<int>::min();
         int di = 0;
@@ -102,19 +107,25 @@ NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res)
 
     sw.lap("trace.calc");
 
-    // Reverse the trace, so it starts from the top-left corner of the matrix.
-    std::reverse(nw.trace.begin(), nw.trace.end());
+    if (calcDebugTrace)
+    {
+        // Reverse the trace, so it starts from the top-left corner of the matrix.
+        std::reverse(nw.trace.begin(), nw.trace.end());
+    }
 
     // http://www.cse.yorku.ca/~oz/hash.html
     unsigned hash = 5381;
 
-    for (auto& curr : nw.trace)
-    {
-        hash = ((hash << 5) + hash) ^ curr;
-    }
     for (auto& curr : res.edit_trace)
     {
         hash = ((hash << 5) + hash) ^ curr;
+    }
+    if (calcDebugTrace)
+    {
+        for (auto& curr : nw.trace)
+        {
+            hash = ((hash << 5) + hash) ^ curr;
+        }
     }
 
     res.trace_hash = hash;
