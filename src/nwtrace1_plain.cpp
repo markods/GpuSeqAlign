@@ -3,7 +3,6 @@
 #include <limits>
 
 // TODO: don't calculate default trace (numbers) unless asked
-// TODO: same_letter_cnt
 
 // TODO: smith waterman
 // TODO: affine gap
@@ -30,6 +29,9 @@ NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res)
 
     int i = nw.adjrows - 1;
     int j = nw.adjcols - 1;
+    int same_letter_cnt = 1;
+    char edit = '\0';
+    char prev_edit = '\0';
     while (true)
     {
         int curr = el(nw.score, nw.adjcols, i, j);
@@ -38,7 +40,6 @@ NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res)
         int max = std::numeric_limits<int>::min();
         int di = 0;
         int dj = 0;
-        char edit = '\0';
 
         if (i > 0 && j > 0)
         {
@@ -48,12 +49,12 @@ NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res)
             if (nw.seqX[j] == nw.seqY[i])
             {
                 // DIAGONAL^-1 -- match.
-                edit = 'M';
+                edit = '=';
             }
             else
             {
-                // DIAGONAL^-1 -- substitution.
-                edit = 'S';
+                // DIAGONAL^-1 -- mismatch.
+                edit = 'X';
             }
         }
         if (i > 0 && max < el(nw.score, nw.adjcols, i - 1, j))
@@ -75,11 +76,25 @@ NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res)
         i += di;
         j += dj;
 
+        if (edit != prev_edit && prev_edit != '\0')
+        {
+            std::string letter_cnt_str {std::to_string(same_letter_cnt)};
+            std::reverse(letter_cnt_str.begin(), letter_cnt_str.end());
+            res.edit_trace.push_back(prev_edit);
+            res.edit_trace.append(letter_cnt_str);
+            same_letter_cnt = 1;
+        }
+        else if (edit == prev_edit)
+        {
+            same_letter_cnt++;
+        }
+        prev_edit = edit;
+        edit = '\0';
+
         if (di == 0 && dj == 0)
         {
             break;
         }
-        res.edit_trace.push_back(edit);
     }
 
     // Reverse the edit trace, so it starts from the top-left corner of the matrix.

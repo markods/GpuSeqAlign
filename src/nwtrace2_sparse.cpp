@@ -126,6 +126,9 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
     NwTrace2_GetTileAndElemIJ(nw, i, j, co);
     NwTrace2_AlignTile(tile, nw, co);
 
+    int same_letter_cnt = 1;
+    char edit = '\0';
+    char prev_edit = '\0';
     while (true)
     {
         int currElem = el(tile, nw.tileHrowLen, co.iTileElem, co.jTileElem);
@@ -134,7 +137,6 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
         int max = std::numeric_limits<int>::min();
         int di = 0;
         int dj = 0;
-        char edit = '\0';
 
         if (co.iTileElem > 0 && co.jTileElem > 0)
         {
@@ -144,12 +146,12 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
             if (nw.seqX[j] == nw.seqY[i])
             {
                 // DIAGONAL^-1 -- match.
-                edit = 'M';
+                edit = '=';
             }
             else
             {
-                // DIAGONAL^-1 -- substitution.
-                edit = 'S';
+                // DIAGONAL^-1 -- mismatch.
+                edit = 'X';
             }
         }
         if (co.iTileElem > 0 && max < el(tile, nw.tileHrowLen, co.iTileElem - 1, co.jTileElem))
@@ -194,11 +196,25 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res)
             NwTrace2_AlignTile(tile, nw, co);
         }
 
+        if (edit != prev_edit && prev_edit != '\0')
+        {
+            std::string letter_cnt_str {std::to_string(same_letter_cnt)};
+            std::reverse(letter_cnt_str.begin(), letter_cnt_str.end());
+            res.edit_trace.push_back(prev_edit);
+            res.edit_trace.append(letter_cnt_str);
+            same_letter_cnt = 1;
+        }
+        else if (edit == prev_edit)
+        {
+            same_letter_cnt++;
+        }
+        prev_edit = edit;
+        edit = '\0';
+
         if (di == 0 && dj == 0)
         {
             break;
         }
-        res.edit_trace.push_back(edit);
     }
 
     // Reverse the edit trace, so it starts from the top-left corner of the matrix instead of the bottom-right.
