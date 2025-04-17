@@ -392,16 +392,16 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
         // Size of shared memory per block in bytes.
         int shmemByteSize {};
 
-        dim3 blockDim {};
-        blockDim.x = threadsPerBlockA;
+        dim3 blockA {};
+        blockA.x = threadsPerBlockA;
 
         // Calculate the necessary number of blocks to cover the larger score matrix dimension.
-        dim3 gridDim {};
+        dim3 gridA {};
         {
             int tileHrowMat_RowElemCount = tcols * (1 + tileBx);
             int tileHcolMat_ColElemCount = trows * (1 + tileBy);
             int largerDimElemCount = max2(tileHrowMat_RowElemCount, tileHcolMat_ColElemCount);
-            gridDim.x = (int)ceil(float(largerDimElemCount) / threadsPerBlockA);
+            gridA.x = (int)ceil(float(largerDimElemCount) / threadsPerBlockA);
         }
 
         int* tileHrowMat_gpu = nw.tileHrowMat_gpu.data();
@@ -416,7 +416,7 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
             &tileBy,
             &nw.gapoCost};
 
-        if (cudaSuccess != (res.cudaStat = cudaLaunchKernel((void*)Nw_Gpu7_KernelA, gridDim, blockDim, kargs, shmemByteSize, cudaStreamDefault)))
+        if (cudaSuccess != (res.cudaStat = cudaLaunchKernel((void*)Nw_Gpu7_KernelA, gridA, blockA, kargs, shmemByteSize, cudaStreamDefault)))
         {
             return NwStat::errorKernelFailure;
         }

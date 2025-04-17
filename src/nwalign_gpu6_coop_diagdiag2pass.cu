@@ -381,8 +381,11 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, Nw
         gridA.y = (int)ceil(float(adjrows) / tileAy);
         gridA.x = (int)ceil(float(adjcols) / tileAx);
         // block dimensions for kernel A
-        int threadsPerBlockA = min2(nw.maxThreadsPerBlock, tileAy * tileAx);
-        dim3 blockA {(unsigned)threadsPerBlockA};
+        dim3 blockA {};
+        {
+            int threadsPerBlockA = min2(nw.maxThreadsPerBlock, tileAy * tileAx);
+            blockA.x = threadsPerBlockA;
+        }
 
         // calculate size of shared memory per block in bytes
         int shmemsz =
