@@ -73,7 +73,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
 {
     // number of threads per block
     // +   the tile is one-dimensional
-    int threadsPerBlock = {};
+    int threadsPerBlock {};
 
     // get the parameter values
     try
@@ -155,7 +155,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
     //  x / . . . .       x . / / . .       x . . . / /|
     // launch kernel for each minor diagonal of the score matrix
     {
-        cudaStream_t stream;
+        cudaStream_t stream {};
         if (cudaSuccess != (res.cudaStat = cudaStreamCreate(&stream)))
         {
             return NwStat::errorKernelFailure;
@@ -165,7 +165,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
             cudaStreamDestroy(stream);
         });
 
-        cudaGraph_t graph;
+        cudaGraph_t graph {};
         if (cudaSuccess != (res.cudaStat = cudaGraphCreate(&graph, 0)))
         {
             return NwStat::errorKernelFailure;
@@ -186,7 +186,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
         dim3 blockA {};
 
         // calculate size of shared memory per block in bytes
-        int shmemsz = (0);
+        int shmemsz {};
 
         // for all minor diagonals in the score matrix (excluding the header row and column)
         for (int d = 0; d < cols - 1 + rows; d++)

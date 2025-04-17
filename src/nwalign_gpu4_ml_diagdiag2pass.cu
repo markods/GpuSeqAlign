@@ -280,10 +280,10 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAl
     // tile sizes for kernels A and B
     // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
     // +   tile B must have one dimension fixed to the number of threads in a warp
-    int tileAx = {};
-    int tileAy = {};
-    int tileBx = {};
-    int tileBy = nw.warpsz;
+    int tileAx {};
+    int tileAy {};
+    int tileBx {};
+    int tileBy {nw.warpsz};
 
     // get the parameter values
     try
@@ -370,16 +370,19 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAl
         gridA.y = (int)ceil(float(adjrows) / tileAy);
         gridA.x = (int)ceil(float(adjcols) / tileAx);
         // block dimensions for kernel A
-        int threadsPerBlockA = min2(nw.maxThreadsPerBlock, tileAy * tileAx);
-        dim3 blockA {(unsigned)threadsPerBlockA};
+        dim3 blockA {};
+        {
+            int threadsPerBlockA = min2(nw.maxThreadsPerBlock, tileAy * tileAx);
+            blockA.x = threadsPerBlockA;
+        }
 
         // calculate size of shared memory per block in bytes
-        int shmemsz = (
+        int shmemsz =
             /*subst[][]*/ nw.substsz * nw.substsz * sizeof(int)
             /*seqX[]*/
             + tileAx * sizeof(int)
             /*seqY[]*/
-            + tileAy * sizeof(int));
+            + tileAy * sizeof(int);
 
         // create variables for gpu arrays in order to be able to take their addresses
         int* seqX_gpu = nw.seqX_gpu.data();
@@ -422,7 +425,7 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAl
     //  x / . . . .       x . / / . .       x . . . / /|
     // launch kernel B for each minor tile diagonal of the score matrix
     {
-        cudaStream_t stream;
+        cudaStream_t stream {};
         if (cudaSuccess != (res.cudaStat = cudaStreamCreate(&stream)))
         {
             return NwStat::errorKernelFailure;
@@ -432,7 +435,7 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAl
             cudaStreamDestroy(stream);
         });
 
-        cudaGraph_t graph;
+        cudaGraph_t graph {};
         if (cudaSuccess != (res.cudaStat = cudaGraphCreate(&graph, 0)))
         {
             return NwStat::errorKernelFailure;
@@ -456,8 +459,8 @@ NwStat NwAlign_Gpu4_Ml_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAl
         int tcols = (int)ceil(float(adjcols - 1) / tileBx);
 
         // calculate size of shared memory per block in bytes
-        int shmemsz = (
-            /*tile[]*/ (1 + tileBy) * (1 + tileBx) * sizeof(int));
+        int shmemsz =
+            /*tile[]*/ (1 + tileBy) * (1 + tileBx) * sizeof(int);
 
         // for all minor tile diagonals in the score matrix (excluding the header row and column)
         for (int d = 0; d < tcols - 1 + trows; d++)

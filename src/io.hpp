@@ -16,7 +16,7 @@ NwStat openOutFile(const std::string& path, std::ofstream& ofs);
 template <typename T>
 NwStat readFromJsonFile(const std::string& path, T& res, std::string& error_msg)
 {
-    std::ifstream ifs;
+    std::ifstream ifs {};
     if (NwStat stat = openInFile(path, ifs); stat != NwStat::success)
     {
         error_msg = std::string("could not open file on path: \"" + path + "\"");

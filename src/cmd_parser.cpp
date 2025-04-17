@@ -424,7 +424,7 @@ static NwStat verifyAndSetAlgNames(NwCmdArgs& cmdArgs, const NwCmdData& cmdData)
 
 static NwStat parseSeqFile(const std::string& seqPath, const Dict<std::string, int>& letterMap, NwSeqData& seqData)
 {
-    std::ifstream ifs;
+    std::ifstream ifs {};
     if (NwStat stat = openInFile(seqPath, ifs); stat != NwStat::success)
     {
         std::cerr << "error: could not open fasta file from seqPath: \"" << seqPath << "\"\n";
@@ -444,7 +444,7 @@ static NwStat parseSeqFile(const std::string& seqPath, const Dict<std::string, i
 
 static NwStat parseSeqPairFile(const std::string& seqPairPath, NwSeqPairData& seqPairData, const Dict<std::string, NwSeq>& seqMap)
 {
-    std::ifstream ifs;
+    std::ifstream ifs {};
     if (NwStat stat = openInFile(seqPairPath, ifs); stat != NwStat::success)
     {
         std::cerr << "error: could not open text file from seqPairPath: \"" << seqPairPath << "\"\n";

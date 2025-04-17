@@ -291,10 +291,10 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, Nw
     // tile sizes for kernels A and B
     // +   tile A should have one dimension be a multiple of the warp size for full memory coallescing
     // +   tile B must have one dimension fixed to the number of threads in a warp
-    int tileAx = {};
-    int tileAy = {};
-    int tileBx = {};
-    int tileBy = nw.warpsz;
+    int tileAx {};
+    int tileAy {};
+    int tileBx {};
+    int tileBy {nw.warpsz};
 
     // get the parameter values
     try
@@ -385,12 +385,12 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, Nw
         dim3 blockA {(unsigned)threadsPerBlockA};
 
         // calculate size of shared memory per block in bytes
-        int shmemsz = (
+        int shmemsz =
             /*subst[][]*/ nw.substsz * nw.substsz * sizeof(int)
             /*seqX[]*/
             + tileAx * sizeof(int)
             /*seqY[]*/
-            + tileAy * sizeof(int));
+            + tileAy * sizeof(int);
 
         // create variables for gpu arrays in order to be able to take their addresses
         int* seqX_gpu = nw.seqX_gpu.data();
@@ -437,8 +437,8 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, Nw
         int tcols = (int)ceil(float(adjcols - 1) / tileBx);
 
         // calculate size of shared memory per block in bytes
-        int shmemsz = (
-            /*tile[]*/ (1 + tileBy) * (1 + tileBx) * sizeof(int));
+        int shmemsz =
+            /*tile[]*/ (1 + tileBy) * (1 + tileBx) * sizeof(int);
 
         // calculate grid and block dimensions for kernel B
         {

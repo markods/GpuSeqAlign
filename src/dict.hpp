@@ -38,12 +38,12 @@ public:
     Dict() = default;
 
     Dict(const Dict& other)
-        : entries(other.entries), index()
+        : entries {other.entries}, index {}
     {
         rebuild_index();
     }
     Dict(Dict&& other) noexcept
-        : entries(std::move(other.entries)), index(std::move(other.index))
+        : entries {std::move(other.entries)}, index {std::move(other.index)}
     { }
 
     Dict& operator=(const Dict& other)

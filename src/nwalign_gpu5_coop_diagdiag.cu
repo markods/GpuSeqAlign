@@ -312,8 +312,8 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
 {
     // tile size for the kernel
     // +   tile A must have one dimension fixed to the number of threads in a warp
-    int tileAx = {};
-    int tileAy = nw.warpsz;
+    int tileAx {};
+    int tileAy {nw.warpsz};
 
     // get the parameter values
     try
@@ -396,14 +396,14 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
         int tcols = (int)ceil(float(adjcols - 1) / tileAx);
 
         // calculate size of shared memory per block in bytes
-        int shmemsz = (
+        int shmemsz =
             /*subst[]*/ nw.substsz * nw.substsz * sizeof(int)
             /*seqX[]*/
             + tileAx * sizeof(int)
             /*seqY[]*/
             + tileAy * sizeof(int)
             /*tile[]*/
-            + (1 + tileAy) * (1 + tileAx) * sizeof(int));
+            + (1 + tileAy) * (1 + tileAx) * sizeof(int);
 
         // calculate grid and block dimensions for kernel
         {

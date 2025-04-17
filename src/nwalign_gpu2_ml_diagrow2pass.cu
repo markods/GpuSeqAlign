@@ -112,11 +112,11 @@ __global__ static void Nw_Gpu2_KernelB(
 NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
 {
     // tile size for the kernel B
-    int tileBx = {};
-    int tileBy = {};
+    int tileBx {};
+    int tileBy {};
     // number of threads per block for kernels A and B
-    int threadsPerBlockA = {};
-    int threadsPerBlockB = {};
+    int threadsPerBlockA {};
+    int threadsPerBlockB {};
 
     // get the parameter values
     try
@@ -205,7 +205,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
         dim3 blockA {};
 
         // calculate size of shared memory per block in bytes
-        int shmemsz = (0);
+        int shmemsz {};
 
         // calculate grid and block dimensions for kernel A
         {
@@ -247,7 +247,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
     //  x / . . . .       x . / / . .       x . . . / /|
     // launch kernel B for each minor diagonal of the score matrix
     {
-        cudaStream_t stream;
+        cudaStream_t stream {};
         if (cudaSuccess != (res.cudaStat = cudaStreamCreate(&stream)))
         {
             return NwStat::errorKernelFailure;
@@ -257,7 +257,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
             cudaStreamDestroy(stream);
         });
 
-        cudaGraph_t graph;
+        cudaGraph_t graph {};
         if (cudaSuccess != (res.cudaStat = cudaGraphCreate(&graph, 0)))
         {
             return NwStat::errorKernelFailure;
@@ -281,8 +281,8 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
         int tcols = (int)ceil(float(adjcols - 1) / tileBx);
 
         // calculate size of shared memory per block in bytes
-        int shmemsz = (
-            /*subst[]*/ nw.substsz * nw.substsz * sizeof(int));
+        int shmemsz =
+            /*subst[]*/ nw.substsz * nw.substsz * sizeof(int);
 
         // for all minor diagonals in the score matrix (excluding the header row and column)
         for (int d = 0; d < tcols - 1 + trows; d++)

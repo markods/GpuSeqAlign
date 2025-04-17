@@ -291,12 +291,12 @@ __global__ static void Nw_Gpu7_KernelB(
 NwStat NwAlign_Gpu7_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
 {
     // Number of threads per block for kernel A.
-    int threadsPerBlockA = {};
+    int threadsPerBlockA {};
     // Tile B must have one dimension fixed to the number of threads in a warp.
-    int tileBx = {};
-    int tileBy = nw.warpsz;
+    int tileBx {};
+    int tileBy {nw.warpsz};
     // Reduce the number of warps in the thread block in kernel B.
-    int warpDivFactorB = {};
+    int warpDivFactorB {};
 
     try
     {
@@ -390,7 +390,7 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
     // + tile header column matrix.
     {
         // Size of shared memory per block in bytes.
-        int shmemByteSize = (0);
+        int shmemByteSize {};
 
         dim3 blockDim {};
         blockDim.x = threadsPerBlockA;
@@ -437,7 +437,7 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
     //  x / . . . .       x . / / . .       x . . . / /|
     // Launch kernel B for each (minor) tile diagonal of the score matrix.
     {
-        cudaStream_t stream;
+        cudaStream_t stream {};
         if (cudaSuccess != (res.cudaStat = cudaStreamCreate(&stream)))
         {
             return NwStat::errorKernelFailure;
@@ -447,7 +447,7 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
             cudaStreamDestroy(stream);
         });
 
-        cudaGraph_t graph;
+        cudaGraph_t graph {};
         if (cudaSuccess != (res.cudaStat = cudaGraphCreate(&graph, 0)))
         {
             return NwStat::errorKernelFailure;
@@ -464,14 +464,14 @@ NwStat NwAlign_Gpu7_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
         }
 
         // Size of shared memory per block in bytes.
-        int shmemsz = (
+        int shmemsz =
             /*subst[]*/ nw.substsz * nw.substsz * sizeof(int)
             /*seqX[]*/
             + tileBx * sizeof(int)
             /*seqY[]*/
             + tileBy * sizeof(int)
             /*tile[]*/
-            + (1 + tileBy) * (1 + tileBx) * sizeof(int));
+            + (1 + tileBy) * (1 + tileBx) * sizeof(int);
 
         // The number of threads should be divisible by the warp size.
         // But for performance reasons, we don't need all those single-use warps, just half of them (or some other fraction).

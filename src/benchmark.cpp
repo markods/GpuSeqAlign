@@ -119,7 +119,7 @@ bool operator!=(const NwCompareRes& l, const NwCompareRes& r)
 // Check that the result hashes match the hashes calculated by the reference algorithm (calculated first).
 static NwStat setOrVerifyResult(const NwAlgResult& res, Dict<NwCompareKey, NwCompareRes>& compareMap)
 {
-    NwCompareKey key;
+    NwCompareKey key {};
     key.seqY_id = res.seqY_id;
     key.seqX_id = res.seqX_id;
     key.seqY_range = res.seqY_range;
@@ -256,7 +256,7 @@ static NwStat printBenchReportLine(
 
     // Print the result to the tsv output file.
     {
-        TsvPrintCtl printCtl;
+        TsvPrintCtl printCtl {};
         printCtl.writeValue = 1;
         printCtl.fPrintScoreStats = cmdArgs.fCalcScoreHash.value();
         printCtl.fPrintTraceStats = cmdArgs.fCalcTrace.value();
@@ -276,7 +276,7 @@ static NwStat printBenchReportLine(
     // Print the result to the debug output file.
     if (cmdArgs.fPrintScore.value() || cmdArgs.fPrintTrace.value())
     {
-        TsvPrintCtl printCtl;
+        TsvPrintCtl printCtl {};
         printCtl.fPrintScoreStats = cmdArgs.fCalcScoreHash.value();
         printCtl.fPrintTraceStats = cmdArgs.fCalcTrace.value();
 
@@ -363,11 +363,11 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
 
     // Write tsv header.
     {
-        TsvPrintCtl printCtl;
+        TsvPrintCtl printCtl {};
         printCtl.writeColName = 1;
         printCtl.fPrintScoreStats = cmdArgs.fCalcScoreHash.value();
         printCtl.fPrintTraceStats = cmdArgs.fCalcTrace.value();
-        NwAlgResult res;
+        NwAlgResult res {};
         if (NwStat stat = writeNwResultToTsv(cmdData.resOfs, res /*unused*/, printCtl); stat != NwStat::success)
         {
             breakProgressLine(cmdArgs, write_progress_newline);

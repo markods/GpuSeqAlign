@@ -285,10 +285,10 @@ __global__ static void Nw_Gpu3_KernelB(
 NwStat NwAlign_Gpu3_Ml_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res)
 {
     // tile size for the kernel
-    int tileBx = {};
-    int tileBy = nw.warpsz;
+    int tileBx {};
+    int tileBy {nw.warpsz};
     // number of threads per block for kernels A and B
-    int threadsPerBlockA = {};
+    int threadsPerBlockA {};
 
     // get the parameter values
     try
@@ -375,7 +375,7 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResu
         dim3 blockA {};
 
         // calculate size of shared memory per block in bytes
-        int shmemsz = (0);
+        int shmemsz {};
 
         // calculate grid and block dimensions for kernel A
         {
@@ -417,7 +417,7 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResu
     //  x / . . . .       x . / / . .       x . . . / /|
     // launch kernel B for each minor tile diagonal of the score matrix
     {
-        cudaStream_t stream;
+        cudaStream_t stream {};
         if (cudaSuccess != (res.cudaStat = cudaStreamCreate(&stream)))
         {
             return NwStat::errorKernelFailure;
@@ -427,7 +427,7 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResu
             cudaStreamDestroy(stream);
         });
 
-        cudaGraph_t graph;
+        cudaGraph_t graph {};
         if (cudaSuccess != (res.cudaStat = cudaGraphCreate(&graph, 0)))
         {
             return NwStat::errorKernelFailure;
@@ -451,14 +451,14 @@ NwStat NwAlign_Gpu3_Ml_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResu
         int tcols = (int)ceil(float(adjcols - 1) / tileBx);
 
         // calculate size of shared memory per block in bytes
-        int shmemsz = (
+        int shmemsz =
             /*subst[]*/ nw.substsz * nw.substsz * sizeof(int)
             /*seqX[]*/
             + tileBx * sizeof(int)
             /*seqY[]*/
             + tileBy * sizeof(int)
             /*tile[]*/
-            + (1 + tileBy) * (1 + tileBx) * sizeof(int));
+            + (1 + tileBy) * (1 + tileBx) * sizeof(int);
 
         // for all minor tile diagonals in the score matrix (excluding the header row and column)
         for (int d = 0; d < tcols - 1 + trows; d++)

@@ -14,7 +14,7 @@ NwStat isoDatetimeAsString(std::string& res)
         return NwStat::errorInvalidValue;
     }
 
-    std::stringstream strs;
+    std::stringstream strs {};
     strs << std::put_time(&tm_struct, "%Y%m%d_%H%M%S");
     res = strs.str();
 
