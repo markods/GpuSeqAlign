@@ -109,7 +109,7 @@ Dict<std::string, int> NwAlgParams::copy() const
 
 ////// NwAlgInput //////
 
-size_t NwAlgInput::measureHostAllocations()
+size_t NwAlgInput::measureHostAllocations() const
 {
     size_t size = 0;
 
@@ -128,7 +128,7 @@ size_t NwAlgInput::measureHostAllocations()
     return size;
 }
 
-size_t NwAlgInput::measureDeviceAllocations()
+size_t NwAlgInput::measureDeviceAllocations() const
 {
     size_t size = 0;
 

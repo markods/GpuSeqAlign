@@ -103,8 +103,8 @@ struct NwAlgInput
     int warpsz;
     int maxThreadsPerBlock;
 
-    size_t measureHostAllocations();
-    size_t measureDeviceAllocations();
+    size_t measureHostAllocations() const;
+    size_t measureDeviceAllocations() const;
     void resetAllocsBenchmarkCycle();
     void resetAllocsBenchmarkEnd();
 };
@@ -136,8 +136,12 @@ struct NwAlgResult
     unsigned score_hash;
     unsigned trace_hash;
 
-    size_t hostAllocations;   // In bytes.
-    size_t deviceAllocations; // In bytes.
+    size_t sm_count;
+    size_t ramPeakAllocs;       // In bytes.
+    size_t globalMemPeakAllocs; // In bytes.
+    size_t sharedMemPeakAllocs; // In bytes.
+    size_t localMemPeakAllocs;  // In bytes.
+    size_t regMemPeakAllocs;    // In bytes.
 
     Stopwatch sw_align;
     Stopwatch sw_hash;

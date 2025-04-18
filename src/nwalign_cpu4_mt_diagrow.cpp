@@ -1,3 +1,4 @@
+#include "nwalign_shared.hpp"
 #include "run_types.hpp"
 
 static void UpdateScore(NwAlgInput& nw, int i, int j) noexcept
@@ -13,6 +14,7 @@ NwStat NwAlign_Cpu4_Mt_DiagRow(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResul
     // Size of square block that will be a unit of work.
     int blocksz = {};
 
+    // Get parameters.
     try
     {
         blocksz = pr.at("blocksz").curr();
@@ -21,7 +23,7 @@ NwStat NwAlign_Cpu4_Mt_DiagRow(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResul
             return NwStat::errorInvalidValue;
         }
     }
-    catch (const std::out_of_range&)
+    catch (const std::exception&)
     {
         return NwStat::errorInvalidValue;
     }
@@ -46,6 +48,8 @@ NwStat NwAlign_Cpu4_Mt_DiagRow(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResul
     {
         return NwStat::errorMemoryAllocation;
     }
+
+    updateNwAlgPeakMemUsage(nw, res);
 
     sw.lap("align.alloc");
 

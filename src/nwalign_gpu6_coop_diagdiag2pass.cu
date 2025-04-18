@@ -1,4 +1,6 @@
 #include "defer.hpp"
+#include "math.hpp"
+#include "nwalign_shared.hpp"
 #include "run_types.hpp"
 #include <cooperative_groups.h>
 #include <cuda_runtime.h>
@@ -296,7 +298,7 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, Nw
     int tileBx {};
     int tileBy {nw.warpsz};
 
-    // get the parameter values
+    // Get parameters.
     try
     {
         tileAx = pr.at("tileAx").curr();
@@ -312,7 +314,7 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, Nw
             return NwStat::errorInvalidValue;
         }
     }
-    catch (const std::out_of_range&)
+    catch (const std::exception&)
     {
         return NwStat::errorInvalidValue;
     }
@@ -335,7 +337,7 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, Nw
     Stopwatch& sw = res.sw_align;
     sw.start();
 
-    // reserve space in the ram and gpu global memory
+    // Allocate.
     try
     {
         nw.seqX_gpu.init(adjcols);
@@ -348,6 +350,8 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, Nw
     {
         return NwStat::errorMemoryAllocation;
     }
+
+    updateNwAlgPeakMemUsage(nw, res);
 
     // measure allocation time
     sw.lap("align.alloc");
@@ -388,12 +392,27 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, Nw
         }
 
         // calculate size of shared memory per block in bytes
-        int shmemsz =
+        size_t shmemsz =
             /*subst[][]*/ nw.substsz * nw.substsz * sizeof(int)
             /*seqX[]*/
             + tileAx * sizeof(int)
             /*seqY[]*/
             + tileAy * sizeof(int);
+
+        cudaFuncAttributes attr {};
+        if (cudaSuccess != (res.cudaStat = cudaFuncGetAttributes(&attr, (void*)Nw_Gpu6_KernelA)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+
+        int maxActiveBlocksPerSm = 0;
+        if (cudaSuccess != (res.cudaStat = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxActiveBlocksPerSm, (void*)Nw_Gpu6_KernelA, blockA.x, shmemsz)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+
+        int maxActiveBlocksActual = min2(maxActiveBlocksPerSm * nw.sm_count, (int)(gridA.y * gridA.x));
+        updateNwAlgPeakMemUsage(nw, res, &attr, maxActiveBlocksActual, blockA.x, shmemsz);
 
         // create variables for gpu arrays in order to be able to take their addresses
         int* seqX_gpu = nw.seqX_gpu.data();
@@ -439,30 +458,35 @@ NwStat NwAlign_Gpu6_Coop_DiagDiag2Pass(const NwAlgParams& pr, NwAlgInput& nw, Nw
         int trows = (int)ceil(float(adjrows - 1) / tileBy);
         int tcols = (int)ceil(float(adjcols - 1) / tileBx);
 
+        // take the number of threads on the largest diagonal of the tile
+        // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
+        blockB.x = nw.warpsz * (int)ceil(max2(tileBy, tileBx) * 2. / nw.warpsz);
+
         // calculate size of shared memory per block in bytes
-        int shmemsz =
+        size_t shmemsz =
             /*tile[]*/ (1 + tileBy) * (1 + tileBx) * sizeof(int);
+
+        cudaFuncAttributes attr {};
+        if (cudaSuccess != (res.cudaStat = cudaFuncGetAttributes(&attr, (void*)Nw_Gpu6_KernelB)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+
+        int maxActiveBlocksPerSm = 0;
+        if (cudaSuccess != (res.cudaStat = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxActiveBlocksPerSm, (void*)Nw_Gpu6_KernelB, blockB.x, shmemsz)))
+        {
+            return NwStat::errorKernelFailure;
+        }
 
         // calculate grid and block dimensions for kernel B
         {
-            // take the number of threads on the largest diagonal of the tile
-            // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-            blockB.x = nw.warpsz * (int)ceil(max2(tileBy, tileBx) * 2. / nw.warpsz);
-
-            // the maximum number of parallel blocks on a streaming multiprocessor
-            int maxBlocksPerSm = 0;
-            // number of threads per block that the kernel will be launched with
-            int numThreads = blockB.x;
-
-            // calculate the max number of parallel blocks per streaming multiprocessor
-            if (cudaSuccess != (res.cudaStat = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxBlocksPerSm, Nw_Gpu6_KernelB, numThreads, shmemsz)))
-            {
-                return NwStat::errorKernelFailure;
-            }
             // take the number of tiles on the largest score matrix diagonal as the only dimension
             // +   the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
-            gridB.x = min2(min2(trows, tcols), nw.sm_count * maxBlocksPerSm);
+            gridB.x = min2(min2(trows, tcols), nw.sm_count * maxActiveBlocksPerSm);
         }
+
+        int maxActiveBlocksActual = min2(maxActiveBlocksPerSm * nw.sm_count, (int)gridB.x);
+        updateNwAlgPeakMemUsage(nw, res, &attr, maxActiveBlocksActual, blockB.x, shmemsz);
 
         // create variables for gpu arrays in order to be able to take their addresses
         int* score_gpu = nw.score_gpu.data();

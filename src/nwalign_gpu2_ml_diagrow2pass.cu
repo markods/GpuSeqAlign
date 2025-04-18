@@ -1,4 +1,6 @@
 #include "defer.hpp"
+#include "math.hpp"
+#include "nwalign_shared.hpp"
 #include "run_types.hpp"
 #include <cuda_runtime.h>
 #include <stdexcept>
@@ -118,7 +120,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
     int threadsPerBlockA {};
     int threadsPerBlockB {};
 
-    // get the parameter values
+    // Get parameters.
     try
     {
         tileBx = pr.at("tileBx").curr();
@@ -132,7 +134,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
             return NwStat::errorInvalidValue;
         }
     }
-    catch (const std::out_of_range&)
+    catch (const std::exception&)
     {
         return NwStat::errorInvalidValue;
     }
@@ -155,7 +157,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
     Stopwatch& sw = res.sw_align;
     sw.start();
 
-    // reserve space in the ram and gpu global memory
+    // Allocate.
     try
     {
         nw.seqX_gpu.init(adjcols);
@@ -168,6 +170,8 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
     {
         return NwStat::errorMemoryAllocation;
     }
+
+    updateNwAlgPeakMemUsage(nw, res);
 
     // measure allocation time
     sw.lap("align.alloc");
@@ -203,9 +207,8 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
         // grid and block dimensions for kernel A
         dim3 gridA {};
         dim3 blockA {};
-
         // calculate size of shared memory per block in bytes
-        int shmemsz {};
+        size_t shmemsz {};
 
         // calculate grid and block dimensions for kernel A
         {
@@ -214,6 +217,21 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
             // take the number of blocks on the score matrix diagonal as the only dimension
             gridA.x = (int)ceil(float(max2(adjrows, adjcols)) / threadsPerBlockA);
         }
+
+        cudaFuncAttributes attr {};
+        if (cudaSuccess != (res.cudaStat = cudaFuncGetAttributes(&attr, (void*)Nw_Gpu2_KernelA)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+
+        int maxActiveBlocksPerSm = 0;
+        if (cudaSuccess != (res.cudaStat = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxActiveBlocksPerSm, (void*)Nw_Gpu2_KernelA, blockA.x, shmemsz)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+
+        int maxActiveBlocksActual = min2(maxActiveBlocksPerSm * nw.sm_count, (int)gridA.x);
+        updateNwAlgPeakMemUsage(nw, res, &attr, maxActiveBlocksActual, blockA.x, shmemsz);
 
         // create variables for gpu arrays in order to be able to take their addresses
         int* score_gpu = nw.score_gpu.data();
@@ -272,6 +290,11 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
         {
             return NwStat::errorKernelFailure;
         }
+        cudaError_t cudaStreamEndCapture_stat = cudaSuccess;
+        auto defer3_cudaStreamEndCapture = make_defer([&cudaStreamEndCapture_stat, &stream, &graph]() noexcept
+        {
+            cudaStreamEndCapture_stat = cudaStreamEndCapture(stream, &graph);
+        });
 
         // grid and block dimensions for kernel B
         dim3 gridB {};
@@ -280,9 +303,24 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
         int trows = (int)ceil(float(adjrows - 1) / tileBy);
         int tcols = (int)ceil(float(adjcols - 1) / tileBx);
 
+        // take the number of threads per block as the only dimension
+        blockB.x = threadsPerBlockB;
+
         // calculate size of shared memory per block in bytes
-        int shmemsz =
+        size_t shmemsz =
             /*subst[]*/ nw.substsz * nw.substsz * sizeof(int);
+
+        cudaFuncAttributes attr {};
+        if (cudaSuccess != (res.cudaStat = cudaFuncGetAttributes(&attr, (void*)Nw_Gpu2_KernelB)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+
+        int maxActiveBlocksPerSm = 0;
+        if (cudaSuccess != (res.cudaStat = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxActiveBlocksPerSm, (void*)Nw_Gpu2_KernelB, blockB.x, shmemsz)))
+        {
+            return NwStat::errorKernelFailure;
+        }
 
         // for all minor diagonals in the score matrix (excluding the header row and column)
         for (int d = 0; d < tcols - 1 + trows; d++)
@@ -295,12 +333,13 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
                 // the number of elements on the current diagonal
                 int dsize = pend - pbeg;
 
-                // take the number of threads per block as the only dimension
-                blockB.x = threadsPerBlockB;
                 // take the number of blocks on the current score matrix diagonal as the only dimension
                 // +   launch at least one block on the x axis
                 gridB.x = (int)ceil(float(dsize) / threadsPerBlockB);
             }
+
+            int maxActiveBlocksActual = min2(maxActiveBlocksPerSm * nw.sm_count, (int)gridB.x);
+            updateNwAlgPeakMemUsage(nw, res, &attr, maxActiveBlocksActual, blockB.x, shmemsz);
 
             // create variables for gpu arrays in order to be able to take their addresses
             int* seqX_gpu = nw.seqX_gpu.data();
@@ -332,7 +371,8 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
         }
 
         // collect kernel launches from this thread
-        if (cudaSuccess != (res.cudaStat = cudaStreamEndCapture(stream, &graph)))
+        defer3_cudaStreamEndCapture();
+        if (cudaSuccess != (res.cudaStat = cudaStreamEndCapture_stat))
         {
             return NwStat::errorKernelFailure;
         }
@@ -342,7 +382,7 @@ NwStat NwAlign_Gpu2_Ml_DiagRow2Pass(const NwAlgParams& pr, NwAlgInput& nw, NwAlg
         {
             return NwStat::errorKernelFailure;
         }
-        auto defer3 = make_defer([&graphExec]() noexcept
+        auto defer4 = make_defer([&graphExec]() noexcept
         {
             cudaGraphExecDestroy(graphExec);
         });

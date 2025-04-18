@@ -1,11 +1,13 @@
 #include "defer.hpp"
+#include "math.hpp"
+#include "nwalign_shared.hpp"
 #include "run_types.hpp"
 #include <cooperative_groups.h>
 #include <cuda_runtime.h>
 #include <stdexcept>
 
 // cuda kernel for the parallel implementation
-__global__ static void Nw_Gpu5_Kernel(
+__global__ static void Nw_Gpu5_KernelAB(
     // nw input
     const int* const seqX_gpu,
     const int* const seqY_gpu,
@@ -315,7 +317,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
     int tileAx {};
     int tileAy {nw.warpsz};
 
-    // get the parameter values
+    // Get parameters.
     try
     {
         tileAx = pr.at("tileAx").curr();
@@ -324,7 +326,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
             return NwStat::errorInvalidValue;
         }
     }
-    catch (const std::out_of_range&)
+    catch (const std::exception&)
     {
         return NwStat::errorInvalidValue;
     }
@@ -347,7 +349,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
     Stopwatch& sw = res.sw_align;
     sw.start();
 
-    // reserve space in the ram and gpu global memory
+    // Allocate.
     try
     {
         nw.seqX_gpu.init(adjcols);
@@ -360,6 +362,8 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
     {
         return NwStat::errorMemoryAllocation;
     }
+
+    updateNwAlgPeakMemUsage(nw, res);
 
     // measure allocation time
     sw.lap("align.alloc");
@@ -395,8 +399,12 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
         int trows = (int)ceil(float(adjrows - 1) / tileAy);
         int tcols = (int)ceil(float(adjcols - 1) / tileAx);
 
+        // take the number of threads on the largest diagonal of the tile
+        // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
+        blockA.x = nw.warpsz * (int)ceil(max2(tileAy, tileAx) * 2. / nw.warpsz);
+
         // calculate size of shared memory per block in bytes
-        int shmemsz =
+        size_t shmemsz =
             /*subst[]*/ nw.substsz * nw.substsz * sizeof(int)
             /*seqX[]*/
             + tileAx * sizeof(int)
@@ -405,26 +413,27 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
             /*tile[]*/
             + (1 + tileAy) * (1 + tileAx) * sizeof(int);
 
+        cudaFuncAttributes attr {};
+        if (cudaSuccess != (res.cudaStat = cudaFuncGetAttributes(&attr, (void*)Nw_Gpu5_KernelAB)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+
+        int maxActiveBlocksPerSm = 0;
+        if (cudaSuccess != (res.cudaStat = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxActiveBlocksPerSm, (void*)Nw_Gpu5_KernelAB, blockA.x, shmemsz)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+
         // calculate grid and block dimensions for kernel
         {
-            // take the number of threads on the largest diagonal of the tile
-            // +   multiply by the number of half warps in the larger dimension for faster writing to global gpu memory
-            blockA.x = nw.warpsz * (int)ceil(max2(tileAy, tileAx) * 2. / nw.warpsz);
-
-            // the maximum number of parallel blocks on a streaming multiprocessor
-            int maxBlocksPerSm = 0;
-            // number of threads per block that the kernel will be launched with
-            int numThreads = blockA.x;
-
-            // calculate the max number of parallel blocks per streaming multiprocessor
-            if (cudaSuccess != (res.cudaStat = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxBlocksPerSm, Nw_Gpu5_Kernel, numThreads, shmemsz)))
-            {
-                return NwStat::errorKernelFailure;
-            }
             // take the number of tiles on the largest score matrix diagonal as the only dimension
             // +   the number of cooperative blocks launched must not exceed the maximum possible number of parallel blocks on the device
-            gridA.x = min2(min2(trows, tcols), nw.sm_count * maxBlocksPerSm);
+            gridA.x = min2(min2(trows, tcols), nw.sm_count * maxActiveBlocksPerSm);
         }
+
+        int maxActiveBlocksActual = min2(maxActiveBlocksPerSm * nw.sm_count, (int)gridA.x);
+        updateNwAlgPeakMemUsage(nw, res, &attr, maxActiveBlocksActual, blockA.x, shmemsz);
 
         // create variables for gpu arrays in order to be able to take their addresses
         int* seqX_gpu = nw.seqX_gpu.data();
@@ -448,7 +457,7 @@ NwStat NwAlign_Gpu5_Coop_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
             &tileAy};
 
         // launch the kernel in the given stream (don't statically allocate shared memory)
-        if (cudaSuccess != (res.cudaStat = cudaLaunchCooperativeKernel((void*)Nw_Gpu5_Kernel, gridA, blockA, kargs, shmemsz, cudaStreamDefault)))
+        if (cudaSuccess != (res.cudaStat = cudaLaunchCooperativeKernel((void*)Nw_Gpu5_KernelAB, gridA, blockA, kargs, shmemsz, cudaStreamDefault)))
         {
             return NwStat::errorKernelFailure;
         }

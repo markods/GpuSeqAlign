@@ -1,3 +1,4 @@
+#include "nwalign_shared.hpp"
 #include "run_types.hpp"
 
 static void UpdateScore(NwAlgInput& nw, int i, int j) noexcept
@@ -12,6 +13,7 @@ NwStat NwAlign_Cpu1_St_Row(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& r
 {
     (void)pr;
 
+    // Get parameters.
     // The dimensions of the matrix without its row and column header.
     const int rows = -1 + nw.adjrows;
     const int cols = -1 + nw.adjcols;
@@ -28,6 +30,8 @@ NwStat NwAlign_Cpu1_St_Row(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& r
     {
         return NwStat::errorMemoryAllocation;
     }
+
+    updateNwAlgPeakMemUsage(nw, res);
 
     sw.lap("align.alloc");
 

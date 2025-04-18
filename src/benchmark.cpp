@@ -457,6 +457,8 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                     res.warmup_runs = cmdArgs.warmupPerAlign.value();
                     res.sample_runs = cmdArgs.samplesPerAlign.value();
                     res.last_run_idx = iR;
+                    //
+                    res.sm_count = nw.sm_count;
 
                     // Clear cuda non-sticky errors and get possible cuda sticky errors.
                     // Since sticky errors cannot be cleared, repeat twice.
@@ -492,9 +494,6 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                         res.errstep = 5;
                         benchData.calcErrors++;
                     }
-
-                    res.hostAllocations = nw.measureHostAllocations();
-                    res.deviceAllocations = nw.measureDeviceAllocations();
 
                     if (iR < 0 && res.stat == NwStat::success)
                     {

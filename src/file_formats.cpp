@@ -495,8 +495,12 @@ NwStat writeNwResultToTsv(std::ostream& os, const NwAlgResult& res, const TsvPri
         fieldToTsv(os, "trace_hash", res.trace_hash, printCtl, fmt1);
     }
 
-    fieldToTsv(os, "host_allocs", res.hostAllocations, printCtl);
-    fieldToTsv(os, "device_allocs", res.deviceAllocations, printCtl);
+    fieldToTsv(os, "sm_count", res.sm_count, printCtl);
+    fieldToTsv(os, "ram_peak_allocs", res.ramPeakAllocs, printCtl);
+    fieldToTsv(os, "glmem_peak_allocs", res.globalMemPeakAllocs, printCtl);
+    fieldToTsv(os, "shmem_peak_allocs", res.sharedMemPeakAllocs, printCtl);
+    fieldToTsv(os, "locmem_peak_allocs", res.localMemPeakAllocs, printCtl);
+    fieldToTsv(os, "regmem_peak_allocs", res.regMemPeakAllocs, printCtl);
 
     fieldToTsv(os, "align.alloc", res.sw_align.get_or_default("align.alloc"), printCtl, fmt2);
     fieldToTsv(os, "align.cpy_dev", res.sw_align.get_or_default("align.cpy_dev"), printCtl, fmt2);

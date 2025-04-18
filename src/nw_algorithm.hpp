@@ -37,6 +37,7 @@ private:
     NwHashFn _hashFn;
     NwPrintScoreFn _printScoreFn;
     NwPrintTraceFn _printTraceFn;
+    bool _usesGpu;
 };
 
 void getNwAlgorithmMap(Dict<std::string, NwAlgorithm>& algMap);

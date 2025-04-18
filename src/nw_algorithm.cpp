@@ -11,11 +11,11 @@ NwAlgorithm::NwAlgorithm()
 { }
 
 NwAlgorithm::NwAlgorithm(
-    NwAlgorithm::NwAlignFn alignFn,
-    NwAlgorithm::NwTraceFn traceFn,
-    NwAlgorithm::NwHashFn hashFn,
-    NwAlgorithm::NwPrintScoreFn printScoreFn,
-    NwAlgorithm::NwPrintTraceFn printTraceFn)
+    NwAlignFn alignFn,
+    NwTraceFn traceFn,
+    NwHashFn hashFn,
+    NwPrintScoreFn printScoreFn,
+    NwPrintTraceFn printTraceFn)
     : _alignFn(alignFn),
       _traceFn(traceFn),
       _hashFn(hashFn),

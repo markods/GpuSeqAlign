@@ -1,10 +1,12 @@
 #include "defer.hpp"
 #include "fmt_guard.hpp"
+#include "math.hpp"
+#include "nwalign_shared.hpp"
 #include "run_types.hpp"
 #include <cuda_runtime.h>
 
 // cuda kernel for the parallel implementation
-__global__ static void Nw_Gpu1_KernelA(
+__global__ static void Nw_Gpu1_KernelAB(
     const int* const seqX_gpu,
     const int* const seqY_gpu,
     int* const score_gpu,
@@ -75,7 +77,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
     // +   the tile is one-dimensional
     int threadsPerBlock {};
 
-    // get the parameter values
+    // Get parameters.
     try
     {
         threadsPerBlock = pr.at("threadsPerBlock").curr();
@@ -84,7 +86,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
             return NwStat::errorInvalidValue;
         }
     }
-    catch (const std::out_of_range&)
+    catch (const std::exception&)
     {
         return NwStat::errorInvalidValue;
     }
@@ -110,7 +112,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
     Stopwatch& sw = res.sw_align;
     sw.start();
 
-    // reserve space in the ram and gpu global memory
+    // Allocate.
     try
     {
         nw.seqX_gpu.init(adjcols);
@@ -123,6 +125,8 @@ NwStat NwAlign_Gpu1_Ml_Diag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
     {
         return NwStat::errorMemoryAllocation;
     }
+
+    updateNwAlgPeakMemUsage(nw, res);
 
     // measure allocation time
     sw.lap("align.alloc");
@@ -180,13 +184,32 @@ NwStat NwAlign_Gpu1_Ml_Diag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
         {
             return NwStat::errorKernelFailure;
         }
+        cudaError_t cudaStreamEndCapture_stat = cudaSuccess;
+        auto defer3_cudaStreamEndCapture = make_defer([&cudaStreamEndCapture_stat, &stream, &graph]() noexcept
+        {
+            cudaStreamEndCapture_stat = cudaStreamEndCapture(stream, &graph);
+        });
 
         // grid and block dimensions for kernel
         dim3 gridA {};
         dim3 blockA {};
-
         // calculate size of shared memory per block in bytes
-        int shmemsz {};
+        size_t shmemsz {};
+
+        // take the number of threads per block as the only dimension
+        blockA.x = threadsPerBlock;
+
+        cudaFuncAttributes attr {};
+        if (cudaSuccess != (res.cudaStat = cudaFuncGetAttributes(&attr, (void*)Nw_Gpu1_KernelAB)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+
+        int maxActiveBlocksPerSm = 0;
+        if (cudaSuccess != (res.cudaStat = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxActiveBlocksPerSm, (void*)Nw_Gpu1_KernelAB, blockA.x, shmemsz)))
+        {
+            return NwStat::errorKernelFailure;
+        }
 
         // for all minor diagonals in the score matrix (excluding the header row and column)
         for (int d = 0; d < cols - 1 + rows; d++)
@@ -199,12 +222,13 @@ NwStat NwAlign_Gpu1_Ml_Diag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
                 // the number of elements on the current diagonal
                 int dsize = pend - pbeg;
 
-                // take the number of threads per block as the only dimension
-                blockA.x = threadsPerBlock;
                 // take the number of blocks on the current score matrix diagonal as the only dimension
                 // +   launch at least one block on the x axis
                 gridA.x = (int)ceil(float(dsize) / threadsPerBlock);
             }
+
+            int maxActiveBlocksActual = min2(maxActiveBlocksPerSm * nw.sm_count, (int)gridA.x);
+            updateNwAlgPeakMemUsage(nw, res, &attr, maxActiveBlocksActual, blockA.x, shmemsz);
 
             // create variables for gpu arrays in order to be able to take their addresses
             int* seqX_gpu = nw.seqX_gpu.data();
@@ -225,14 +249,15 @@ NwStat NwAlign_Gpu1_Ml_Diag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
                 &d};
 
             // launch the kernel in the given stream (don't statically allocate shared memory)
-            if (cudaSuccess != (res.cudaStat = cudaLaunchKernel((void*)Nw_Gpu1_KernelA, gridA, blockA, kargs, shmemsz, stream)))
+            if (cudaSuccess != (res.cudaStat = cudaLaunchKernel((void*)Nw_Gpu1_KernelAB, gridA, blockA, kargs, shmemsz, stream)))
             {
                 return NwStat::errorKernelFailure;
             }
         }
 
         // collect kernel launches from this thread
-        if (cudaSuccess != (res.cudaStat = cudaStreamEndCapture(stream, &graph)))
+        defer3_cudaStreamEndCapture();
+        if (cudaSuccess != (res.cudaStat = cudaStreamEndCapture_stat))
         {
             return NwStat::errorKernelFailure;
         }
@@ -242,7 +267,7 @@ NwStat NwAlign_Gpu1_Ml_Diag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& 
         {
             return NwStat::errorKernelFailure;
         }
-        auto defer3 = make_defer([&graphExec]() noexcept
+        auto defer4 = make_defer([&graphExec]() noexcept
         {
             cudaGraphExecDestroy(graphExec);
         });

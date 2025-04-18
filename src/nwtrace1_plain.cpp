@@ -5,8 +5,7 @@
 // TODO: smith waterman
 // TODO: affine gap
 
-// TODO: allocate score matrix on the gpu every cycle
-// TODO: measure shared memory usage
+// TODO: add nvtx range to each gpu implementation
 // TODO: remove comments in nwalign algorithms (part 3)
 
 NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)

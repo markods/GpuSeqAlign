@@ -19,6 +19,7 @@
     <ClCompile Include="src\cmd_parser.cpp" />
     <ClCompile Include="src\file_formats.cpp" />
     <ClCompile Include="src\io.cpp" />
+    <ClCompile Include="src\nwalign_shared.cpp" />
     <ClCompile Include="src\nw_algorithm.cpp" />
     <ClCompile Include="src\run_types.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -37,6 +38,7 @@
     <ClInclude Include="src\io.hpp" />
     <ClInclude Include="src\json_fwd.hpp" />
     <ClInclude Include="src\math.hpp" />
+    <ClInclude Include="src\nwalign_shared.hpp" />
     <ClInclude Include="src\nw_algorithm.hpp" />
     <ClInclude Include="src\nw_fns.hpp" />
     <ClInclude Include="src\dict.hpp" />

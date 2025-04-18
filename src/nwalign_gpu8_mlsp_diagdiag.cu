@@ -1,5 +1,7 @@
 #include "defer.hpp"
+#include "math.hpp"
 #include "nw_fns.hpp"
+#include "nwalign_shared.hpp"
 #include "run_types.hpp"
 #include <cuda_runtime.h>
 #include <stdexcept>
@@ -318,6 +320,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
     // Reduce the number of warps in the thread block in kernel B.
     int warpDivFactorB {};
 
+    // Get parameters.
     try
     {
         threadsPerBlockA = pr.at("threadsPerBlockA").curr();
@@ -330,7 +333,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
             return NwStat::errorInvalidValue;
         }
     }
-    catch (const std::out_of_range&)
+    catch (const std::exception&)
     {
         return NwStat::errorInvalidValue;
     }
@@ -356,7 +359,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
     Stopwatch& sw = res.sw_align;
     sw.start();
 
-    // Allocate space in the ram and gpu global memory.
+    // Allocate.
     try
     {
         nw.seqX_gpu.init(adjcols);
@@ -374,6 +377,8 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
     {
         return NwStat::errorMemoryAllocation;
     }
+
+    updateNwAlgPeakMemUsage(nw, res);
 
     // Measure allocation time.
     sw.lap("align.alloc");
@@ -410,19 +415,34 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
     // + tile header column matrix.
     {
         // Size of shared memory per block in bytes.
-        int shmemByteSize {};
-
         dim3 blockA {};
+        dim3 gridA {};
+        size_t shmemsz {};
+
         blockA.x = threadsPerBlockA;
 
+        cudaFuncAttributes attr {};
+        if (cudaSuccess != (res.cudaStat = cudaFuncGetAttributes(&attr, (void*)Nw_Gpu8_KernelA)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+
+        int maxActiveBlocksPerSm = 0;
+        if (cudaSuccess != (res.cudaStat = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxActiveBlocksPerSm, (void*)Nw_Gpu8_KernelA, blockA.x, shmemsz)))
+        {
+            return NwStat::errorKernelFailure;
+        }
+
         // Calculate the necessary number of blocks to cover the larger score matrix dimension.
-        dim3 gridA {};
         {
             int tileHrowMat_RowElemCount = tcols * (1 + tileBx);
             int tileHcolMat_ColElemCount = trows * (1 + tileBy);
             int largerDimElemCount = max2(tileHrowMat_RowElemCount, tileHcolMat_ColElemCount);
             gridA.x = (int)ceil(float(largerDimElemCount) / threadsPerBlockA);
         }
+
+        int maxActiveBlocksActual = min2(maxActiveBlocksPerSm * nw.sm_count, (int)gridA.x);
+        updateNwAlgPeakMemUsage(nw, res, &attr, maxActiveBlocksActual, blockA.x, shmemsz);
 
         int* tileHrowMat_gpu = nw.tileHrowMat_gpu.data();
         int* tileHcolMat_gpu = nw.tileHcolMat_gpu.data();
@@ -436,7 +456,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
             &tileBy,
             &nw.gapoCost};
 
-        if (cudaSuccess != (res.cudaStat = cudaLaunchKernel((void*)Nw_Gpu8_KernelA, gridA, blockA, kargs, shmemByteSize, cudaStreamDefault)))
+        if (cudaSuccess != (res.cudaStat = cudaLaunchKernel((void*)Nw_Gpu8_KernelA, gridA, blockA, kargs, shmemsz, cudaStreamDefault)))
         {
             return NwStat::errorKernelFailure;
         }
@@ -482,9 +502,25 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
         {
             return NwStat::errorKernelFailure;
         }
+        cudaError_t cudaStreamEndCapture_stat = cudaSuccess;
+        auto defer3_cudaStreamEndCapture = make_defer([&cudaStreamEndCapture_stat, &stream, &graph]() noexcept
+        {
+            cudaStreamEndCapture_stat = cudaStreamEndCapture(stream, &graph);
+        });
+
+        dim3 blockB {};
+        dim3 gridB {};
+
+        {
+            // The number of threads should be divisible by the warp size.
+            // But for performance reasons, we don't need all those single-use warps, just half of them (or some other fraction).
+            // That way the thread block can be smaller while doing the same amount of work.
+            int warps = (int)ceil(float(max2(tileBx, tileBy)) / nw.warpsz / warpDivFactorB);
+            blockB.x = nw.warpsz * warps;
+        }
 
         // Size of shared memory per block in bytes.
-        int shmemsz =
+        size_t shmemsz =
             /*subst[]*/ nw.substsz * nw.substsz * sizeof(int)
             /*seqX[]*/
             + tileBx * sizeof(int)
@@ -495,19 +531,21 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
             /*tileHcol[]*/
             + (1 + tileBy) * sizeof(int);
 
-        // The number of threads should be divisible by the warp size.
-        // But for performance reasons, we don't need all those single-use warps, just half of them (or some other fraction).
-        // That way the thread block can be smaller while doing the same amount of work.
-        dim3 blockB {};
+        cudaFuncAttributes attr {};
+        if (cudaSuccess != (res.cudaStat = cudaFuncGetAttributes(&attr, (void*)Nw_Gpu8_KernelB)))
         {
-            int warps = (int)ceil(float(max2(tileBx, tileBy)) / nw.warpsz / warpDivFactorB);
-            blockB.x = nw.warpsz * warps;
+            return NwStat::errorKernelFailure;
+        }
+
+        int maxActiveBlocksPerSm = 0;
+        if (cudaSuccess != (res.cudaStat = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxActiveBlocksPerSm, (void*)Nw_Gpu8_KernelB, blockB.x, shmemsz)))
+        {
+            return NwStat::errorKernelFailure;
         }
 
         // For all (minor) tile diagonals in the score matrix.
         for (int d = 0; d < tcols - 1 + trows; d++)
         {
-            dim3 gridB {};
             {
                 int tbeg = max2(0, d - (tcols - 1));
                 int tend = min2(d + 1, trows);
@@ -516,6 +554,9 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
 
                 gridB.x = dsize;
             }
+
+            int maxActiveBlocksActual = min2(maxActiveBlocksPerSm * nw.sm_count, (int)gridB.x);
+            updateNwAlgPeakMemUsage(nw, res, &attr, maxActiveBlocksActual, blockB.x, shmemsz);
 
             int* seqX_gpu = nw.seqX_gpu.data();
             int* seqY_gpu = nw.seqY_gpu.data();
@@ -546,7 +587,8 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
         }
 
         // collect kernel launches from this thread
-        if (cudaSuccess != (res.cudaStat = cudaStreamEndCapture(stream, &graph)))
+        defer3_cudaStreamEndCapture();
+        if (cudaSuccess != (res.cudaStat = cudaStreamEndCapture_stat))
         {
             return NwStat::errorKernelFailure;
         }
@@ -556,7 +598,7 @@ NwStat NwAlign_Gpu8_Mlsp_DiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwAlgRe
         {
             return NwStat::errorKernelFailure;
         }
-        auto defer3 = make_defer([&graphExec]() noexcept
+        auto defer4 = make_defer([&graphExec]() noexcept
         {
             cudaGraphExecDestroy(graphExec);
         });
