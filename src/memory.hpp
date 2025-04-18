@@ -1,6 +1,7 @@
 #ifndef INCLUDE_MEMORY_HPP
 #define INCLUDE_MEMORY_HPP
 
+#include <cstddef>
 #include <cuda_runtime.h>
 #include <memory>
 #include <vector>
@@ -143,12 +144,12 @@ private:
 template <typename T>
 cudaError_t memSet(
     T* const arr,
-    int idx,
+    size_t idx,
     size_t count,
     int value)
 {
     cudaError_t status = cudaMemset(
-        /*devPtr*/ &arr[idx],       // Pointer to device memory.
+        /*devPtr*/ arr + idx,       // Pointer to device memory.
         /*value*/ value,            // Value to set for each byte of specified memory.
         /*count*/ count * sizeof(T) // Size in bytes to set.
     );
@@ -158,7 +159,7 @@ cudaError_t memSet(
 template <typename T>
 cudaError_t memSet(
     DeviceArray<T>& arr,
-    int idx,
+    size_t idx,
     int value)
 {
     return memSet(arr.data(), idx, arr.size() - idx, value);
@@ -169,7 +170,7 @@ template <typename T>
 cudaError_t memTransfer(
     T* const dst,
     const T* const src,
-    int elemcnt, // TODO: size_t
+    size_t elemcnt,
     cudaMemcpyKind kind)
 {
     cudaError_t status = cudaMemcpy(
@@ -187,7 +188,7 @@ template <typename T>
 cudaError_t memTransfer(
     DeviceArray<T>& dst,
     const std::vector<T>& src,
-    int elemcnt)
+    size_t elemcnt)
 {
     return memTransfer(dst.data(), src.data(), elemcnt, cudaMemcpyHostToDevice);
 }
@@ -197,7 +198,7 @@ template <typename T>
 cudaError_t memTransfer(
     HostArray<T>& dst,
     const DeviceArray<T>& src,
-    int elemcnt)
+    size_t elemcnt)
 {
     return memTransfer(dst.data(), src.data(), elemcnt, cudaMemcpyDeviceToHost);
 }
@@ -208,9 +209,9 @@ template <typename T>
 cudaError_t memTransfer(
     T* const dst,
     const T* const src,
-    int dst_rows,
-    int dst_cols,
-    int src_cols,
+    size_t dst_rows,
+    size_t dst_cols,
+    size_t src_cols,
     cudaMemcpyKind kind)
 {
     cudaError_t status = cudaMemcpy2D(
@@ -233,9 +234,9 @@ template <typename T>
 cudaError_t memTransfer(
     HostArray<T>& dst,
     const DeviceArray<T>& src,
-    int dst_rows,
-    int dst_cols,
-    int src_cols)
+    size_t dst_rows,
+    size_t dst_cols,
+    size_t src_cols)
 {
     return memTransfer(dst.data(), src.data(), dst_rows, dst_cols, src_cols, cudaMemcpyDeviceToHost);
 }
