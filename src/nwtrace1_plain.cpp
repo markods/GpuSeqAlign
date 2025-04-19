@@ -3,11 +3,6 @@
 #include "run_types.hpp"
 #include <limits>
 
-// TODO: smith waterman
-// TODO: affine gap
-
-// TODO: remove comments in nwalign algorithms (part 3)
-
 NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
 {
     Stopwatch& sw = res.sw_trace;
