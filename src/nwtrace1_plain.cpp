@@ -6,7 +6,6 @@
 // TODO: smith waterman
 // TODO: affine gap
 
-// TODO: add nvtx range to each gpu implementation
 // TODO: remove comments in nwalign algorithms (part 3)
 
 NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
