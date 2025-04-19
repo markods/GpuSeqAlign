@@ -1,3 +1,4 @@
+#include "nwalign_shared.hpp"
 #include "print_mat.hpp"
 #include "run_types.hpp"
 #include <limits>
@@ -13,6 +14,7 @@ NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
     Stopwatch& sw = res.sw_trace;
     sw.start();
 
+    // Allocate.
     try
     {
         res.edit_trace.reserve(nw.adjrows - 1 + nw.adjcols); // Longest possible path.
@@ -25,6 +27,8 @@ NwStat NwTrace1_Plain(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
     {
         return NwStat::errorMemoryAllocation;
     }
+
+    updateNwAlgPeakMemUsage(nw, res);
 
     sw.lap("trace.alloc");
 
@@ -155,7 +159,7 @@ NwStat NwHash1_Plain(NwAlgInput& nw, NwAlgResult& res)
     return NwStat::success;
 }
 
-NwStat NwPrintScore1_Plain(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res)
+NwStat NwPrintScore1_Plain(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res)
 {
     (void)res;
     NwPrintMat(os, nw.score.data(), nw.adjrows, nw.adjcols);

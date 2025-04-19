@@ -237,7 +237,7 @@ static NwStat printBenchReportLine(
     NwCmdData& cmdData,
     const NwAlgorithm& alg,
     const NwAlgInput& nw,
-    const NwAlgResult& repResCombined,
+    NwAlgResult& repResCombined,
     bool& write_progress_newline)
 {
     // Print progress to stdout.
@@ -504,9 +504,9 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
                     // Last iteration.
                     if (iR == cmdArgs.samplesPerAlign.value() - 1 || res.stat != NwStat::success)
                     {
-                        NwAlgResult repResCombined {combineRepResults(repResList)};
+                        benchData.resultList.push_back(combineRepResults(repResList));
+                        NwAlgResult& repResCombined = benchData.resultList.back();
                         repResList.clear();
-                        benchData.resultList.push_back(repResCombined);
 
                         ZIG_TRY(NwStat::success, printBenchReportLine(cmdArgs, cmdData, alg, nw, repResCombined, write_progress_newline));
                     }

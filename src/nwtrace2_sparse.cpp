@@ -1,5 +1,6 @@
 #include "fmt_guard.hpp"
 #include "nw_fns.hpp"
+#include "nwalign_shared.hpp"
 #include "run_types.hpp"
 #include <limits>
 #include <vector>
@@ -103,6 +104,7 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
     Stopwatch& sw = res.sw_trace;
     sw.start();
 
+    // Allocate.
     try
     {
         std::vector<int> tmpTile(nw.tileHcolLen * nw.tileHrowLen, 0);
@@ -117,6 +119,8 @@ NwStat NwTrace2_Sparse(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace)
     {
         return NwStat::errorMemoryAllocation;
     }
+
+    updateNwAlgPeakMemUsage(nw, res);
 
     sw.lap("trace.alloc");
 
@@ -264,6 +268,7 @@ NwStat NwHash2_Sparse(NwAlgInput& nw, NwAlgResult& res)
     Stopwatch& sw = res.sw_hash;
     sw.start();
 
+    // Allocate.
     try
     {
         std::vector<int> tmpCurrRow(nw.adjcols, 0);
@@ -275,6 +280,8 @@ NwStat NwHash2_Sparse(NwAlgInput& nw, NwAlgResult& res)
     {
         return NwStat::errorMemoryAllocation;
     }
+
+    updateNwAlgPeakMemUsage(nw, res);
 
     sw.lap("align.alloc");
 
@@ -336,7 +343,7 @@ NwStat NwHash2_Sparse(NwAlgInput& nw, NwAlgResult& res)
 // The score matrix is represented as two matrices (row-major order):
 // + tile header row matrix,
 // + tile header column matrix.
-NwStat NwPrintScore2_Sparse(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res)
+NwStat NwPrintScore2_Sparse(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res)
 {
     (void)res;
 
@@ -345,6 +352,7 @@ NwStat NwPrintScore2_Sparse(std::ostream& os, const NwAlgInput& nw, const NwAlgR
     std::vector<int> currRow;
     std::vector<int> prevRow;
 
+    // Allocate.
     try
     {
         std::vector<int> tmpCurrRow(nw.adjcols, 0);
@@ -356,6 +364,8 @@ NwStat NwPrintScore2_Sparse(std::ostream& os, const NwAlgInput& nw, const NwAlgR
     {
         return NwStat::errorMemoryAllocation;
     }
+
+    updateNwAlgPeakMemUsage(nw, res);
 
     for (int i = 0; i < nw.adjrows; i++)
     {

@@ -11,7 +11,7 @@ public:
     using NwAlignFn = NwStat (*)(const NwAlgParams& pr, NwAlgInput& nw, NwAlgResult& res);
     using NwTraceFn = NwStat (*)(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace);
     using NwHashFn = NwStat (*)(NwAlgInput& nw, NwAlgResult& res);
-    using NwPrintScoreFn = NwStat (*)(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
+    using NwPrintScoreFn = NwStat (*)(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res);
     using NwPrintTraceFn = NwStat (*)(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res);
 
 public:
@@ -28,7 +28,7 @@ public:
     NwStat align(const NwAlgParams& algParams, NwAlgInput& nw, NwAlgResult& res) const;
     NwStat trace(NwAlgInput& nw, NwAlgResult& res, bool calcDebugTrace) const;
     NwStat hash(NwAlgInput& nw, NwAlgResult& res) const;
-    NwStat printScore(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res) const;
+    NwStat printScore(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res) const;
     NwStat printTrace(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res) const;
 
 private:
@@ -37,7 +37,6 @@ private:
     NwHashFn _hashFn;
     NwPrintScoreFn _printScoreFn;
     NwPrintTraceFn _printTraceFn;
-    bool _usesGpu;
 };
 
 void getNwAlgorithmMap(Dict<std::string, NwAlgorithm>& algMap);

@@ -36,7 +36,7 @@ NwStat NwAlgorithm::hash(NwAlgInput& nw, NwAlgResult& res) const
 {
     return _hashFn(nw, res);
 }
-NwStat NwAlgorithm::printScore(std::ostream& os, const NwAlgInput& nw, const NwAlgResult& res) const
+NwStat NwAlgorithm::printScore(std::ostream& os, const NwAlgInput& nw, NwAlgResult& res) const
 {
     return _printScoreFn(os, nw, res);
 }
