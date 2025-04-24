@@ -75,6 +75,9 @@
     <ClCompile Include="src\nwalign_shared.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\cross_platform.hpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\run_types.hpp">

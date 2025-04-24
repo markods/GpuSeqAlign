@@ -17,6 +17,7 @@
   <ItemGroup>
     <ClCompile Include="src\benchmark.cpp" />
     <ClCompile Include="src\cmd_parser.cpp" />
+    <ClCompile Include="src\cross_platform.hpp" />
     <ClCompile Include="src\file_formats.cpp" />
     <ClCompile Include="src\io.cpp" />
     <ClCompile Include="src\nwalign_shared.cpp" />

@@ -2,6 +2,7 @@
 #include "math.hpp"
 #include "nwalign_shared.hpp"
 #include "run_types.hpp"
+#include <cmath>
 #include <cooperative_groups.h>
 #include <cuda_runtime.h>
 #include <stdexcept>

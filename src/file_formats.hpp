@@ -5,6 +5,7 @@
 #include "json.hpp"
 #include "run_types.hpp"
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -82,7 +83,7 @@ struct adl_serializer<NwSubstData>
     {
         if (j.size() != 2)
         {
-            throw std::exception("Expected a JSON object with exactly two keys: \"letterMap\", \"substMap\"");
+            throw std::invalid_argument("Expected a JSON object with exactly two keys: \"letterMap\", \"substMap\"");
         }
         j.at("letterMap").get_to(substData.letterMap);
         j.at("substMap").get_to(substData.substMap);

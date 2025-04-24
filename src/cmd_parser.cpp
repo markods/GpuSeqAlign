@@ -227,7 +227,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
             if (cmdArgs.warmupPerAlign.value() < 0)
             {
                 std::cerr << "error: parameter must be nonnegative integer: \"" << arg << "\"\n";
-                NwStat::errorInvalidValue;
+                return NwStat::errorInvalidValue;
             }
         }
         else if (arg == "--samplesPerAlign")
@@ -236,7 +236,7 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
             if (cmdArgs.samplesPerAlign.value() <= 0)
             {
                 std::cerr << "error: parameter must be positive integer: \"" << arg << "\"\n";
-                NwStat::errorInvalidValue;
+                return NwStat::errorInvalidValue;
             }
         }
         else if (arg == "--fCalcTrace")
@@ -288,8 +288,8 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
     // Defaults.
     setDefaultIfArgEmpty(cmdArgs.substPath, std::string("./resrc/subst.json"));
     // Required.
-    cmdArgs.algParamPath;
-    cmdArgs.seqPath;
+    // cmdArgs.algParamPath;
+    // cmdArgs.seqPath;
     setDefaultIfArgEmpty(cmdArgs.seqPairPath, std::string {});
     setDefaultIfArgEmpty(cmdArgs.resPath, std::string("./logs/") + cmdArgs.isoDateTime + std::string(".tsv"));
 
@@ -297,8 +297,8 @@ NwStat parseCmdArgs(const int argc, const char* argv[], NwCmdArgs& cmdArgs)
     setDefaultIfArgEmpty(cmdArgs.gapoCost, -11);
     setDefaultIfArgEmpty(cmdArgs.gapeCost, 0);
     // Handled when the algParam file is read.
-    cmdArgs.algNames;
-    cmdArgs.refAlgName;
+    // cmdArgs.algNames;
+    // cmdArgs.refAlgName;
     setDefaultIfArgEmpty(cmdArgs.warmupPerAlign, 0);
     setDefaultIfArgEmpty(cmdArgs.samplesPerAlign, 1);
 

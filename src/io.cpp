@@ -9,10 +9,20 @@ NwStat isoDatetimeAsString(std::string& res)
     auto time = std::chrono::system_clock::to_time_t(now);
 
     std::tm tm_struct {};
+
+#if defined(_WIN32) || defined(_WIN64)
     if (localtime_s(&tm_struct, &time) != 0)
     {
         return NwStat::errorInvalidValue;
     }
+#elif defined(__linux__)
+    if (localtime_r(&time, &tm_struct) == nullptr)
+    {
+        return NwStat::errorInvalidValue;
+    }
+#else
+    #error "error: unknown os"
+#endif
 
     std::stringstream strs {};
     strs << std::put_time(&tm_struct, "%Y%m%d_%H%M%S");

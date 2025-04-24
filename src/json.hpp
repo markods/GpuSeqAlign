@@ -18,7 +18,8 @@
 #ifndef INCLUDE_NLOHMANN_JSON_HPP_
 #define INCLUDE_NLOHMANN_JSON_HPP_
 
-#pragma warning(push, 0)  // Disable all warnings
+#include "cross_platform.hpp"
+BEGIN_DISABLE_WARNINGS
 
 #include <algorithm> // all_of, find, for_each
 #include <cstddef> // nullptr_t, ptrdiff_t, size_t
@@ -25009,6 +25010,6 @@ inline void swap(nlohmann::NLOHMANN_BASIC_JSON_TPL& j1, nlohmann::NLOHMANN_BASIC
 
 
 
-#pragma warning(pop)
+END_DISABLE_WARNINGS
 
 #endif  // INCLUDE_NLOHMANN_JSON_HPP_

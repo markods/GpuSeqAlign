@@ -1,5 +1,6 @@
 #include "nwalign_shared.hpp"
 #include "run_types.hpp"
+#include <cmath>
 
 static void UpdateScore(NwAlgInput& nw, int i, int j) noexcept
 {

@@ -3,6 +3,7 @@
 #include "nw_fns.hpp"
 #include "nwalign_shared.hpp"
 #include "run_types.hpp"
+#include <cmath>
 #include <cuda_runtime.h>
 #include <stdexcept>
 #include <vector>

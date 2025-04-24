@@ -9,7 +9,8 @@
 #ifndef INCLUDE_NLOHMANN_JSON_FWD_HPP_
 #define INCLUDE_NLOHMANN_JSON_FWD_HPP_
 
-#pragma warning(push, 0)  // Disable all warnings
+#include "cross_platform.hpp"
+BEGIN_DISABLE_WARNINGS
 
 #include <cstdint> // int64_t, uint64_t
 #include <map> // map
@@ -175,6 +176,6 @@ using ordered_json = basic_json<nlohmann::ordered_map>;
 
 NLOHMANN_JSON_NAMESPACE_END
 
-#pragma warning(pop)
+END_DISABLE_WARNINGS
 
 #endif  // INCLUDE_NLOHMANN_JSON_FWD_HPP_
