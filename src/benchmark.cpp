@@ -510,6 +510,11 @@ NwStat benchmarkAlgs(const NwCmdArgs& cmdArgs, NwCmdData& cmdData, NwBenchmarkDa
 
                         ZIG_TRY(NwStat::success, printBenchReportLine(cmdArgs, cmdData, alg, nw, repResCombined, write_progress_newline));
                     }
+
+                    if (res.stat != NwStat::success)
+                    {
+                        break;
+                    }
                 }
             }
 
