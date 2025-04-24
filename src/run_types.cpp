@@ -15,12 +15,11 @@ bool operator!=(const NwRange& l, const NwRange& r)
 
 ////// NwAlgParam //////
 
-NwAlgParam::NwAlgParam() = default;
+NwAlgParam::NwAlgParam()
+    : _currIdx {0} { };
 NwAlgParam::NwAlgParam(std::vector<int> values)
-{
-    _values = values;
-    _currIdx = 0;
-}
+    : _values {values}, _currIdx {0}
+{ }
 
 int NwAlgParam::curr() const
 {
@@ -42,16 +41,15 @@ void NwAlgParam::reset()
 ////// NwAlgParams //////
 
 NwAlgParams::NwAlgParams()
-{
-    _params = {};
-    _isEnd = false;
-}
+    : _params {},
+      _isEnd {}
+{ }
 NwAlgParams::NwAlgParams(Dict<std::string, NwAlgParam> params)
-{
-    _params = params;
-    // Always allow the inital iteration, even if there are no params.
-    _isEnd = false;
-}
+    : _params {params},
+      // Always allow the inital iteration, even if there are no params.
+      _isEnd {false}
+
+{ }
 
 NwAlgParam& NwAlgParams::at(const std::string name)
 {

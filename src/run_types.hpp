@@ -45,7 +45,7 @@ struct NwAlgParam
     void reset();
 
     std::vector<int> _values;
-    int _currIdx = 0;
+    size_t _currIdx;
 };
 
 struct NwAlgParams
