@@ -56,37 +56,72 @@ This work is part of my master's thesis (todo link). The idea is to start with t
 3. Focus on pairwise alignment, and use linear/affine gap penalty functions.
 
 ## Prerequisites
-The project is run on Windows. The algorithms themselves are platform-agnostic.  
+The project is tested on Windows and Ubuntu WSL (version 2). The algorithms themselves are platform-agnostic.  
 Minimum Cuda supported architecture is `sm6_8`<sup>1</sup>.
 
+Windows:
 1. Install [Visual Studio Community Edition 2022](https://visualstudio.microsoft.com/vs/community/).
-
 2. Install [Cuda for Windows](https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/).
+3. (Optional) Install [Cmake](https://cmake.org/).
+
+Ubuntu WSL (version 2):
+1. Install [Cuda for Ubuntu WSL](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html?highlight=wsl#wsl).
+2. Install [Cmake](https://cmake.org/).
+3. Install [Ninja](https://ninja-build.org/).
+4. Install [GCC](https://gcc.gnu.org/) or [Clang](https://clang.llvm.org/).
 
 ## Build
-The build is done in Visual Studio Community Edition 2022. Build output is in the `/build` directory.
+Build outputs are in the `./build` directory.
+
+#### Visual Studio Community Edition 2022
+Build the project through the editor.
+
+#### Cmake Windows
+```shell
+cmake --list-presets
+
+# /m - MSVC project-level parallelism
+cmake --preset "windows-x64-cmake_msvc_cl"
+cmake --build ./build/windows-x64-cmake_msvc_cl/ --config Debug -- /m
+cmake --build ./build/windows-x64-cmake_msvc_cl/ --config Release -- /m
+cmake --build ./build/windows-x64-cmake_msvc_cl/ --config RelWithDebInfo -- /m
+```
+
+#### Cmake Ubuntu WSL
+```shell
+cmake --list-presets
+
+cmake --preset "linux-x64-cmake_ninja_gcc"
+cmake --build ./build/linux-x64-cmake_ninja_gcc/ --config Debug
+cmake --build ./build/linux-x64-cmake_ninja_gcc/ --config Release
+cmake --build ./build/linux-x64-cmake_ninja_gcc/ --config RelWithDebInfo
+```
 
 ## Benchmark
-Benchmark files are in `.json` format, in the `/resrc` directory. Sequences inside benchmark files are aligned each-with-each without repeating, the specified number of times. The average time for each step is reported. Results are written to the `log` directory.
+Benchmark files are in `.json` format, in the `./resrc` directory. Sequences inside benchmark files are aligned each-with-each without repeating, the specified number of times. The average time for each step is reported. Results are written to the `./log` directory.
 
 Run existing benchmarks from the project root:
 
 ```shell
+# The below examples are built on Windows using Cmake.
+# For other configurations, find the executable in:
+# ./build/<CONFIGURATION>/<TARGET_CONFIG>/nw(.exe)
+
 # View all parameters.
-./build/windows-x64-vs-release/nw.exe --help
+./build/windows-x64-cmake_msvc_cl/Release/nw.exe -h
 # Run a quick test to verify all algorithms work on your system.
-./build/windows-x64-vs-release/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_generated.fa" -p "./resrc/pair_debug.txt" --fCalcScoreHash --fCalcTrace --fWriteProgress
+./build/windows-x64-cmake_msvc_cl/Release/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_generated.fa" -p "./resrc/pair_debug.txt" --fCalcScoreHash --fCalcTrace --fWriteProgress
 
 # Calibrate optimal algoritm parameters on your system. See the results in the '/logs' directory.
-./build/windows-x64-vs-release/nw.exe -r "./resrc/param_optimize.json" -s "./resrc/seq_generated.fa" -p "./resrc/pair_optimize.txt" --fCalcScoreHash --fCalcTrace --fWriteProgress
+./build/windows-x64-cmake_msvc_cl/Release/nw.exe -r "./resrc/param_optimize.json" -s "./resrc/seq_generated.fa" -p "./resrc/pair_optimize.txt" --fCalcScoreHash --fCalcTrace --fWriteProgress
 
 # Run the sequences used in profiling reports.
-./build/windows-x64-vs-profile/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_generated.fa" -p "./resrc/pair_profile.txt" --fCalcScoreHash --fCalcTrace --fWriteProgress
+./build/windows-x64-cmake_msvc_cl/RelWithDebInfo/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_generated.fa" -p "./resrc/pair_profile.txt" --fCalcScoreHash --fCalcTrace --fWriteProgress
 
 # Medium test - sequences up to 1k base pairs.
-./build/windows-x64-vs-release/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_generated.fa" -p "./resrc/pair_generated_1.txt" --fCalcScoreHash --fCalcTrace --fWriteProgress
+./build/windows-x64-cmake_msvc_cl/Release/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_generated.fa" -p "./resrc/pair_generated_1.txt" --fCalcScoreHash --fCalcTrace --fWriteProgress
 # Large test - sequences up to 10k base pairs.
-./build/windows-x64-vs-release/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_generated.fa" -p "./resrc/pair_generated_2.txt" --fCalcScoreHash --fCalcTrace --fWriteProgress
+./build/windows-x64-cmake_msvc_cl/Release/nw.exe -r "./resrc/param_best.json" -s "./resrc/seq_generated.fa" -p "./resrc/pair_generated_2.txt" --fCalcScoreHash --fCalcTrace --fWriteProgress
 ```
 
 ## Results
