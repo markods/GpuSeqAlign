@@ -81,7 +81,7 @@ __global__ static void Nw_Gpu9_KernelB(
     const int tileBx,
     const int tileBy,
     const int subtileCntX,
-    const int subtileCntY,
+    // const int subtileCntY,
     const int subtileBx,
     const int d)
 {
@@ -648,7 +648,7 @@ NwStat NwAlign_Gpu9_Mlsp_DiagDiagDiag(const NwAlgParams& pr, NwAlgInput& nw, NwA
                 &tileBx,
                 &tileBy,
                 &subtileCntX,
-                &subtileCntY,
+                //&subtileCntY,
                 &subtileBx,
                 //&subtileBy,
                 &d};

@@ -343,7 +343,7 @@ static NwStat parseSubstFile(const std::string& substPath, NwSubstData& substDat
 
     for (const auto& subst_tuple : substData.substMap)
     {
-        if (subst_tuple.second.size() != letter_cnt * letter_cnt)
+        if (subst_tuple.second.size() != (size_t)(letter_cnt * letter_cnt))
         {
             std::cerr << "error: substitution matrix must have exactly letter_cnt^2 elements: \"" << subst_tuple.first << "\"\n";
             return NwStat::errorInvalidFormat;
