@@ -47,10 +47,10 @@ __global__ static void Nw_Gpu3_KernelB(
     const int d // the current minor tile diagonal in the score matrix (exclude the header row and column)
 )
 {
-    extern __shared__ int shmem[/* substsz*substsz + tileBx + tileBy + (1+tileBy)*(1+tileBx) */];
+    extern __shared__ int shmem_gpu3B[/* substsz*substsz + tileBx + tileBy + (1+tileBy)*(1+tileBx) */];
     // the substitution matrix and relevant parts of the two sequences
     // NOTE: should we align allocations to 0-th shared memory bank?
-    int* const subst /*[substsz*substsz]*/ = shmem + 0;
+    int* const subst /*[substsz*substsz]*/ = shmem_gpu3B + 0;
     int* const seqX /*[tileBx]*/ = subst + substsz * substsz;
     int* const seqY /*[tileBy]*/ = seqX + tileBx;
     int* const tile /*[(1+tileBy)*(1+tileBx)]*/ = seqY + tileBy;

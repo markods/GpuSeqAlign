@@ -21,11 +21,11 @@ __global__ static void Nw_Gpu6_KernelA(
     const int tileAx,
     const int tileAy)
 {
-    extern __shared__ int shmem[/* substsz*substsz + tileAx + tileAy */];
+    extern __shared__ int shmem_gpu6A[/* substsz*substsz + tileAx + tileAy */];
     // the substitution matrix and relevant parts of the two sequences
     // +   stored in shared memory for faster random access
     // NOTE: should we align allocations to 0-th shared memory bank?
-    int* const subst /*[substsz*substsz]*/ = shmem + 0;
+    int* const subst /*[substsz*substsz]*/ = shmem_gpu6A + 0;
     int* const seqX /*[tileAx]*/ = subst + substsz * substsz;
     int* const seqY /*[tileAy]*/ = seqX + tileAx;
 
@@ -144,10 +144,10 @@ __global__ static void Nw_Gpu6_KernelB(
     const int tileBx,
     const int tileBy)
 {
-    extern __shared__ int shmem[/* (1+tileBy)*(1+tileBx) */];
+    extern __shared__ int shmem_gpu6B[/* (1+tileBy)*(1+tileBx) */];
     // matrix tile which this thread block maps onto
     // +   stored in shared memory for faster random access
-    int* const tile /*[(1+tileBy)*(1+tileBx)]*/ = shmem + 0;
+    int* const tile /*[(1+tileBy)*(1+tileBx)]*/ = shmem_gpu6B + 0;
 
     //  / / / . .       . . . / /       . . . . .|/ /
     //  / / . . .   +   . . / / .   +   . . . . /|/

@@ -15,7 +15,7 @@ if (POLICY CMP0141)
 endif()
 
 
-set(CPP_SOURCES
+set(NW_CPP_SOURCES
     "src/benchmark.cpp"
     "src/cmd_parser.cpp"
     "src/file_formats.cpp"
@@ -33,7 +33,7 @@ set(CPP_SOURCES
     "src/stopwatch.cpp"
 )
 
-set(CUDA_SOURCES
+set(NW_CUDA_SOURCES
     "src/nwalign_gpu1_ml_diag.cu"
     "src/nwalign_gpu2_ml_diagrow2pass.cu"
     "src/nwalign_gpu3_ml_diagdiag.cu"
@@ -45,7 +45,7 @@ set(CUDA_SOURCES
     "src/nwalign_gpu9_mlsp_diagdiagdiag.cu"
 )
 
-add_executable(nw ${CPP_SOURCES} ${CUDA_SOURCES})
+add_executable(nw ${NW_CPP_SOURCES} ${NW_CUDA_SOURCES})
 
 target_include_directories(nw PRIVATE
     ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}

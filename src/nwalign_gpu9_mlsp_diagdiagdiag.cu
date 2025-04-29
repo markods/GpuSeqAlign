@@ -85,8 +85,8 @@ __global__ static void Nw_Gpu9_KernelB(
     const int subtileBx,
     const int d)
 {
-    extern __shared__ int shmem[/* substsz*substsz + tileBx + tileBy + (1+tileBx) + (1+tileBy) */];
-    int* const subst /*[substsz*substsz]*/ = shmem + 0;
+    extern __shared__ int shmem_gpu9B[/* substsz*substsz + tileBx + tileBy + (1+tileBx) + (1+tileBy) */];
+    int* const subst /*[substsz*substsz]*/ = shmem_gpu9B + 0;
     int* const seqX /*[tileBx]*/ = subst + substsz * substsz;
     int* const seqY /*[tileBy]*/ = seqX + tileBx;
     int* const tileHrow /*[(1+tileBx)]*/ = seqY + tileBy;

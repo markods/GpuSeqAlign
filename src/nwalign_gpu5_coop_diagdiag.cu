@@ -24,10 +24,10 @@ __global__ static void Nw_Gpu5_KernelAB(
     const int tileAx,
     const int tileAy)
 {
-    extern __shared__ int shmem[/* substsz*substsz + tileAx + tileAy + (1+tileAy)*(1+tileAx) */];
+    extern __shared__ int shmem_gpu5AB[/* substsz*substsz + tileAx + tileAy + (1+tileAy)*(1+tileAx) */];
     // the substitution matrix and relevant parts of the two sequences
     // NOTE: should we align allocations to 0-th shared memory bank?
-    int* const subst /*[substsz*substsz]*/ = shmem + 0;
+    int* const subst /*[substsz*substsz]*/ = shmem_gpu5AB + 0;
     int* const seqX /*[tileAx]*/ = subst + substsz * substsz;
     int* const seqY /*[tileAy]*/ = seqX + tileAx;
     int* const tile /*[(1+tileAy)*(1+tileAx)]*/ = seqY + tileAy;

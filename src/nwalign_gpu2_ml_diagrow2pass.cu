@@ -46,9 +46,9 @@ __global__ static void Nw_Gpu2_KernelB(
     const int d // the current minor tile diagonal in the score matrix (exclude the header row and column)
 )
 {
-    extern __shared__ int shmem[/* substsz*substsz */];
+    extern __shared__ int shmem_gpu2B[/* substsz*substsz */];
     // the substitution matrix and relevant parts of the two sequences
-    int* const subst /*[substsz*substsz]*/ = shmem + 0;
+    int* const subst /*[substsz*substsz]*/ = shmem_gpu2B + 0;
 
     // initialize the substitution shared memory copy
     {
