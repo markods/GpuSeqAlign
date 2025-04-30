@@ -102,9 +102,17 @@ target_compile_options(nw PRIVATE
         >
     >
     $<$<COMPILE_LANGUAGE:CUDA>:
-        $<$<CONFIG:Debug,RelWithDebInfo>:-G>   # kernel debug symbols
-        -maxrregcount 32
-        --ptxas-options=-warn-spills
+        $<$<CONFIG:Debug>:
+            -G   # kernel debug symbols
+        >
+        $<$<CONFIG:Release>:
+            -maxrregcount 32
+            --ptxas-options=-warn-spills
+        >
+        $<$<CONFIG:RelWithDebInfo>:
+            --ptxas-options=-warn-spills
+            -G   # kernel debug symbols
+        >
     >
 )
 

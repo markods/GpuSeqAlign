@@ -156,10 +156,11 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CudaCompile>
-      <AdditionalOptions>%(AdditionalOptions) -std=c++17 --ptxas-options=-warn-spills</AdditionalOptions>
+      <AdditionalOptions>%(AdditionalOptions) -std=c++17</AdditionalOptions>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_86,sm_86</CodeGeneration>
-      <MaxRegCount>32</MaxRegCount>
+      <MaxRegCount>
+      </MaxRegCount>
       <CompileOut>$(SolutionDir)build\windows-$(Platform.toLower())-msvc\nw.dir\$(Configuration)\%(Filename)%(Extension).obj</CompileOut>
       <CudaRuntime>Shared</CudaRuntime>
     </CudaCompile>
@@ -191,19 +192,16 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <CudaCompile>
-      <AdditionalOptions>%(AdditionalOptions) -std=c++17 --ptxas-options=-warn-spills</AdditionalOptions>
+      <AdditionalOptions>%(AdditionalOptions) -std=c++17 --ptxas-options=-warn-spills -Xcompiler="/EHsc -Ob2"</AdditionalOptions>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_86,sm_86</CodeGeneration>
       <MaxRegCount>32</MaxRegCount>
       <Optimization>O2</Optimization>
       <CompileOut>$(SolutionDir)build\windows-$(Platform.toLower())-msvc\nw.dir\$(Configuration)\%(Filename)%(Extension).obj</CompileOut>
       <CudaRuntime>Shared</CudaRuntime>
-      <ExtensibleWholeProgramCompilation>true</ExtensibleWholeProgramCompilation>
     </CudaCompile>
     <CudaLink>
       <GPUDebugInfo>false</GPUDebugInfo>
-    </CudaLink>
-    <CudaLink>
       <Optimization>O2</Optimization>
     </CudaLink>
   </ItemDefinitionGroup>
@@ -242,8 +240,6 @@
     </CudaCompile>
     <CudaLink>
       <GPUDebugInfo>true</GPUDebugInfo>
-    </CudaLink>
-    <CudaLink>
       <Optimization>O2</Optimization>
     </CudaLink>
   </ItemDefinitionGroup>
